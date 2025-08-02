@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "peerjs": "^1.5.5",
+    "socket.io-client": "^4.8.1"
+  }
+}
