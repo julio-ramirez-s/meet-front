@@ -1,3 +1,18 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* src/index.css */
+
+/* Define estilos globales para toda la aplicación */
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Puedes añadir más estilos base aquí si lo necesitas */
+/* Por ejemplo, para un tema oscuro similar a Tailwind */
+body {
+  background-color: #0c0d11; /* Un color oscuro de fondo */
+  color: #fff; /* Color de texto blanco */
+}

@@ -4,25 +4,22 @@ import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 
 // --- CONTEXTO PARA WEBRTC ---
-// Usamos un Contexto para evitar pasar props por muchos niveles (prop drilling)
 const WebRTCContext = createContext();
 const useWebRTC = () => useContext(WebRTCContext);
 
 // --- HOOK PERSONALIZADO PARA LA LÓGICA DE WEBRTC ---
-// Encapsula toda la lógica de Socket.IO y PeerJS para mantener los componentes limpios.
 const useWebRTCLogic = (roomId, userName) => {
     const [myStream, setMyStream] = useState(null);
     const [myScreenStream, setMyScreenStream] = useState(null);
-    const [peers, setPeers] = useState({}); // Almacena streams de otros { peerId: { stream, userName, isScreenShare } }
+    const [peers, setPeers] = useState({});
     const [chatMessages, setChatMessages] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     
     const socketRef = useRef(null);
     const myPeerRef = useRef(null);
-    const peerConnections = useRef({}); // Referencia a las conexiones activas de PeerJS
+    const peerConnections = useRef({});
 
-    // Función para limpiar todas las conexiones y streams
     const cleanup = () => {
         console.log("Limpiando conexiones...");
         if (myStream) {
@@ -43,7 +40,6 @@ const useWebRTCLogic = (roomId, userName) => {
         peerConnections.current = {};
     };
 
-    // Inicializa el stream local del usuario
     const initializeStream = async (audioDeviceId, videoDeviceId) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -59,10 +55,8 @@ const useWebRTCLogic = (roomId, userName) => {
         }
     };
     
-    // Conecta al servidor de señalización y a PeerJS
     const connect = (stream) => {
-        // URL del servidor de señalización (debería estar en una variable de entorno)
-        const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // Reemplaza con tu servidor desplegado
+        const SERVER_URL = "https://meet-clone-v0ov.onrender.com";
 
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
@@ -77,17 +71,15 @@ const useWebRTCLogic = (roomId, userName) => {
             socketRef.current.emit('join-room', roomId, peerId, userName);
         });
 
-        // Escucha llamadas entrantes
         myPeerRef.current.on('call', (call) => {
             const { peer: peerId, metadata } = call;
             console.log(`Recibiendo llamada de ${peerId} con metadata:`, metadata);
             
-            // Responde con el stream correspondiente (cámara o pantalla)
             const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
             if(streamToSend) {
                 call.answer(streamToSend);
             } else {
-                 call.answer(stream); // Fallback al stream principal
+                 call.answer(stream);
             }
 
             call.on('stream', (remoteStream) => {
@@ -120,7 +112,7 @@ const useWebRTCLogic = (roomId, userName) => {
             console.log(`Usuario ${disconnectedUserName} (${userId}) se desconectó.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
             removePeer(userId, false);
-            removePeer(userId, true); // También elimina su posible pantalla compartida
+            removePeer(userId, true);
         });
         
         socketRef.current.on('createMessage', (message, user) => {
@@ -132,7 +124,6 @@ const useWebRTCLogic = (roomId, userName) => {
         console.log(`Llamando a ${remoteUserName} (${peerId})`);
         if (!myPeerRef.current) return;
 
-        // Llamada con el stream de la cámara
         const call = myPeerRef.current.call(peerId, stream, { metadata: { userName, isScreenShare: false } });
         
         call.on('stream', (remoteStream) => {
@@ -161,7 +152,6 @@ const useWebRTCLogic = (roomId, userName) => {
         });
     };
 
-    // --- Funciones de control ---
     const toggleMute = () => {
         if (myStream) {
             myStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
@@ -183,7 +173,7 @@ const useWebRTCLogic = (roomId, userName) => {
     };
 
     const shareScreen = async () => {
-        if (myScreenStream) { // Si ya se está compartiendo, detener
+        if (myScreenStream) {
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
@@ -199,10 +189,10 @@ const useWebRTCLogic = (roomId, userName) => {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             setMyScreenStream(screenStream);
 
-            screenStream.getVideoTracks()[0].onended = () => { // Cuando el usuario detiene desde el navegador
+            screenStream.getVideoTracks()[0].onended = () => {
                 setMyScreenStream(null);
                 socketRef.current.emit('stop-screen-share');
-                 Object.keys(peerConnections.current).forEach(key => {
+                Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
                         removePeer(key.replace('_screen', ''), true);
                     }
@@ -231,6 +221,7 @@ const useWebRTCLogic = (roomId, userName) => {
 };
 
 // --- COMPONENTES DE LA UI ---
+import styles from './App.module.css';
 
 const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, isLocal = false }) => {
     const videoRef = useRef();
@@ -241,15 +232,15 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
     }, [stream]);
 
     return (
-        <div className="relative aspect-video bg-slate-800 rounded-lg overflow-hidden shadow-lg border-2 border-slate-700">
+        <div className={styles.videoWrapper}>
             <video
                 ref={videoRef}
                 playsInline
                 autoPlay
                 muted={muted}
-                className={`w-full h-full object-cover ${isLocal && !isScreenShare ? 'transform scale-x-[-1]' : ''}`}
+                className={`${styles.videoElement} ${isLocal && !isScreenShare ? styles.localVideo : ''}`}
             />
-            <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-md font-medium">
+            <div className={styles.userNameLabel}>
                 {userName} {isScreenShare && "(Pantalla)"}
             </div>
         </div>
@@ -267,16 +258,18 @@ const VideoGrid = () => {
         }))
     ].filter(Boolean);
 
-    const gridLayout = (count) => {
-        if (count <= 1) return 'grid-cols-1';
-        if (count <= 2) return 'grid-cols-1 md:grid-cols-2';
-        if (count <= 4) return 'grid-cols-2';
-        if (count <= 6) return 'grid-cols-2 lg:grid-cols-3';
-        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+    const getGridLayoutClass = (count) => {
+        if (count <= 1) return styles.grid_1;
+        if (count <= 2) return styles.grid_2_md;
+        if (count <= 4) return styles.grid_2;
+        if (count <= 6) return styles.grid_2_lg;
+        return styles.grid_4;
     };
+    
+    const gridLayoutClass = getGridLayoutClass(videoElements.length);
 
     return (
-        <div className={`grid ${gridLayout(videoElements.length)} gap-4 p-4 flex-grow overflow-y-auto`}>
+        <div className={`${styles.videoGridContainer} ${gridLayoutClass}`}>
             {videoElements.map(v => (
                 <VideoPlayer key={v.id} {...v} />
             ))}
@@ -287,20 +280,20 @@ const VideoGrid = () => {
 const Controls = ({ onToggleChat, onLeave }) => {
     const { toggleMute, toggleVideo, shareScreen, isMuted, isVideoOff, myScreenStream } = useWebRTC();
     return (
-        <footer className="bg-slate-900/80 backdrop-blur-sm p-3 flex justify-center items-center space-x-2 sm:space-x-4">
-            <button onClick={toggleMute} className={`p-3 rounded-full transition-colors ${isMuted ? 'bg-red-500 text-white' : 'bg-slate-700 hover:bg-slate-600'}`}>
+        <footer className={styles.controlsFooter}>
+            <button onClick={toggleMute} className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ''}`}>
                 {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
-            <button onClick={toggleVideo} className={`p-3 rounded-full transition-colors ${isVideoOff ? 'bg-red-500 text-white' : 'bg-slate-700 hover:bg-slate-600'}`}>
+            <button onClick={toggleVideo} className={`${styles.controlButton} ${isVideoOff ? styles.controlButtonActive : ''}`}>
                 {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
             </button>
-            <button onClick={shareScreen} className={`p-3 rounded-full transition-colors ${myScreenStream ? 'bg-green-500 text-white' : 'bg-slate-700 hover:bg-slate-600'}`}>
+            <button onClick={shareScreen} className={`${styles.controlButton} ${myScreenStream ? styles.controlButtonScreenShare : ''}`}>
                 <ScreenShare size={20} />
             </button>
-            <button onClick={onToggleChat} className="p-3 rounded-full bg-slate-700 hover:bg-slate-600">
+            <button onClick={onToggleChat} className={styles.controlButton}>
                 <MessageSquare size={20} />
             </button>
-            <button onClick={onLeave} className="px-4 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm">
+            <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
             </button>
         </footer>
@@ -325,39 +318,39 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     };
 
     return (
-        <aside className={`fixed top-0 right-0 h-full w-full sm:w-80 md:w-96 bg-slate-900 flex flex-col transform transition-transform duration-300 ease-in-out z-50 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-            <header className="p-4 flex items-center justify-between border-b border-slate-700">
-                <h2 className="text-lg font-bold">Chat</h2>
-                <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-700">
+        <aside className={`${styles.chatSidebar} ${isOpen ? styles.chatSidebarOpen : ''}`}>
+            <header className={styles.chatHeader}>
+                <h2 className={styles.chatTitle}>Chat</h2>
+                <button onClick={onClose} className={styles.closeChatButton}>
                     <X size={20} />
                 </button>
             </header>
-            <div className="flex-grow p-4 overflow-y-auto space-y-4">
+            <div className={styles.chatMessages}>
                 {chatMessages.map((msg) => {
                     if (msg.type === 'system') {
-                        return <div key={msg.id} className="text-center text-xs text-slate-400 italic">{msg.text}</div>;
+                        return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
                     }
                     const isMe = msg.user === userName;
                     return (
-                        <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                            <div className={`p-2 rounded-lg max-w-xs ${isMe ? 'bg-blue-600' : 'bg-slate-700'}`}>
-                                {!isMe && <div className="text-xs font-bold text-blue-300">{msg.user}</div>}
-                                <p className="text-sm break-words">{msg.text}</p>
+                        <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
+                            <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
+                                {!isMe && <div className={styles.chatUserName}>{msg.user}</div>}
+                                <p className={styles.chatMessageText}>{msg.text}</p>
                             </div>
                         </div>
                     );
                 })}
                 <div ref={messagesEndRef} />
             </div>
-            <form onSubmit={handleSend} className="p-4 border-t border-slate-700 flex space-x-2">
+            <form onSubmit={handleSend} className={styles.chatForm}>
                 <input
                     type="text"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="flex-grow p-2 bg-slate-800 rounded-lg focus:outline-none text-white placeholder-slate-400 border border-slate-700"
+                    className={styles.chatInput}
                     placeholder="Escribe un mensaje..."
                 />
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-3 rounded-lg text-white transition-colors">
+                <button type="submit" className={styles.chatSendButton}>
                     <Send size={18} />
                 </button>
             </form>
@@ -365,12 +358,11 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     );
 };
 
-
 const CallRoom = ({ onLeave }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     return (
-        <div className="flex h-screen bg-slate-950 text-white font-sans overflow-hidden">
-            <main className="flex flex-col flex-grow relative">
+        <div className={styles.mainContainer}>
+            <main className={styles.mainContent}>
                 <VideoGrid />
                 <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} />
             </main>
@@ -390,7 +382,6 @@ const Lobby = ({ onJoin }) => {
     useEffect(() => {
         const getDevices = async () => {
             try {
-                // Pedir permiso para activar los dispositivos y poder listarlos
                 await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoInputs = devices.filter(d => d.kind === 'videoinput');
@@ -417,47 +408,46 @@ const Lobby = ({ onJoin }) => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white p-4">
-            <div className="w-full max-w-md">
-                <div className="bg-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-700">
-                    <h1 className="text-3xl font-bold text-center text-blue-400 mb-6">Unirse a la Sala</h1>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label htmlFor="userName" className="block text-sm font-medium text-slate-300 mb-1">Tu nombre</label>
+        <div className={styles.lobbyContainer}>
+            <div className={styles.lobbyFormWrapper}>
+                <div className={styles.lobbyCard}>
+                    <h1 className={styles.lobbyTitle}>Unirse a la Sala</h1>
+                    <form onSubmit={handleSubmit} className={styles.lobbyForm}>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="userName" className={styles.formLabel}>Tu nombre</label>
                             <input
                                 id="userName" type="text" value={userName}
                                 onChange={(e) => setUserName(e.target.value)}
                                 placeholder="Ingresa tu nombre"
-                                className="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className={styles.formInput}
                             />
                         </div>
                         {isLoading ? (
-                            <div className="text-center text-slate-400">Cargando dispositivos...</div>
+                            <div className={styles.loadingMessage}>Cargando dispositivos...</div>
                         ) : (
                             <>
                                 {videoDevices.length > 0 && (
-                                    <div>
-                                        <label htmlFor="videoDevice" className="block text-sm font-medium text-slate-300 mb-1">Cámara</label>
+                                    <div className={styles.formGroup}>
+                                        <label htmlFor="videoDevice" className={styles.formLabel}>Cámara</label>
                                         <select id="videoDevice" value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)}
-                                            className="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            className={styles.formSelect}>
                                             {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
                                         </select>
                                     </div>
                                 )}
                                 {audioDevices.length > 0 && (
-                                    <div>
-                                        <label htmlFor="audioDevice" className="block text-sm font-medium text-slate-300 mb-1">Micrófono</label>
+                                    <div className={styles.formGroup}>
+                                        <label htmlFor="audioDevice" className={styles.formLabel}>Micrófono</label>
                                         <select id="audioDevice" value={selectedAudio} onChange={(e) => setSelectedAudio(e.target.value)}
-                                            className="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                            className={styles.formSelect}>
                                             {audioDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
                                         </select>
                                     </div>
                                 )}
                             </>
                         )}
-                        <button type="submit" disabled={!userName.trim() || isLoading}
-                            className="w-full flex items-center justify-center p-3 text-lg font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed">
-                            <LogIn className="mr-2" size={20} />
+                        <button type="submit" disabled={!userName.trim() || isLoading} className={styles.joinButton}>
+                            <LogIn className={styles.joinButtonIcon} size={20} />
                             Unirse
                         </button>
                     </form>
@@ -467,8 +457,6 @@ const Lobby = ({ onJoin }) => {
     );
 };
 
-
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
 export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
@@ -489,7 +477,6 @@ export default function App() {
         setUserName('');
     };
     
-    // Asegurarse de limpiar al cerrar la pestaña
     useEffect(() => {
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
         return () => {
