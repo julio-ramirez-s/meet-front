@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, ChevronRight, ChevronLeft, Pause, Play } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, ChevronRight, ChevronLeft } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import './App.css'; 
@@ -13,6 +13,7 @@ const VideoComponent = ({ stream, muted, userName, isScreenShare = false }) => {
     }
   }, [stream]);
 
+  // Si es una pantalla compartida, no voltear la imagen.
   const videoClasses = `w-full h-full object-cover ${isScreenShare ? '' : 'transform scale-x-[-1]'}`;
 
   return (
@@ -50,10 +51,12 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [userName, setUserName] = useState('');
   const [peerUserNames, setPeerUserNames] = useState({});
-  const [myScreenStream, setMyScreenStream] = useState(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  
+  // Referencias para las conexiones
   const socketRef = useRef();
   const myPeerRef = useRef();
+  const myScreenPeerRef = useRef(); // Nueva referencia para la conexión de pantalla
   const chatMessagesRef = useRef();
   const peersRef = useRef({});
 
@@ -89,6 +92,7 @@ export default function App() {
       audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined }
     }).then(stream => {
         setMyStream(stream);
+        
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
           host: new URL(SERVER_URL).hostname,
@@ -110,8 +114,7 @@ export default function App() {
             setPeerStreams(prev => {
               if (prev.some(p => p.stream.id === userVideoStream.id)) return prev;
               
-              // Se asume que si el nombre de la pista de video es 'screen', es una pantalla compartida.
-              // Esta es una forma sencilla de diferenciarla sin un protocolo más complejo.
+              // Determina si el stream es una pantalla compartida
               const isScreen = userVideoStream.getVideoTracks()[0]?.label.includes('screen');
               return [...prev, { stream: userVideoStream, peerId: call.peer, isScreenShare: isScreen }];
             });
@@ -141,11 +144,6 @@ export default function App() {
         socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
           console.log('Usuario desconectado: ' + disconnectedUserName + ' (' + userId + ')');
           setChatMessages(prev => [...prev, { user: 'Sistema', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
-          if (peersRef.current[userId]) {
-            peersRef.current[userId].close();
-            const { [userId]: removedPeer, ...newPeers } = peersRef.current;
-            peersRef.current = newPeers;
-          }
           setPeerStreams(prev => prev.filter(p => p.peerId !== userId));
         });
 
@@ -219,35 +217,56 @@ export default function App() {
     try {
       if (isScreenSharing) {
         // Detener pantalla compartida
-        if (myScreenStream) {
-          myScreenStream.getTracks().forEach(track => track.stop());
-          setMyScreenStream(null);
-          setIsScreenSharing(false);
-          // Cerrar la llamada PeerJS asociada al screen share
-          // En esta implementación, PeerJS no maneja la desconexión de un solo stream fácilmente,
-          // así que simplemente lo eliminamos del estado local. Los otros clientes
-          // verán la desconexión del stream.
+        if (myScreenPeerRef.current) {
+          myScreenPeerRef.current.destroy();
+          myScreenPeerRef.current = null;
         }
+        setIsScreenSharing(false);
+        // Quita tu propio stream de pantalla de la lista local
+        setPeerStreams(prev => prev.filter(p => p.peerId === myPeerRef.current.id && p.isScreenShare));
         return;
       }
       
-      // Compartir pantalla como un stream separado
       const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      setMyScreenStream(screenStream);
       setIsScreenSharing(true);
+      
+      // Crea una nueva conexión PeerJS para la pantalla compartida
+      myScreenPeerRef.current = new Peer(undefined, {
+        host: new URL(process.env.REACT_APP_SERVER_URL).hostname,
+        port: new URL(process.env.REACT_APP_SERVER_URL).port || (new URL(process.env.REACT_APP_SERVER_URL).protocol === 'https:' ? 443 : 80),
+        path: '/peerjs/myapp',
+        secure: new URL(process.env.REACT_APP_SERVER_URL).protocol === 'https:'
+      });
 
-      // Enviar el nuevo stream a todos los peers existentes
-      for (const peerId in peersRef.current) {
-        myPeerRef.current.call(peerId, screenStream);
-      }
+      myScreenPeerRef.current.on('open', screenId => {
+        // Agrega el stream de tu pantalla a tu propia vista
+        setPeerStreams(prev => [...prev, { stream: screenStream, peerId: myPeerRef.current.id, isScreenShare: true }]);
+
+        // Notifica a los demás usuarios que hay un nuevo stream de pantalla
+        socketRef.current.emit('start-screen-share', { 
+            userId: myPeerRef.current.id,
+            userName,
+            screenPeerId: screenId 
+        });
+
+        // Envia el stream de pantalla a todos los peers existentes
+        for (const peerId in peersRef.current) {
+            myScreenPeerRef.current.call(peerId, screenStream);
+        }
+      });
 
       screenStream.getVideoTracks()[0].onended = () => {
-        setMyScreenStream(null);
+        if (myScreenPeerRef.current) {
+          myScreenPeerRef.current.destroy();
+          myScreenPeerRef.current = null;
+        }
         setIsScreenSharing(false);
+        setPeerStreams(prev => prev.filter(p => p.peerId !== myPeerRef.current.id || !p.isScreenShare));
       };
 
     } catch (err) {
       console.error("Error al compartir la pantalla:", err);
+      setIsScreenSharing(false);
     }
   };
 
@@ -330,9 +349,8 @@ export default function App() {
   // Renderizar la interfaz de la videollamada
   const videoElements = [
     myStream && <VideoComponent key="my-video" stream={myStream} muted={true} userName={userName} />,
-    myScreenStream && <VideoComponent key="my-screen-share" stream={myScreenStream} muted={true} userName={userName} isScreenShare={true} />,
     ...peerStreams.map((peer) => (
-      <VideoComponent key={peer.stream.id} stream={peer.stream} userName={peerUserNames[peer.peerId] || peer.peerId} isScreenShare={peer.isScreenShare} />
+      <VideoComponent key={peer.stream.id} stream={peer.stream} muted={false} userName={peerUserNames[peer.peerId] || peer.peerId} isScreenShare={peer.isScreenShare} />
     ))
   ].filter(Boolean);
 
