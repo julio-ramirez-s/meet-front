@@ -221,7 +221,7 @@ export default function App() {
         // Detener pantalla compartida
         if (myScreenStream) {
           myScreenStream.getTracks().forEach(track => track.stop());
-          setMyScreenStream(null);
+          setMyScreenStream(false);
           setIsScreenSharing(null);
           // Cerrar la llamada PeerJS asociada al screen share
           // En esta implementación, PeerJS no maneja la desconexión de un solo stream fácilmente,
