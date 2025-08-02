@@ -313,6 +313,8 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
         }
     }, [stream]);
 
+    // console.log(`VideoPlayer for: ${userName}, isScreenShare: ${isScreenShare}, isLocal: ${isLocal}`); // Para depuración
+
     return (
         <div className={styles.videoWrapper}>
             <video
@@ -322,8 +324,9 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
                 muted={muted}
                 className={`${styles.videoElement} ${isLocal && !isScreenShare ? styles.localVideo : ''}`}
             />
+            {/* Muestra el nombre del usuario, con un fallback si es nulo o vacío */}
             <div className={styles.userNameLabel}>
-                {userName} {isScreenShare && "(Pantalla)"}
+                {userName || 'Usuario Desconocido'} {isScreenShare && "(Pantalla)"}
             </div>
         </div>
     );
