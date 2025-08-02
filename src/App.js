@@ -62,7 +62,7 @@ const useWebRTCLogic = (roomId, userName) => {
     // Conecta al servidor de señalización y a PeerJS
     const connect = (stream) => {
         // URL del servidor de señalización (debería estar en una variable de entorno)
-        const SERVER_URL = "https://your-webrtc-server.onrender.com"; // Reemplaza con tu servidor desplegado
+        const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // Reemplaza con tu servidor desplegado
 
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
