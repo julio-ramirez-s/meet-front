@@ -55,11 +55,12 @@ export default function App() {
   // Referencias para las conexiones
   const socketRef = useRef();
   const myPeerRef = useRef();
-  const myScreenPeerRef = useRef(null); // Referencia para la conexión de pantalla
-  const myScreenStreamRef = useRef(null); // Referencia al stream de la pantalla para detenerlo
+  const myScreenPeerRef = useRef(null);
+  const myScreenStreamRef = useRef(null);
+  const myLocalStreamRef = useRef(null);
   const chatMessagesRef = useRef();
-  const peersRef = useRef({}); // Colección de llamadas de PeerJS para video
-  const screenPeersRef = useRef({}); // Colección de llamadas a streams de pantalla
+  const peersRef = useRef({});
+  const screenPeersRef = useRef({});
 
   // Efecto para enumerar los dispositivos de audio y video disponibles
   useEffect(() => {
@@ -81,127 +82,154 @@ export default function App() {
     getDevices();
   }, []);
 
-  // Efecto para inicializar la conexión con el servidor y PeerJS
+  // Efecto principal para la inicialización de la llamada
   useEffect(() => {
     if (!isJoined) return;
-    if (myPeerRef.current || socketRef.current) return;
 
     const SERVER_URL = process.env.REACT_APP_SERVER_URL;
 
+    // Función para conectar a un nuevo usuario
+    const connectToNewUser = (userId, stream) => {
+      if (peersRef.current[userId]) return;
+      const call = myPeerRef.current.call(userId, stream);
+      call.on('stream', userVideoStream => {
+        setPeerStreams(prev => {
+          if (prev.some(p => p.peerId === userId)) return prev;
+          const streamUserName = peerUserNames[userId] || userId;
+          return [...prev, { stream: userVideoStream, peerId: userId, isScreenShare: false, userName: streamUserName }];
+        });
+      });
+      call.on('close', () => {
+        setPeerStreams(prev => prev.filter(p => p.peerId !== userId));
+      });
+      peersRef.current = { ...peersRef.current, [userId]: call };
+    };
+
+    // Función para conectar al stream de pantalla de otro usuario
+    const connectToScreenShare = (userId) => {
+      const screenPeerId = `${userId}-screen`;
+      if (screenPeersRef.current[userId]) return;
+      const call = myPeerRef.current.call(screenPeerId, myLocalStreamRef.current);
+      call.on('stream', userScreenStream => {
+        console.log('Stream de pantalla recibido al unirse de: ' + screenPeerId);
+        setPeerStreams(prev => {
+          if (prev.some(p => p.peerId === screenPeerId)) return prev;
+          const streamUserName = `${peerUserNames[userId] || userId} (Pantalla)`;
+          return [...prev, { stream: userScreenStream, peerId: screenPeerId, isScreenShare: true, userName: streamUserName }];
+        });
+      });
+      call.on('close', () => {
+        setPeerStreams(prev => prev.filter(p => p.peerId !== screenPeerId));
+      });
+      screenPeersRef.current = { ...screenPeersRef.current, [userId]: call };
+    };
+
+    // Obtener el stream local y inicializar todo
     navigator.mediaDevices.getUserMedia({
       video: { deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined },
       audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined }
     }).then(stream => {
-        setMyStream(stream);
+      myLocalStreamRef.current = stream;
+      setMyStream(stream);
+      
+      socketRef.current = io(SERVER_URL);
+      myPeerRef.current = new Peer(undefined, {
+        host: new URL(SERVER_URL).hostname,
+        port: new URL(SERVER_URL).port || (new URL(SERVER_URL).protocol === 'https:' ? 443 : 80),
+        path: '/peerjs/myapp',
+        secure: new URL(SERVER_URL).protocol === 'https:'
+      });
+
+      myPeerRef.current.on('open', id => {
+        console.log('Mi ID de Peer es: ' + id);
+        socketRef.current.emit('join-room', roomId, id, userName);
+      });
+
+      // Listener para llamadas entrantes
+      myPeerRef.current.on('call', call => {
+        console.log('Recibiendo llamada de: ' + call.peer);
+        call.answer(myLocalStreamRef.current);
         
-        socketRef.current = io(SERVER_URL);
-        myPeerRef.current = new Peer(undefined, {
-          host: new URL(SERVER_URL).hostname,
-          port: new URL(SERVER_URL).port || (new URL(SERVER_URL).protocol === 'https:' ? 443 : 80),
-          path: '/peerjs/myapp',
-          secure: new URL(SERVER_URL).protocol === 'https:'
-        });
+        call.on('stream', userVideoStream => {
+          console.log('Stream recibido de: ' + call.peer);
+          setPeerStreams(prev => {
+            if (prev.some(p => p.peerId === call.peer)) return prev;
 
-        myPeerRef.current.on('open', id => {
-          console.log('Mi ID de Peer es: ' + id);
-          socketRef.current.emit('join-room', roomId, id, userName);
-        });
+            const isScreen = userVideoStream.getVideoTracks()[0]?.label.includes('screen');
+            let streamUserName = peerUserNames[call.peer] || call.peer;
 
-        // Este listener maneja las llamadas entrantes (de video normal o de pantalla)
-        myPeerRef.current.on('call', call => {
-          console.log('Recibiendo llamada de: ' + call.peer);
-          call.answer(stream); // Responde con tu stream local
-          
-          call.on('stream', userVideoStream => {
-            console.log('Stream recibido de: ' + call.peer);
-            setPeerStreams(prev => {
-              // Evita duplicar streams
-              if (prev.some(p => p.peerId === call.peer)) return prev;
+            if (isScreen && call.peer.endsWith('-screen')) {
+                const userId = call.peer.split('-screen')[0];
+                streamUserName = `${peerUserNames[userId] || userId} (Pantalla)`;
+            } else {
+                streamUserName = peerUserNames[call.peer] || call.peer;
+            }
 
-              const isScreen = userVideoStream.getVideoTracks()[0]?.label.includes('screen');
-              let streamUserName = peerUserNames[call.peer] || call.peer;
-
-              // Corrección: Si es una llamada de pantalla, extrae el ID del usuario original del peerId
-              if (isScreen && call.peer.endsWith('-screen')) {
-                  const userId = call.peer.split('-screen')[0];
-                  streamUserName = `${peerUserNames[userId] || userId} (Pantalla)`;
-              }
-
-              return [...prev, { stream: userVideoStream, peerId: call.peer, isScreenShare: isScreen, userName: streamUserName }];
-            });
-          });
-          call.on('close', () => {
-            console.log('Conexión cerrada con: ' + call.peer);
-            setPeerStreams(prev => prev.filter(p => p.peerId !== call.peer));
+            return [...prev, { stream: userVideoStream, peerId: call.peer, isScreenShare: isScreen, userName: streamUserName }];
           });
         });
+        call.on('close', () => {
+          console.log('Conexión cerrada con: ' + call.peer);
+          setPeerStreams(prev => prev.filter(p => p.peerId !== call.peer));
+        });
+      });
 
-        socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
-          console.log('Nuevo usuario se unió: ' + remoteUserName + ' (' + userId + ')');
-          setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
-          setPeerUserNames(prev => ({ ...prev, [userId]: remoteUserName }));
-          
-          // Corrección: Conecta al nuevo usuario para que vea tu video
-          if (myStream) {
-            connectToNewUser(userId, myStream);
+      // Listeners de Socket.io
+      socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
+        console.log('Nuevo usuario se unió: ' + remoteUserName + ' (' + userId + ')');
+        setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
+        setPeerUserNames(prev => ({ ...prev, [userId]: remoteUserName }));
+        connectToNewUser(userId, myLocalStreamRef.current);
+      });
+
+      socketRef.current.on('all-users', (existingUsers) => {
+        console.log('Usuarios existentes en la sala:', existingUsers);
+        existingUsers.forEach(user => {
+          if (user.userId !== myPeerRef.current.id) {
+            setPeerUserNames(prev => ({ ...prev, [user.userId]: user.userName }));
+            connectToNewUser(user.userId, myLocalStreamRef.current);
+            if (user.isScreenSharing) {
+              connectToScreenShare(user.userId);
+            }
           }
         });
+      });
+      
+      socketRef.current.on('user-started-screen-share', ({ userId, userName: remoteUserName }) => {
+          console.log(`Usuario ${remoteUserName} ha empezado a compartir pantalla.`);
+          setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} ha empezado a compartir pantalla.`, id: Date.now() }]);
+          connectToScreenShare(userId);
+      });
 
-        socketRef.current.on('all-users', (existingUsers) => {
-          console.log('Usuarios existentes en la sala:', existingUsers);
-          existingUsers.forEach(user => {
-            if (user.userId !== myPeerRef.current.id) {
-              setPeerUserNames(prev => ({ ...prev, [user.userId]: user.userName }));
-              // Conecta a los streams de video principales de los usuarios existentes
-              connectToNewUser(user.userId, myStream);
-              
-              // Si el usuario está compartiendo pantalla, conecta a ese stream también
-              if (user.isScreenSharing) {
-                connectToScreenShare(user.userId);
-              }
-            }
-          });
-        });
-        
-        // Listener para la pantalla compartida
-        socketRef.current.on('user-started-screen-share', ({ userId, userName: remoteUserName }) => {
-            console.log(`Usuario ${remoteUserName} ha empezado a compartir pantalla.`);
-            setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} ha empezado a compartir pantalla.`, id: Date.now() }]);
-            // El usuario que recibe la notificación se conecta al Peer de la pantalla
-            connectToScreenShare(userId);
-        });
-
-        // Listener para cuando un usuario deja de compartir pantalla
-        socketRef.current.on('user-stopped-screen-share', ({ userId, userName: remoteUserName }) => {
-            console.log(`Usuario ${remoteUserName} ha dejado de compartir pantalla.`);
-            setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} ha dejado de compartir pantalla.`, id: Date.now() }]);
-            const screenPeerId = `${userId}-screen`;
-            setPeerStreams(prev => prev.filter(p => p.peerId !== screenPeerId));
-            // Cierra la llamada de pantalla si existe
-            if (screenPeersRef.current[userId]) {
-                screenPeersRef.current[userId].close();
-                delete screenPeersRef.current[userId];
-            }
-        });
-
-        socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
-          console.log('Usuario desconectado: ' + disconnectedUserName + ' (' + userId + ')');
-          setChatMessages(prev => [...prev, { user: 'Sistema', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
+      socketRef.current.on('user-stopped-screen-share', ({ userId, userName: remoteUserName }) => {
+          console.log(`Usuario ${remoteUserName} ha dejado de compartir pantalla.`);
+          setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} ha dejado de compartir pantalla.`, id: Date.now() }]);
           const screenPeerId = `${userId}-screen`;
-          setPeerStreams(prev => prev.filter(p => p.peerId !== userId && p.peerId !== screenPeerId));
-          if (peersRef.current[userId]) {
-            peersRef.current[userId].close();
-            delete peersRef.current[userId];
-          }
+          setPeerStreams(prev => prev.filter(p => p.peerId !== screenPeerId));
           if (screenPeersRef.current[userId]) {
-            screenPeersRef.current[userId].close();
-            delete screenPeersRef.current[userId];
+              screenPeersRef.current[userId].close();
+              delete screenPeersRef.current[userId];
           }
-        });
+      });
 
-        socketRef.current.on('createMessage', (message, user) => {
-          setChatMessages(prev => [...prev, { user, text: message, id: Date.now() }]);
-        });
+      socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
+        console.log('Usuario desconectado: ' + disconnectedUserName + ' (' + userId + ')');
+        setChatMessages(prev => [...prev, { user: 'Sistema', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
+        const screenPeerId = `${userId}-screen`;
+        setPeerStreams(prev => prev.filter(p => p.peerId !== userId && p.peerId !== screenPeerId));
+        if (peersRef.current[userId]) {
+          peersRef.current[userId].close();
+          delete peersRef.current[userId];
+        }
+        if (screenPeersRef.current[userId]) {
+          screenPeersRef.current[userId].close();
+          delete screenPeersRef.current[userId];
+        }
+      });
+
+      socketRef.current.on('createMessage', (message, user) => {
+        setChatMessages(prev => [...prev, { user, text: message, id: Date.now() }]);
+      });
     }).catch(err => {
         console.error("Error al obtener el stream local", err);
     });
@@ -210,7 +238,7 @@ export default function App() {
       if (socketRef.current) socketRef.current.disconnect();
       if (myPeerRef.current) myPeerRef.current.destroy();
     };
-  }, [isJoined, roomId, userName, selectedVideoDeviceId, selectedAudioDeviceId, myStream]);
+  }, [isJoined, roomId, userName, selectedVideoDeviceId, selectedAudioDeviceId, peerUserNames]);
   
   // Efecto para hacer scroll automático en el chat
   useEffect(() => {
@@ -219,40 +247,6 @@ export default function App() {
     }
   }, [chatMessages, isChatOpen]);
   
-  // Función para conectar con un nuevo usuario
-  const connectToNewUser = (userId, stream) => {
-    const call = myPeerRef.current.call(userId, stream);
-    call.on('stream', userVideoStream => {
-      setPeerStreams(prev => {
-        if (prev.some(p => p.peerId === userId)) return prev;
-        const streamUserName = peerUserNames[userId] || userId;
-        return [...prev, { stream: userVideoStream, peerId: userId, isScreenShare: false, userName: streamUserName }];
-      });
-    });
-    call.on('close', () => {
-      setPeerStreams(prev => prev.filter(p => p.peerId !== userId));
-    });
-    peersRef.current = { ...peersRef.current, [userId]: call };
-  };
-
-  // Función para conectar con el stream de pantalla de otro usuario
-  const connectToScreenShare = (userId) => {
-      const screenPeerId = `${userId}-screen`;
-      const call = myPeerRef.current.call(screenPeerId, myStream);
-      call.on('stream', userScreenStream => {
-          console.log('Stream de pantalla recibido al unirse de: ' + screenPeerId);
-          setPeerStreams(prev => {
-              if (prev.some(p => p.peerId === screenPeerId)) return prev;
-              const streamUserName = `${peerUserNames[userId] || userId} (Pantalla)`;
-              return [...prev, { stream: userScreenStream, peerId: screenPeerId, isScreenShare: true, userName: streamUserName }];
-          });
-      });
-      call.on('close', () => {
-          setPeerStreams(prev => prev.filter(p => p.peerId !== screenPeerId));
-      });
-      screenPeersRef.current = { ...screenPeersRef.current, [userId]: call };
-  };
-
   // Manejador para enviar mensajes de chat
   const handleSendMessage = (e) => {
     e.preventDefault();
@@ -318,14 +312,11 @@ export default function App() {
 
           myScreenPeerRef.current.on('open', id => {
               console.log(`Peer de pantalla abierto con ID: ${id}`);
-              // Agrega el stream de tu pantalla a tu propia vista como un usuario más
               const streamUserName = `${userName} (Pantalla)`;
               setPeerStreams(prev => [...prev, { stream: screenStream, peerId: screenPeerId, isScreenShare: true, userName: streamUserName }]);
-              // Notifica a los demás usuarios que hay un nuevo stream de pantalla
               socketRef.current.emit('start-screen-share', { userId: myPeerRef.current.id, userName });
           });
           
-          // Escucha llamadas a este Peer de pantalla para enviar el stream
           myScreenPeerRef.current.on('call', call => {
               call.answer(screenStream);
           });
