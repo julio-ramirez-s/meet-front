@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, ChevronRight, ChevronLeft, Pause, Play } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
-import './App.css'; // Asegúrate de que esta línea esté presente
+import './App.css'; 
 
 // Componente para renderizar la tarjeta de video
-const VideoComponent = ({ stream, muted, userName }) => {
+const VideoComponent = ({ stream, muted, userName, isScreenShare = false }) => {
   const ref = useRef();
   useEffect(() => {
     if (stream) {
       ref.current.srcObject = stream;
     }
   }, [stream]);
+
+  const videoClasses = `w-full h-full object-cover ${isScreenShare ? '' : 'transform scale-x-[-1]'}`;
 
   return (
     <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-xl border border-gray-700">
@@ -20,10 +22,11 @@ const VideoComponent = ({ stream, muted, userName }) => {
         playsInline
         autoPlay
         muted={muted}
-        className="w-full h-full object-cover transform scale-x-[-1]"
+        className={videoClasses}
       />
       <div className="absolute bottom-3 left-3 bg-gray-900 bg-opacity-70 text-white text-sm px-3 py-1 rounded-full font-semibold">
         {userName}
+        {isScreenShare && <span className="ml-2 text-yellow-300"> (Pantalla)</span>}
       </div>
     </div>
   );
@@ -47,9 +50,10 @@ export default function App() {
   const [message, setMessage] = useState('');
   const [userName, setUserName] = useState('');
   const [peerUserNames, setPeerUserNames] = useState({});
+  const [myScreenStream, setMyScreenStream] = useState(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const socketRef = useRef();
   const myPeerRef = useRef();
-  const myOriginalStreamRef = useRef();
   const chatMessagesRef = useRef();
   const peersRef = useRef({});
 
@@ -85,7 +89,6 @@ export default function App() {
       audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined }
     }).then(stream => {
         setMyStream(stream);
-        myOriginalStreamRef.current = stream;
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
           host: new URL(SERVER_URL).hostname,
@@ -105,8 +108,12 @@ export default function App() {
           call.on('stream', userVideoStream => {
             console.log('Stream recibido de: ' + call.peer);
             setPeerStreams(prev => {
-              if (prev.some(p => p.peerId === call.peer)) return prev;
-              return [...prev, { stream: userVideoStream, peerId: call.peer }];
+              if (prev.some(p => p.stream.id === userVideoStream.id)) return prev;
+              
+              // Se asume que si el nombre de la pista de video es 'screen', es una pantalla compartida.
+              // Esta es una forma sencilla de diferenciarla sin un protocolo más complejo.
+              const isScreen = userVideoStream.getVideoTracks()[0]?.label.includes('screen');
+              return [...prev, { stream: userVideoStream, peerId: call.peer, isScreenShare: isScreen }];
             });
           });
           call.on('close', () => {
@@ -166,10 +173,10 @@ export default function App() {
   const connectToNewUser = (userId, stream) => {
     const call = myPeerRef.current.call(userId, stream);
     call.on('stream', userVideoStream => {
-      console.log('Stream enviado y recibido de: ' + userId);
       setPeerStreams(prev => {
-        if (prev.some(p => p.peerId === userId)) return prev;
-        return [...prev, { stream: userVideoStream, peerId: userId }];
+        if (prev.some(p => p.stream.id === userVideoStream.id)) return prev;
+        const isScreen = userVideoStream.getVideoTracks()[0]?.label.includes('screen');
+        return [...prev, { stream: userVideoStream, peerId: userId, isScreenShare: isScreen }];
       });
     });
     call.on('close', () => {
@@ -183,7 +190,6 @@ export default function App() {
     e.preventDefault();
     if (message.trim() && userName) {
       socketRef.current.emit('message', message);
-      setChatMessages(prev => [...prev, { user: userName, text: message, id: Date.now() }]);
       setMessage('');
     }
   };
@@ -211,24 +217,35 @@ export default function App() {
 
   const shareScreen = async () => {
     try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      const screenTrack = screenStream.getVideoTracks()[0];
-      for (const peerId in peersRef.current) {
-        const sender = peersRef.current[peerId].peerConnection.getSenders().find(s => s.track.kind === 'video');
-        if (sender) sender.replaceTrack(screenTrack);
-      }
-      const newStreamWithScreen = new MediaStream([screenTrack, myOriginalStreamRef.current.getAudioTracks()[0]]);
-      setMyStream(newStreamWithScreen);
-      setIsVideoOff(false);
-      screenTrack.onended = () => {
-        const originalStream = myOriginalStreamRef.current;
-        const originalTrack = originalStream.getVideoTracks()[0];
-        setMyStream(new MediaStream([originalTrack, originalStream.getAudioTracks()[0]]));
-        for (const peerId in peersRef.current) {
-          const sender = peersRef.current[peerId].peerConnection.getSenders().find(s => s.track.kind === 'video');
-          if (sender) sender.replaceTrack(originalTrack);
+      if (isScreenSharing) {
+        // Detener pantalla compartida
+        if (myScreenStream) {
+          myScreenStream.getTracks().forEach(track => track.stop());
+          setMyScreenStream(null);
+          setIsScreenSharing(false);
+          // Cerrar la llamada PeerJS asociada al screen share
+          // En esta implementación, PeerJS no maneja la desconexión de un solo stream fácilmente,
+          // así que simplemente lo eliminamos del estado local. Los otros clientes
+          // verán la desconexión del stream.
         }
+        return;
+      }
+      
+      // Compartir pantalla como un stream separado
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      setMyScreenStream(screenStream);
+      setIsScreenSharing(true);
+
+      // Enviar el nuevo stream a todos los peers existentes
+      for (const peerId in peersRef.current) {
+        myPeerRef.current.call(peerId, screenStream);
+      }
+
+      screenStream.getVideoTracks()[0].onended = () => {
+        setMyScreenStream(null);
+        setIsScreenSharing(false);
       };
+
     } catch (err) {
       console.error("Error al compartir la pantalla:", err);
     }
@@ -313,8 +330,9 @@ export default function App() {
   // Renderizar la interfaz de la videollamada
   const videoElements = [
     myStream && <VideoComponent key="my-video" stream={myStream} muted={true} userName={userName} />,
+    myScreenStream && <VideoComponent key="my-screen-share" stream={myScreenStream} muted={true} userName={userName} isScreenShare={true} />,
     ...peerStreams.map((peer) => (
-      <VideoComponent key={peer.peerId} stream={peer.stream} userName={peerUserNames[peer.peerId] || peer.peerId} />
+      <VideoComponent key={peer.stream.id} stream={peer.stream} userName={peerUserNames[peer.peerId] || peer.peerId} isScreenShare={peer.isScreenShare} />
     ))
   ].filter(Boolean);
 
@@ -343,10 +361,10 @@ export default function App() {
           </button>
           <button
             onClick={shareScreen}
-            className="px-4 py-2 rounded-full text-xs md:text-base bg-blue-600 hover:bg-blue-500 transition-colors duration-200 shadow-md flex items-center justify-center space-x-2"
+            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isScreenSharing ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-500'}`}
           >
-            <ScreenShare />
-            <span className="hidden md:inline">Compartir Pantalla</span>
+            {isScreenSharing ? <X /> : <ScreenShare />}
+            <span className="hidden md:inline">{isScreenSharing ? 'Dejar de compartir' : 'Compartir Pantalla'}</span>
           </button>
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
