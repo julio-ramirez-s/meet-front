@@ -155,27 +155,7 @@ export default function App() {
     }).catch(err => {
         console.error("Error al obtener el stream local", err);
     });
-// Nuevo evento: un peer está compartiendo su pantalla
-socketRef.current.on('screen-share-started', (userId) => {
-  setPeerStreams(prev => {
-    const updatedPeers = { ...prev };
-    if (updatedPeers[userId]) {
-      updatedPeers[userId].isScreenShare = true;
-    }
-    return updatedPeers;
-  });
-});
 
-// Nuevo evento: un peer ha dejado de compartir su pantalla
-socketRef.current.on('screen-share-stopped', (userId) => {
-  setPeerStreams(prev => {
-    const updatedPeers = { ...prev };
-    if (updatedPeers[userId]) {
-      updatedPeers[userId].isScreenShare = false;
-    }
-    return updatedPeers;
-  });
-});
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
       if (myPeerRef.current) myPeerRef.current.destroy();
