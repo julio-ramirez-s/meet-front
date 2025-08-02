@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, ChevronRight, ChevronLeft } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
+import './App.css'; // Asegúrate de que esta línea esté presente
 
 // Componente para renderizar la tarjeta de video
 const VideoComponent = ({ stream, muted, userName }) => {
@@ -83,7 +84,8 @@ export default function App() {
       video: { deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined },
       audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined }
     }).then(stream => {
-        setMyStream(stream);current = stream;
+        setMyStream(stream);
+        myOriginalStreamRef.current = stream;
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
           host: new URL(SERVER_URL).hostname,
@@ -181,6 +183,7 @@ export default function App() {
     e.preventDefault();
     if (message.trim() && userName) {
       socketRef.current.emit('message', message);
+      setChatMessages(prev => [...prev, { user: userName, text: message, id: Date.now() }]);
       setMessage('');
     }
   };
@@ -390,4 +393,3 @@ export default function App() {
     </div>
   );
 }
-
