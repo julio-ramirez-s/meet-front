@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
+import './App.css'; // Asegúrate de tener este archivo CSS
 
 const VideoComponent = ({ stream, muted, userName }) => {
   const ref = useRef();
@@ -72,7 +73,7 @@ export default function App() {
     if (!isJoined) return;
     if (myPeerRef.current || socketRef.current) return;
 
-    // Use a variable to get the server URL from the environment
+    // Conexión al servidor a través de la variable de entorno de Render
     const SERVER_URL = process.env.REACT_APP_SERVER_URL;
 
     navigator.mediaDevices.getUserMedia({
@@ -89,31 +90,31 @@ export default function App() {
           secure: new URL(SERVER_URL).protocol === 'https:'
         });
         myPeerRef.current.on('open', id => {
-          console.log('My Peer ID is: ' + id);
+          console.log('Mi ID de Peer es: ' + id);
           socketRef.current.emit('join-room', roomId, id, userName);
         });
         myPeerRef.current.on('call', call => {
-          console.log('Receiving call from: ' + call.peer);
+          console.log('Recibiendo llamada de: ' + call.peer);
           call.answer(stream);
           call.on('stream', userVideoStream => {
-            console.log('Stream received from: ' + call.peer);
+            console.log('Stream recibido de: ' + call.peer);
             setPeerStreams(prev => {
               if (prev.some(p => p.peerId === call.peer)) return prev;
               return [...prev, { stream: userVideoStream, peerId: call.peer }];
             });
           });
           call.on('close', () => {
-            console.log('Connection closed with: ' + call.peer);
+            console.log('Conexión cerrada con: ' + call.peer);
             setPeerStreams(prev => prev.filter(p => p.peerId !== call.peer));
           });
         });
         socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
-          console.log('New user joined: ' + remoteUserName + ' (' + userId + ')');
-          setChatMessages(prev => [...prev, { user: 'System', text: `${remoteUserName} has joined.`, id: Date.now() }]);
+          console.log('Nuevo usuario se unió: ' + remoteUserName + ' (' + userId + ')');
+          setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
           setPeerUserNames(prev => ({ ...prev, [userId]: remoteUserName }));
         });
         socketRef.current.on('all-users', (existingUsers) => {
-          console.log('Existing users in the room:', existingUsers);
+          console.log('Usuarios existentes en la sala:', existingUsers);
           existingUsers.forEach(user => {
             if (user.userId !== myPeerRef.current.id) {
               setPeerUserNames(prev => ({ ...prev, [user.userId]: user.userName }));
@@ -122,8 +123,8 @@ export default function App() {
           });
         });
         socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
-          console.log('User disconnected: ' + disconnectedUserName + ' (' + userId + ')');
-          setChatMessages(prev => [...prev, { user: 'System', text: `${disconnectedUserName} has left.`, id: Date.now() }]);
+          console.log('Usuario desconectado: ' + disconnectedUserName + ' (' + userId + ')');
+          setChatMessages(prev => [...prev, { user: 'Sistema', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
           if (peersRef.current[userId]) {
             peersRef.current[userId].close();
             const { [userId]: removedPeer, ...newPeers } = peersRef.current;
@@ -135,7 +136,7 @@ export default function App() {
           setChatMessages(prev => [...prev, { user, text: message, id: Date.now() }]);
         });
     }).catch(err => {
-        console.error("Error getting local stream", err);
+        console.error("Error al obtener el stream local", err);
     });
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
@@ -152,7 +153,7 @@ export default function App() {
   const connectToNewUser = (userId, stream) => {
     const call = myPeerRef.current.call(userId, stream);
     call.on('stream', userVideoStream => {
-      console.log('Stream sent and received from: ' + userId);
+      console.log('Stream enviado y recibido de: ' + userId);
       setPeerStreams(prev => {
         if (prev.some(p => p.peerId === userId)) return prev;
         return [...prev, { stream: userVideoStream, peerId: userId }];
@@ -213,7 +214,7 @@ export default function App() {
         }
       };
     } catch (err) {
-      console.error("Error sharing screen:", err);
+      console.error("Error al compartir la pantalla:", err);
     }
   };
   const handleJoinCall = (e) => {
@@ -227,26 +228,26 @@ export default function App() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white font-sans p-4">
         <form onSubmit={handleJoinCall} className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md space-y-6">
-          <h1 className="text-3xl font-bold text-center mb-6">Join Call</h1>
+          <h1 className="text-3xl font-bold text-center mb-6">Únete a la Llamada</h1>
           <div className="space-y-4">
             <div>
-              <label htmlFor="userName" className="block text-sm font-medium text-gray-300">Your Name</label>
+              <label htmlFor="userName" className="block text-sm font-medium text-gray-300">Tu nombre</label>
               <input
                 id="userName"
                 type="text"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                placeholder="Enter your name"
+                placeholder="Ingresa tu nombre"
                 className="w-full mt-1 p-3 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             {isLoadingDevices ? (
-              <div className="text-center text-gray-400">Loading devices...</div>
+              <div className="text-center text-gray-400">Cargando dispositivos...</div>
             ) : (
               <>
                 {videoDevices.length > 0 && (
                   <div>
-                    <label htmlFor="videoDevice" className="block text-sm font-medium text-gray-300">Camera</label>
+                    <label htmlFor="videoDevice" className="block text-sm font-medium text-gray-300">Cámara</label>
                     <select
                       id="videoDevice"
                       value={selectedVideoDeviceId}
@@ -261,7 +262,7 @@ export default function App() {
                 )}
                 {audioDevices.length > 0 && (
                   <div>
-                    <label htmlFor="audioDevice" className="block text-sm font-medium text-gray-300">Microphone</label>
+                    <label htmlFor="audioDevice" className="block text-sm font-medium text-gray-300">Micrófono</label>
                     <select
                       id="audioDevice"
                       value={selectedAudioDeviceId}
@@ -283,7 +284,7 @@ export default function App() {
             className="w-full flex items-center justify-center p-3 text-lg font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors duration-200 disabled:bg-gray-500"
           >
             <LogIn className="mr-2" />
-            Join Call
+            Unirse a la Llamada
           </button>
         </form>
       </div>
@@ -305,21 +306,21 @@ export default function App() {
             className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isMuted ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
           >
             {isMuted ? <MicOff /> : <Mic />}
-            <span className="hidden md:inline">{isMuted ? 'Unmute' : 'Mute'}</span>
+            <span className="hidden md:inline">{isMuted ? 'Activar' : 'Silenciar'}</span>
           </button>
           <button
             onClick={toggleVideo}
             className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isVideoOff ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
           >
             {isVideoOff ? <VideoOff /> : <Video />}
-            <span className="hidden md:inline">{isVideoOff ? 'Turn On' : 'Turn Off'}</span>
+            <span className="hidden md:inline">{isVideoOff ? 'Activar' : 'Detener'}</span>
           </button>
           <button
             onClick={shareScreen}
             className="px-4 py-2 rounded-full text-xs md:text-base bg-blue-600 hover:bg-blue-500 transition-colors duration-200 shadow-md flex items-center justify-center space-x-2"
           >
             <ScreenShare />
-            <span className="hidden md:inline">Share Screen</span>
+            <span className="hidden md:inline">Compartir Pantalla</span>
           </button>
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
@@ -353,7 +354,7 @@ export default function App() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none text-white placeholder-gray-400"
-            placeholder="Write a message..."
+            placeholder="Escribe un mensaje..."
           />
           <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg text-white">
             <Send size={20} />
@@ -363,4 +364,3 @@ export default function App() {
     </div>
   );
 }
-
