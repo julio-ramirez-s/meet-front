@@ -83,8 +83,7 @@ export default function App() {
       video: { deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined },
       audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined }
     }).then(stream => {
-        setMyStream(stream);
-        myOriginalStreamRef.current = stream;
+        setMyStream(stream);current = stream;
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
           host: new URL(SERVER_URL).hostname,
