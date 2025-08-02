@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Settings, Users, ArrowLeft } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Settings, Users, ArrowLeft, ThumbsUp, Heart, PartyPopper } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
+import { ToastContainer, toast } from 'react-toastify'; // Importamos ToastContainer y toast
+import 'react-toastify/dist/ReactToastify.css'; // Importamos los estilos de react-toastify
+
 import styles from './App.module.css'; 
+
 // --- CONTEXTO PARA WEBRTC ---
 const WebRTCContext = createContext();
 const useWebRTC = () => useContext(WebRTCContext);
@@ -40,6 +44,7 @@ const useWebRTCLogic = (roomId, userName) => {
         peerConnections.current = {};
     };
 
+    // Aseguramos que el stream inicial incluya audio y video según los dispositivos seleccionados
     const initializeStream = async (audioDeviceId, videoDeviceId) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -50,13 +55,13 @@ const useWebRTCLogic = (roomId, userName) => {
             return stream;
         } catch (error) {
             console.error("Error al obtener stream de usuario:", error);
-            alert("No se pudo acceder a la cámara o micrófono. Por favor, revisa los permisos.");
+            toast.error("No se pudo acceder a la cámara o micrófono. Por favor, revisa los permisos.");
             return null;
         }
     };
     
     const connect = (stream) => {
-        const SERVER_URL = "https://meet-clone-v0ov.onrender.com";
+        const SERVER_URL = "[https://meet-clone-v0ov.onrender.com](https://meet-clone-v0ov.onrender.com)";
 
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
@@ -75,11 +80,12 @@ const useWebRTCLogic = (roomId, userName) => {
             const { peer: peerId, metadata } = call;
             console.log(`Recibiendo llamada de ${peerId} con metadata:`, metadata);
             
-            const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
-            if(streamToSend) {
-                call.answer(streamToSend);
+            // Responde con el stream principal (cámara/micrófono)
+            // Si hay un stream de pantalla, se manejará con una llamada separada.
+            if(myStream) {
+                call.answer(myStream); 
             } else {
-                 call.answer(stream);
+                call.answer(stream); // Fallback si myStream aún no está disponible
             }
 
             call.on('stream', (remoteStream) => {
@@ -105,25 +111,47 @@ const useWebRTCLogic = (roomId, userName) => {
         socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
             console.log(`Usuario ${remoteUserName} (${userId}) se unió.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
+            toast.info(`${remoteUserName} se ha unido a la sala.`); // Notificación de unión
             connectToNewUser(userId, remoteUserName, stream);
         });
 
         socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
             console.log(`Usuario ${disconnectedUserName} (${userId}) se desconectó.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
+            toast.warn(`${disconnectedUserName} ha abandonado la sala.`); // Notificación de desconexión
             removePeer(userId, false);
             removePeer(userId, true);
         });
         
         socketRef.current.on('createMessage', (message, user) => {
             setChatMessages(prev => [...prev, { user, text: message, id: Date.now(), type: 'chat' }]);
+            toast.info(`${user}: ${message}`, { // Notificación de mensaje de chat
+                autoClose: 3000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
+        });
+
+        socketRef.current.on('reaction-received', (emoji, user) => {
+            toast.success(`${user} reaccionó con ${emoji}`, { // Notificación de reacción
+                icon: emoji,
+                autoClose: 2000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnOnHover: false,
+                draggable: false,
+                position: "top-center",
+            });
         });
     };
 
     const connectToNewUser = (peerId, remoteUserName, stream) => {
         console.log(`Llamando a ${remoteUserName} (${peerId})`);
-        if (!myPeerRef.current) return;
+        if (!myPeerRef.current || !stream) return; // Asegurarse de que hay un stream para enviar
 
+        // Llamada con el stream de la cámara/micrófono
         const call = myPeerRef.current.call(peerId, stream, { metadata: { userName, isScreenShare: false } });
         
         call.on('stream', (remoteStream) => {
@@ -172,14 +200,30 @@ const useWebRTCLogic = (roomId, userName) => {
         }
     };
 
+    const sendReaction = (emoji) => {
+        if (socketRef.current) {
+            socketRef.current.emit('reaction', emoji);
+        }
+    };
+
     const shareScreen = async () => {
-        if (myScreenStream) {
+        if (myScreenStream) { // Si ya se está compartiendo, detener
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
+            // Cierra las conexiones de pantalla compartida con todos los peers
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen')) {
-                    removePeer(key.replace('_screen', ''), true);
+                    const peerId = key.replace('_screen', '');
+                    if (peerConnections.current[key]) {
+                        peerConnections.current[key].close();
+                        delete peerConnections.current[key];
+                    }
+                    setPeers(prev => {
+                        const newPeers = { ...prev };
+                        delete newPeers[key];
+                        return newPeers;
+                    });
                 }
             });
             return;
@@ -189,34 +233,64 @@ const useWebRTCLogic = (roomId, userName) => {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             setMyScreenStream(screenStream);
 
-            screenStream.getVideoTracks()[0].onended = () => {
+            screenStream.getVideoTracks()[0].onended = () => { // Cuando el usuario detiene desde el navegador
                 setMyScreenStream(null);
                 socketRef.current.emit('stop-screen-share');
+                // Cierra las conexiones de pantalla compartida con todos los peers
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
-                        removePeer(key.replace('_screen', ''), true);
+                        const peerId = key.replace('_screen', '');
+                        if (peerConnections.current[key]) {
+                            peerConnections.current[key].close();
+                            delete peerConnections.current[key];
+                        }
+                        setPeers(prev => {
+                            const newPeers = { ...prev };
+                            delete newPeers[key];
+                            return newPeers;
+                        });
                     }
                 });
             };
 
+            // Envía el stream de pantalla a todos los peers existentes
             Object.keys(peerConnections.current).forEach(peerKey => {
-                const peerId = peerKey.split('_')[0];
-                if(peerConnections.current[peerId]){
-                    console.log(`Enviando pantalla a ${peerId}`);
-                    const call = myPeerRef.current.call(peerId, screenStream, { metadata: { userName, isScreenShare: true } });
-                    peerConnections.current[peerId + '_screen'] = call;
+                // Asegúrate de que no es una conexión de pantalla anterior
+                if (!peerKey.endsWith('_screen')) {
+                    const peerId = peerKey;
+                    if(myPeerRef.current && peerConnections.current[peerId]){
+                        console.log(`Enviando pantalla a ${peerId}`);
+                        const call = myPeerRef.current.call(peerId, screenStream, { metadata: { userName, isScreenShare: true } });
+                        // Almacena la conexión de pantalla con una clave diferente para evitar colisiones
+                        peerConnections.current[peerId + '_screen'] = call;
+
+                        call.on('stream', (remoteScreenStream) => {
+                            setPeers(prev => ({ 
+                                ...prev, 
+                                [peerId + '_screen']: { 
+                                    stream: remoteScreenStream, 
+                                    userName: peers[peerId]?.userName || 'Desconocido', // Usa el nombre del peer principal
+                                    isScreenShare: true 
+                                } 
+                            }));
+                        });
+                        call.on('close', () => {
+                            removePeer(peerId, true);
+                        });
+                    }
                 }
             });
 
         } catch (err) {
             console.error("Error al compartir pantalla:", err);
+            toast.error("No se pudo compartir la pantalla. Revisa los permisos.");
         }
     };
 
     return {
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff,
         initializeStream, connect, cleanup,
-        toggleMute, toggleVideo, sendMessage, shareScreen
+        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction
     };
 };
 
@@ -255,12 +329,13 @@ const VideoGrid = () => {
         }))
     ].filter(Boolean);
 
+    // Lógica mejorada para el diseño de la cuadrícula
     const getGridLayoutClass = (count) => {
-        if (count <= 1) return styles.grid_1;
-        if (count <= 2) return styles.grid_2_md;
-        if (count <= 4) return styles.grid_2;
-        if (count <= 6) return styles.grid_2_lg;
-        return styles.grid_4;
+        if (count === 1) return styles.grid_1;
+        if (count === 2) return styles.grid_2;
+        if (count <= 4) return styles.grid_4;
+        if (count <= 6) return styles.grid_6;
+        return styles.grid_8_plus; // Para más de 6 videos
     };
     
     const gridLayoutClass = getGridLayoutClass(videoElements.length);
@@ -275,7 +350,7 @@ const VideoGrid = () => {
 };
 
 const Controls = ({ onToggleChat, onLeave }) => {
-    const { toggleMute, toggleVideo, shareScreen, isMuted, isVideoOff, myScreenStream } = useWebRTC();
+    const { toggleMute, toggleVideo, shareScreen, sendReaction, isMuted, isVideoOff, myScreenStream } = useWebRTC();
     return (
         <footer className={styles.controlsFooter}>
             <button onClick={toggleMute} className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ''}`}>
@@ -290,6 +365,17 @@ const Controls = ({ onToggleChat, onLeave }) => {
             <button onClick={onToggleChat} className={styles.controlButton}>
                 <MessageSquare size={20} />
             </button>
+            <div className={styles.reactionButtons}>
+                <button onClick={() => sendReaction('👍')} className={styles.reactionButton}>
+                    <ThumbsUp size={20} />
+                </button>
+                <button onClick={() => sendReaction('❤️')} className={styles.reactionButton}>
+                    <Heart size={20} />
+                </button>
+                <button onClick={() => sendReaction('🎉')} className={styles.reactionButton}>
+                    <PartyPopper size={20} />
+                </button>
+            </div>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
             </button>
@@ -355,6 +441,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     );
 };
 
+
 const CallRoom = ({ onLeave }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     return (
@@ -379,7 +466,9 @@ const Lobby = ({ onJoin }) => {
     useEffect(() => {
         const getDevices = async () => {
             try {
-                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                // Pedir permiso para activar los dispositivos y poder listarlos
+                // Esto es crucial para que el audio y video funcionen correctamente
+                await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); 
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoInputs = devices.filter(d => d.kind === 'videoinput');
                 const audioInputs = devices.filter(d => d.kind === 'audioinput');
@@ -389,7 +478,7 @@ const Lobby = ({ onJoin }) => {
                 if (audioInputs.length > 0) setSelectedAudio(audioInputs[0].deviceId);
             } catch (err) {
                 console.error("Error al enumerar dispositivos:", err);
-                alert("No se pudo acceder a la cámara o micrófono. Por favor, verifica los permisos en tu navegador.");
+                toast.error("No se pudo acceder a la cámara o micrófono. Por favor, verifica los permisos en tu navegador.");
             } finally {
                 setIsLoading(false);
             }
@@ -454,6 +543,8 @@ const Lobby = ({ onJoin }) => {
     );
 };
 
+
+// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
 export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
@@ -474,6 +565,7 @@ export default function App() {
         setUserName('');
     };
     
+    // Asegurarse de limpiar al cerrar la pestaña
     useEffect(() => {
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
         return () => {
@@ -488,6 +580,8 @@ export default function App() {
     return (
         <WebRTCContext.Provider value={{ ...webRTCLogic, userName }}>
             <CallRoom onLeave={handleLeave} />
+            {/* Contenedor para las notificaciones */}
+            <ToastContainer /> 
         </WebRTCContext.Provider>
     );
 }
