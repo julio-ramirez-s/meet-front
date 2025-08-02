@@ -1,8 +1,4 @@
-/*
-  Archivo: client/src/App.css
-  Este archivo es crucial para que Tailwind compile las clases correctamente.
-  También contiene los estilos para la barra de desplazamiento personalizada.
-*/
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
