@@ -12,7 +12,7 @@ const WebRTCContext = createContext();
 const useWebRTC = () => useContext(WebRTCContext);
 
 // --- HOOK PERSONALIZADO PARA LA LÓGICA DE WEBRTC ---
-const useWebRTCLogic = (roomId, userName) => {
+const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
     const [myStream, setMyStream] = useState(null);
     const [myScreenStream, setMyScreenStream] = useState(null);
     const [peers, setPeers] = useState({}); 
@@ -23,6 +23,9 @@ const useWebRTCLogic = (roomId, userName) => {
     const socketRef = useRef(null);
     const myPeerRef = useRef(null);
     const peerConnections = useRef({}); 
+
+    // Almacena el nombre de usuario más reciente en una ref para evitar problemas de closure
+    const currentUserNameRef = useRef('');
 
     // Función para limpiar todas las conexiones y streams
     const cleanup = () => {
@@ -63,7 +66,9 @@ const useWebRTCLogic = (roomId, userName) => {
     };
     
     // Conecta al servidor de señalización y a PeerJS
-    const connect = (stream) => {
+    const connect = (stream, currentUserName) => { // Acepta userName como argumento
+        currentUserNameRef.current = currentUserName; // Actualiza la ref con el nombre actual
+
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; 
 
         socketRef.current = io(SERVER_URL);
@@ -76,13 +81,14 @@ const useWebRTCLogic = (roomId, userName) => {
 
         myPeerRef.current.on('open', (peerId) => {
             console.log('Mi ID de Peer es: ' + peerId);
-            socketRef.current.emit('join-room', roomId, peerId, userName); 
+            // Usa el nombre de usuario de la ref al unirse
+            socketRef.current.emit('join-room', roomId, peerId, currentUserNameRef.current); 
         });
 
         // Escucha llamadas entrantes
         myPeerRef.current.on('call', (call) => {
             const { peer: peerId, metadata } = call;
-            console.log(`Incoming call from ${peerId}. Metadata received:`, metadata); // LOG CLAVE: Ver metadatos de la llamada entrante
+            console.log(`[PeerJS] Incoming call from ${peerId}. Metadata received:`, metadata); 
             
             const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
             if(streamToSend) {
@@ -92,24 +98,24 @@ const useWebRTCLogic = (roomId, userName) => {
             }
 
             call.on('stream', (remoteStream) => {
-                console.log(`Stream recibido de: ${peerId}. Nombre: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
+                console.log(`[PeerJS] Stream received from: ${peerId}. Name from metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
                 setPeers(prevPeers => {
                     const newPeers = { ...prevPeers };
                     const key = peerId + (metadata.isScreenShare ? '_screen' : '');
 
-                    // Actualiza o añade el peer
+                    // Actualiza o añade el peer, asegurando que el nombre se use desde los metadatos
                     newPeers[key] = { 
                         stream: remoteStream, 
-                        userName: metadata.userName, 
+                        userName: metadata.userName || 'Usuario Desconocido', // Usa metadata.userName
                         isScreenShare: metadata.isScreenShare 
                     };
-                    console.log("Peers state after incoming stream update (key, newPeers):", key, newPeers); // LOG CLAVE: Estado de peers
+                    console.log("[Peers State] Updated peer stream (key, newPeers):", key, newPeers); 
                     return newPeers;
                 });
             });
             
             call.on('close', () => {
-                console.log(`Llamada cerrada con ${peerId}`);
+                console.log(`[PeerJS] Llamada cerrada con ${peerId}`);
                 removePeer(peerId, metadata.isScreenShare);
             });
 
@@ -117,14 +123,33 @@ const useWebRTCLogic = (roomId, userName) => {
         });
 
         socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
-            console.log(`Usuario ${remoteUserName} (${userId}) se unió.`);
+            console.log(`[Socket] Usuario ${remoteUserName} (${userId}) se unió.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
             toast.info(`${remoteUserName} se ha unido a la sala.`); 
-            connectToNewUser(userId, remoteUserName, stream); 
+            
+            // IMPORTANTE: Aseguramos que el nombre se añada al estado 'peers' inmediatamente
+            // Esto ayuda a evitar "Usuario Desconocido" si el stream tarda en llegar
+            setPeers(prevPeers => {
+                const newPeers = { ...prevPeers };
+                if (!newPeers[userId]) { // Solo si no existe ya (para evitar sobrescribir un stream ya conectado)
+                    newPeers[userId] = { 
+                        stream: null, // El stream se actualizará cuando llegue la llamada
+                        userName: remoteUserName, 
+                        isScreenShare: false 
+                    };
+                } else {
+                    // Si el peer ya existe (ej. por una llamada anterior), actualiza el nombre
+                    newPeers[userId] = { ...newPeers[userId], userName: remoteUserName };
+                }
+                console.log(`[Peers State] Added/Updated user ${remoteUserName} to peers (initial/join):`, newPeers);
+                return newPeers;
+            });
+
+            connectToNewUser(userId, remoteUserName, stream, currentUserNameRef.current); // Pasa el nombre actual del usuario local
         });
 
         socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
-            console.log(`Usuario ${disconnectedUserName} (${userId}) se desconectó.`);
+            console.log(`[Socket] Usuario ${disconnectedUserName} (${userId}) se desconectó.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
             toast.warn(`${disconnectedUserName} ha abandonado la sala.`); 
             removePeer(userId, false);
@@ -155,29 +180,31 @@ const useWebRTCLogic = (roomId, userName) => {
         });
     };
 
-    const connectToNewUser = (peerId, remoteUserName, stream) => {
-        console.log(`Llamando a ${remoteUserName} (${peerId}) con mi metadata:`, { userName, isScreenShare: false }); // LOG CLAVE: Metadatos enviados
+    const connectToNewUser = (peerId, remoteUserName, stream, localUserName) => { // Acepta localUserName
+        console.log(`[PeerJS] Calling new user ${remoteUserName} (${peerId}) with my metadata:`, { userName: localUserName, isScreenShare: false });
         if (!myPeerRef.current || !stream) return; 
 
-        const call = myPeerRef.current.call(peerId, stream, { metadata: { userName, isScreenShare: false } });
+        // Usa localUserName para la metadata de la llamada saliente
+        const call = myPeerRef.current.call(peerId, stream, { metadata: { userName: localUserName, isScreenShare: false } });
         
         call.on('stream', (remoteStream) => {
-            console.log(`Stream de cámara recibido de ${remoteUserName} (${peerId})`);
+            console.log(`[PeerJS] Stream received from my call to: ${remoteUserName} (${peerId})`);
             setPeers(prevPeers => {
                 const newPeers = { ...prevPeers };
-                const key = peerId; // Este es siempre el ID de la cámara
-                newPeers[key] = { 
+                // Actualiza el stream para el peer ya añadido por 'user-joined' o crea uno si no existe
+                newPeers[peerId] = { 
+                    ...newPeers[peerId], 
                     stream: remoteStream, 
-                    userName: remoteUserName, // Usamos el nombre del usuario remoto que se unió
+                    userName: remoteUserName, // Asegura que se use el nombre del usuario remoto
                     isScreenShare: false 
                 };
-                console.log("Peers state after new user stream update (key, newPeers):", key, newPeers); // LOG CLAVE: Estado de peers
+                console.log("[Peers State] Updated peer stream from my call (key, newPeers):", peerId, newPeers);
                 return newPeers;
             });
         });
         
         call.on('close', () => {
-            console.log(`Llamada con ${peerId} (cámara) cerrada.`);
+            console.log(`[PeerJS] My call with ${peerId} (camera) closed.`);
             removePeer(peerId, false);
         });
 
@@ -193,7 +220,7 @@ const useWebRTCLogic = (roomId, userName) => {
         setPeers(prev => {
             const newPeers = { ...prev };
             delete newPeers[key];
-            console.log("Peers state after removing peer (key, newPeers):", key, newPeers); // LOG CLAVE: Estado de peers
+            console.log("Peers state after removing peer (key, newPeers):", key, newPeers); 
             return newPeers;
         });
     };
@@ -227,10 +254,11 @@ const useWebRTCLogic = (roomId, userName) => {
     };
 
     const shareScreen = async () => {
-        if (myScreenStream) { 
+        if (myScreenStream) { // Si ya se está compartiendo, detener
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
+            // Cierra las conexiones de pantalla compartida con todos los peers
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen')) {
                     removePeer(key.replace('_screen', ''), true);
@@ -246,9 +274,10 @@ const useWebRTCLogic = (roomId, userName) => {
             console.log("Stream de pantalla inicializado. Pistas de audio:", screenStream.getAudioTracks().length, "Pistas de video:", screenStream.getVideoTracks().length);
 
 
-            screenStream.getVideoTracks()[0].onended = () => { 
+            screenStream.getVideoTracks()[0].onended = () => { // Cuando el usuario detiene desde el navegador
                 setMyScreenStream(null);
                 socketRef.current.emit('stop-screen-share');
+                // Cierra las conexiones de pantalla compartida con todos los peers
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
                         removePeer(key.replace('_screen', ''), true);
@@ -256,24 +285,27 @@ const useWebRTCLogic = (roomId, userName) => {
                 });
             };
 
+            // Envía el stream de pantalla a todos los peers existentes
             Object.keys(peerConnections.current).forEach(peerKey => {
                 if (!peerKey.endsWith('_screen')) { // Solo enviar a peers que no sean de pantalla compartida
                     const peerId = peerKey;
                     if(myPeerRef.current && peerConnections.current[peerId]){
-                        console.log(`Enviando pantalla a ${peerId}`);
-                        const call = myPeerRef.current.call(peerId, screenStream, { metadata: { userName, isScreenShare: true } });
+                        console.log(`[PeerJS] Enviando pantalla a ${peerId}`);
+                        // Usa el nombre de usuario de la ref para la metadata de la pantalla compartida
+                        const call = myPeerRef.current.call(peerId, screenStream, { metadata: { userName: currentUserNameRef.current, isScreenShare: true } });
                         peerConnections.current[peerId + '_screen'] = call;
 
                         call.on('stream', (remoteScreenStream) => {
                             setPeers(prevPeers => {
                                 const newPeers = { ...prevPeers };
                                 const key = peerId + '_screen';
+                                // Asegura que el nombre se tome de la entrada principal del peer
                                 newPeers[key] = { 
                                     stream: remoteScreenStream, 
-                                    userName: prevPeers[peerId]?.userName || 'Desconocido', // Usa el nombre del peer principal
+                                    userName: prevPeers[peerId]?.userName || 'Usuario Desconocido', 
                                     isScreenShare: true 
                                 };
-                                console.log("Peers state after screen stream update (key, newPeers):", key, newPeers); // LOG CLAVE: Estado de peers
+                                console.log("[Peers State] Updated screen stream (key, newPeers):", key, newPeers);
                                 return newPeers;
                             });
                         });
@@ -293,7 +325,8 @@ const useWebRTCLogic = (roomId, userName) => {
     return {
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff,
         initializeStream, connect, cleanup,
-        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction
+        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction,
+        currentUserName: currentUserNameRef.current // Exporta el nombre actual para el contexto
     };
 };
 
@@ -325,17 +358,21 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 };
 
 const VideoGrid = () => {
-    const { myStream, myScreenStream, peers, userName } = useWebRTC();
+    const { myStream, myScreenStream, peers, currentUserName } = useWebRTC(); // Usa currentUserName del contexto
     
+    // Filtra los elementos de video para asegurar que no haya duplicados lógicos
     const videoElements = [
-        myStream && { id: 'my-video', stream: myStream, userName: `${userName} (Tú)`, isLocal: true, muted: true },
-        myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${userName} (Tú)`, isLocal: true, isScreenShare: true, muted: true },
-        ...Object.entries(peers).map(([key, { stream, userName, isScreenShare }]) => ({
-            id: key, stream, userName, isScreenShare
+        myStream && { id: 'my-video', stream: myStream, userName: `${currentUserName} (Tú)`, isLocal: true, muted: true },
+        myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserName} (Tú)`, isLocal: true, isScreenShare: true, muted: true },
+        ...Object.entries(peers).map(([key, peerData]) => ({
+            id: key, 
+            stream: peerData.stream, 
+            userName: peerData.userName, 
+            isScreenShare: peerData.isScreenShare
         }))
     ].filter(Boolean);
 
-    console.log("VideoGrid rendering. Video Elements:", videoElements); // LOG CLAVE: Elementos a renderizar
+    console.log("VideoGrid rendering. Video Elements:", videoElements); 
 
     const getGridLayoutClass = (count) => {
         if (count === 1) return styles.grid_1;
@@ -391,7 +428,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
 };
 
 const ChatSidebar = ({ isOpen, onClose }) => {
-    const { chatMessages, sendMessage, userName } = useWebRTC();
+    const { chatMessages, sendMessage, currentUserName } = useWebRTC(); // Usa currentUserName del contexto
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -420,7 +457,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
                     if (msg.type === 'system') {
                         return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
                     }
-                    const isMe = msg.user === userName; 
+                    const isMe = msg.user === currentUserName; // Compara con el currentUserName local
                     return (
                         <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
                             <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
@@ -552,14 +589,14 @@ const Lobby = ({ onJoin }) => {
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
 export default function App() {
     const [isJoined, setIsJoined] = useState(false);
-    const [userName, setUserName] = useState('');
-    const webRTCLogic = useWebRTCLogic('main-room', userName); 
+    const [userName, setUserName] = useState(''); // Estado local del nombre de usuario
+    const webRTCLogic = useWebRTCLogic('main-room'); // userName ya no se pasa como prop aquí
 
     const handleJoin = async (name, audioId, videoId) => {
-        setUserName(name); 
+        setUserName(name); // Actualiza el estado del nombre de usuario en App
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
-            webRTCLogic.connect(stream);
+            webRTCLogic.connect(stream, name); // Pasa el nombre actual a la función connect
             setIsJoined(true);
         }
     };
@@ -583,7 +620,7 @@ export default function App() {
     }
 
     return (
-        <WebRTCContext.Provider value={{ ...webRTCLogic, userName }}>
+        <WebRTCContext.Provider value={{ ...webRTCLogic, userName: webRTCLogic.currentUserName }}>
             <CallRoom onLeave={handleLeave} />
             {/* Contenedor para las notificaciones */}
             <ToastContainer /> 
