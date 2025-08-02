@@ -155,7 +155,27 @@ export default function App() {
     }).catch(err => {
         console.error("Error al obtener el stream local", err);
     });
+// Nuevo evento: un peer está compartiendo su pantalla
+socketRef.current.on('screen-share-started', (userId) => {
+  setPeerStreams(prev => {
+    const updatedPeers = { ...prev };
+    if (updatedPeers[userId]) {
+      updatedPeers[userId].isScreenShare = true;
+    }
+    return updatedPeers;
+  });
+});
 
+// Nuevo evento: un peer ha dejado de compartir su pantalla
+socketRef.current.on('screen-share-stopped', (userId) => {
+  setPeerStreams(prev => {
+    const updatedPeers = { ...prev };
+    if (updatedPeers[userId]) {
+      updatedPeers[userId].isScreenShare = false;
+    }
+    return updatedPeers;
+  });
+});
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
       if (myPeerRef.current) myPeerRef.current.destroy();
@@ -216,35 +236,73 @@ export default function App() {
   };
 
   const shareScreen = async () => {
+    
     try {
-      if (isScreenSharing) {
-        // Detener pantalla compartida
-        if (myScreenStream) {
-          myScreenStream.getTracks().forEach(track => track.stop());
-          setMyScreenStream(null);
-          setIsScreenSharing(false);
-          // Cerrar la llamada PeerJS asociada al screen share
-          // En esta implementación, PeerJS no maneja la desconexión de un solo stream fácilmente,
-          // así que simplemente lo eliminamos del estado local. Los otros clientes
-          // verán la desconexión del stream.
-        }
+      const shareScreen = async () => {
+    if (!myPeerRef.current || !socketRef.current) {
+        console.error("PeerJS o Socket.io no están inicializados.");
         return;
-      }
-      
-      // Compartir pantalla como un stream separado
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      setMyScreenStream(screenStream);
-      setIsScreenSharing(true);
+    }
 
-      // Enviar el nuevo stream a todos los peers existentes
-      for (const peerId in peersRef.current) {
-        myPeerRef.current.call(peerId, screenStream);
-      }
+    try {
+        if (isScreenSharing) {
+            // DETENER la pantalla compartida
+            if (myScreenStream) {
+                // Notificar a todos los demás que la pantalla ha dejado de compartirse
+                socketRef.current.emit('stop-screen-share');
 
-      screenStream.getVideoTracks()[0].onended = () => {
-        setMyScreenStream(null);
-        setIsScreenSharing(false);
-      };
+                // Obtener el stream de la cámara original
+                const cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined },
+                    audio: { deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined }
+                });
+
+                // Reemplazar la pista de video de la pantalla por la de la cámara en todas las llamadas
+                for (const peerId in peersRef.current) {
+                    const call = peersRef.current[peerId];
+                    const sender = call.peerConnection.getSenders().find(s => s.track.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(cameraStream.getVideoTracks()[0]);
+                    }
+                }
+
+                // Detener el stream de la pantalla compartida
+                myScreenStream.getTracks().forEach(track => track.stop());
+                
+                // Actualizar el estado local
+                setMyScreenStream(null);
+                setMyStream(cameraStream); // Reestablecer el stream de la cámara
+                setIsScreenSharing(false);
+            }
+        } else {
+            // INICIAR la pantalla compartida
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            
+            // Notificar a todos los demás que la pantalla ha empezado a compartirse
+            socketRef.current.emit('start-screen-share');
+
+            // Reemplazar el stream de video de la cámara por el de la pantalla en todas las llamadas
+            for (const peerId in peersRef.current) {
+                const call = peersRef.current[peerId];
+                const sender = call.peerConnection.getSenders().find(s => s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(screenStream.getVideoTracks()[0]);
+                }
+            }
+
+            // Actualizar el estado local
+            setMyScreenStream(screenStream);
+            setIsScreenSharing(true);
+            
+            // Escuchar el evento de finalización del stream (ej. si el usuario hace clic en "Dejar de compartir")
+            screenStream.getVideoTracks()[0].onended = () => {
+                shareScreen(); // Llama a la función para detener la compartición
+            };
+        }
+    } catch (err) {
+        console.error("Error al compartir la pantalla:", err);
+    }
+};
 
     } catch (err) {
       console.error("Error al compartir la pantalla:", err);
