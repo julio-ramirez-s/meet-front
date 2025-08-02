@@ -130,6 +130,7 @@ export default function App() {
           console.log('Nuevo usuario se unió: ' + remoteUserName + ' (' + userId + ')');
           setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
           setPeerUserNames(prev => ({ ...prev, [userId]: remoteUserName }));
+          connectToNewUser(userId, stream);
         });
 
         socketRef.current.on('all-users', (existingUsers) => {
