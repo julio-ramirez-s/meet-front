@@ -62,7 +62,7 @@ const useWebRTCLogic = (roomId, userName) => {
     // Conecta al servidor de señalización y a PeerJS
     const connect = (stream) => {
         // URL del servidor de señalización (debería estar en una variable de entorno)
-        const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // Reemplaza con tu servidor desplegado
+        const SERVER_URL = "https://your-webrtc-server.onrender.com"; // Reemplaza con tu servidor desplegado
 
         socketRef.current = io(SERVER_URL);
         myPeerRef.current = new Peer(undefined, {
@@ -318,9 +318,10 @@ const ChatSidebar = ({ isOpen, onClose }) => {
 
     const handleSend = (e) => {
         e.preventDefault();
-        sendMessage(message);
-        setChatMessages(prev => [...prev, { user: userName, text: message, id: Date.now(), type: 'me' }]);
-        setMessage('');
+        if (message.trim()) {
+            sendMessage(message);
+            setMessage('');
+        }
     };
 
     return (
@@ -336,7 +337,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
                     if (msg.type === 'system') {
                         return <div key={msg.id} className="text-center text-xs text-slate-400 italic">{msg.text}</div>;
                     }
-                    const isMe = msg.type === 'me' || msg.user === userName;
+                    const isMe = msg.user === userName;
                     return (
                         <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                             <div className={`p-2 rounded-lg max-w-xs ${isMe ? 'bg-blue-600' : 'bg-slate-700'}`}>
