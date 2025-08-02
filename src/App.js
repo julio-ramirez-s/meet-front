@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, createContext, useContext } from 'r
 import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Settings, Users, ArrowLeft } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
-
+import styles from './App.module.css'; 
 // --- CONTEXTO PARA WEBRTC ---
 const WebRTCContext = createContext();
 const useWebRTC = () => useContext(WebRTCContext);
@@ -219,9 +219,6 @@ const useWebRTCLogic = (roomId, userName) => {
         toggleMute, toggleVideo, sendMessage, shareScreen
     };
 };
-
-// --- COMPONENTES DE LA UI ---
-import styles from './App.module.css';
 
 const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, isLocal = false }) => {
     const videoRef = useRef();
