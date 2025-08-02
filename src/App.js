@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, ChevronRight, ChevronLeft } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
-import './App.css'; // Asegúrate de tener este archivo CSS
 
+// Componente para renderizar la tarjeta de video
 const VideoComponent = ({ stream, muted, userName }) => {
   const ref = useRef();
   useEffect(() => {
@@ -11,8 +11,9 @@ const VideoComponent = ({ stream, muted, userName }) => {
       ref.current.srcObject = stream;
     }
   }, [stream]);
+
   return (
-    <div className="relative w-full h-full bg-gray-900 rounded-lg overflow-hidden">
+    <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden shadow-xl border border-gray-700">
       <video
         ref={ref}
         playsInline
@@ -20,13 +21,14 @@ const VideoComponent = ({ stream, muted, userName }) => {
         muted={muted}
         className="w-full h-full object-cover transform scale-x-[-1]"
       />
-      <div className="absolute bottom-2 left-2 bg-gray-900 bg-opacity-70 text-white text-xs px-2 py-1 rounded-md">
+      <div className="absolute bottom-3 left-3 bg-gray-900 bg-opacity-70 text-white text-sm px-3 py-1 rounded-full font-semibold">
         {userName}
       </div>
     </div>
   );
 };
 
+// Componente principal de la aplicación
 export default function App() {
   const [roomId] = useState('main-room');
   const [myStream, setMyStream] = useState(null);
@@ -50,6 +52,7 @@ export default function App() {
   const chatMessagesRef = useRef();
   const peersRef = useRef({});
 
+  // Efecto para enumerar los dispositivos de audio y video disponibles
   useEffect(() => {
     const getDevices = async () => {
       try {
@@ -69,11 +72,11 @@ export default function App() {
     getDevices();
   }, []);
 
+  // Efecto para inicializar la conexión con el servidor y PeerJS
   useEffect(() => {
     if (!isJoined) return;
     if (myPeerRef.current || socketRef.current) return;
 
-    // Conexión al servidor a través de la variable de entorno de Render
     const SERVER_URL = process.env.REACT_APP_SERVER_URL;
 
     navigator.mediaDevices.getUserMedia({
@@ -89,10 +92,12 @@ export default function App() {
           path: '/peerjs/myapp',
           secure: new URL(SERVER_URL).protocol === 'https:'
         });
+
         myPeerRef.current.on('open', id => {
           console.log('Mi ID de Peer es: ' + id);
           socketRef.current.emit('join-room', roomId, id, userName);
         });
+
         myPeerRef.current.on('call', call => {
           console.log('Recibiendo llamada de: ' + call.peer);
           call.answer(stream);
@@ -108,11 +113,13 @@ export default function App() {
             setPeerStreams(prev => prev.filter(p => p.peerId !== call.peer));
           });
         });
+
         socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
           console.log('Nuevo usuario se unió: ' + remoteUserName + ' (' + userId + ')');
           setChatMessages(prev => [...prev, { user: 'Sistema', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
           setPeerUserNames(prev => ({ ...prev, [userId]: remoteUserName }));
         });
+
         socketRef.current.on('all-users', (existingUsers) => {
           console.log('Usuarios existentes en la sala:', existingUsers);
           existingUsers.forEach(user => {
@@ -122,6 +129,7 @@ export default function App() {
             }
           });
         });
+
         socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
           console.log('Usuario desconectado: ' + disconnectedUserName + ' (' + userId + ')');
           setChatMessages(prev => [...prev, { user: 'Sistema', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
@@ -132,24 +140,28 @@ export default function App() {
           }
           setPeerStreams(prev => prev.filter(p => p.peerId !== userId));
         });
+
         socketRef.current.on('createMessage', (message, user) => {
           setChatMessages(prev => [...prev, { user, text: message, id: Date.now() }]);
         });
     }).catch(err => {
         console.error("Error al obtener el stream local", err);
     });
+
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
       if (myPeerRef.current) myPeerRef.current.destroy();
     };
   }, [isJoined, roomId, userName, selectedVideoDeviceId, selectedAudioDeviceId]);
   
+  // Efecto para hacer scroll automático en el chat
   useEffect(() => {
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
   }, [chatMessages, isChatOpen]);
   
+  // Función para conectar con un nuevo usuario
   const connectToNewUser = (userId, stream) => {
     const call = myPeerRef.current.call(userId, stream);
     call.on('stream', userVideoStream => {
@@ -165,6 +177,7 @@ export default function App() {
     peersRef.current = { ...peersRef.current, [userId]: call };
   };
 
+  // Manejador para enviar mensajes de chat
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (message.trim() && userName) {
@@ -173,6 +186,7 @@ export default function App() {
     }
   };
 
+  // Funciones para alternar micrófono, video y compartir pantalla
   const toggleMute = () => {
     if (myStream) {
       const audioTrack = myStream.getAudioTracks()[0];
@@ -217,6 +231,8 @@ export default function App() {
       console.error("Error al compartir la pantalla:", err);
     }
   };
+
+  // Manejador para unirse a la llamada
   const handleJoinCall = (e) => {
     e.preventDefault();
     if (userName.trim()) {
@@ -224,11 +240,12 @@ export default function App() {
     }
   };
 
+  // Renderizar la pantalla de inicio si el usuario no se ha unido
   if (!isJoined) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white font-sans p-4">
-        <form onSubmit={handleJoinCall} className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md space-y-6">
-          <h1 className="text-3xl font-bold text-center mb-6">Únete a la Llamada</h1>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-950 text-white font-sans p-4">
+        <form onSubmit={handleJoinCall} className="bg-gray-900 p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-lg space-y-6">
+          <h1 className="text-4xl font-extrabold text-center text-blue-500 mb-6">Únete a la Llamada</h1>
           <div className="space-y-4">
             <div>
               <label htmlFor="userName" className="block text-sm font-medium text-gray-300">Tu nombre</label>
@@ -281,7 +298,7 @@ export default function App() {
           <button
             type="submit"
             disabled={!userName.trim() || isLoadingDevices}
-            className="w-full flex items-center justify-center p-3 text-lg font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors duration-200 disabled:bg-gray-500"
+            className="w-full flex items-center justify-center p-3 text-lg font-semibold rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed"
           >
             <LogIn className="mr-2" />
             Unirse a la Llamada
@@ -291,26 +308,33 @@ export default function App() {
     );
   }
 
+  // Renderizar la interfaz de la videollamada
+  const videoElements = [
+    myStream && <VideoComponent key="my-video" stream={myStream} muted={true} userName={userName} />,
+    ...peerStreams.map((peer) => (
+      <VideoComponent key={peer.peerId} stream={peer.stream} userName={peerUserNames[peer.peerId] || peer.peerId} />
+    ))
+  ].filter(Boolean);
+
+  const gridClass = videoElements.length > 2 ? `grid-cols-1 md:grid-cols-2 lg:grid-cols-3` : `grid-cols-1 md:grid-cols-${videoElements.length}`;
+
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-900 text-white font-sans">
-      <main className={`flex flex-col flex-grow ${isChatOpen ? 'md:mr-80' : ''}`}>
-        <div id="video-grid" className="flex-grow grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-          {myStream && <VideoComponent stream={myStream} muted={true} userName={userName} />}
-          {peerStreams.map((peer) => (
-            <VideoComponent key={peer.peerId} stream={peer.stream} userName={peerUserNames[peer.peerId] || peer.peerId} />
-          ))}
+    <div className="flex h-screen bg-gray-950 text-white font-sans overflow-hidden">
+      <main className={`flex flex-col flex-grow relative transition-all duration-300 ease-in-out`}>
+        <div id="video-grid" className={`flex-grow grid ${gridClass} gap-4 p-4 md:p-8 overflow-y-auto`}>
+          {videoElements}
         </div>
-        <footer className="bg-gray-800 p-4 flex justify-center items-center space-x-2 md:space-x-4">
+        <footer className="bg-gray-900 p-4 flex justify-center items-center flex-wrap space-x-2 md:space-x-4 sticky bottom-0">
           <button
             onClick={toggleMute}
-            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isMuted ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
+            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isMuted ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}
           >
             {isMuted ? <MicOff /> : <Mic />}
             <span className="hidden md:inline">{isMuted ? 'Activar' : 'Silenciar'}</span>
           </button>
           <button
             onClick={toggleVideo}
-            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isVideoOff ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-600 hover:bg-gray-500'}`}
+            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isVideoOff ? 'bg-red-600 hover:bg-red-500' : 'bg-gray-700 hover:bg-gray-600'}`}
           >
             {isVideoOff ? <VideoOff /> : <Video />}
             <span className="hidden md:inline">{isVideoOff ? 'Activar' : 'Detener'}</span>
@@ -324,18 +348,21 @@ export default function App() {
           </button>
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
-            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isChatOpen ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-gray-600 hover:bg-gray-500'}`}
+            className={`px-4 py-2 rounded-full text-xs md:text-base transition-colors duration-200 shadow-md flex items-center justify-center space-x-2 ${isChatOpen ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-gray-700 hover:bg-gray-600'}`}
           >
             <MessageSquare />
             <span className="hidden md:inline">Chat</span>
+            <span className="md:hidden">{isChatOpen ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</span>
           </button>
         </footer>
       </main>
-      <aside className={`fixed top-0 right-0 h-full w-full md:w-80 bg-gray-800 flex flex-col transform transition-transform duration-300 ease-in-out z-50 ${isChatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="p-4 flex items-center justify-between border-b border-gray-700">
-          <h2 className="text-lg md:text-xl font-bold">Chat</h2>
-          <button onClick={() => setIsChatOpen(false)} className="text-white hover:text-gray-400">
-            <X />
+      
+      {/* Sidebar para el chat, se muestra/oculta en móviles */}
+      <aside className={`fixed top-0 right-0 h-full w-full md:w-96 bg-gray-900 flex flex-col transform transition-transform duration-300 ease-in-out z-50 ${isChatOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="p-4 flex items-center justify-between border-b border-gray-700 bg-gray-900">
+          <h2 className="text-xl font-bold">Chat</h2>
+          <button onClick={() => setIsChatOpen(false)} className="text-white hover:text-gray-400 p-2 rounded-full hover:bg-gray-700">
+            <X size={20} />
           </button>
         </div>
         <div ref={chatMessagesRef} className="flex-grow p-4 overflow-y-auto custom-scrollbar">
@@ -343,20 +370,20 @@ export default function App() {
             {chatMessages.map((msg) => (
               <div key={msg.id} className="flex flex-col">
                 <span className="font-semibold text-blue-400 text-xs">{msg.user}:</span>
-                <span className="break-words text-white text-sm">{msg.text}</span>
+                <span className="break-words text-gray-200 text-sm">{msg.text}</span>
               </div>
             ))}
           </div>
         </div>
-        <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex space-x-2">
+        <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-700 flex space-x-2 bg-gray-900">
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="flex-grow p-2 bg-gray-700 rounded-lg focus:outline-none text-white placeholder-gray-400"
+            className="flex-grow p-3 bg-gray-800 rounded-lg focus:outline-none text-white placeholder-gray-400 border border-gray-700"
             placeholder="Escribe un mensaje..."
           />
-          <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-2 rounded-lg text-white">
+          <button type="submit" className="bg-blue-600 hover:bg-blue-500 p-3 rounded-lg text-white transition-colors duration-200">
             <Send size={20} />
           </button>
         </form>
@@ -364,3 +391,4 @@ export default function App() {
     </div>
   );
 }
+
