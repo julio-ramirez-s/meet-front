@@ -292,9 +292,10 @@ const useWebRTCLogic = (roomId) => {
             // Envía el stream de pantalla a todos los peers existentes 
             Object.keys(peerConnections.current).forEach(peerKey => { 
                 // Asegúrate de que no es una conexión de pantalla anterior (que no sea un stream de pantalla) 
-                if (!peerKey.endsWith('_screen')) {  
-                    const peerId = peerKey; // Este es el peerId de la cámara del otro usuario 
-                    if(myPeerRef.current && peerConnections.current[peerId]){ 
+                if (!peerKey.endsWith('_screen')) {
+                    const peerId = peerKey;
+                    if (peerId === myPeerRef.current?.id) return; {// 👈 NO LLAMARTE A TI MISMO
+
                         console.log(`[PeerJS] Enviando pantalla a ${peerId}`); 
                         // Usa el nombre de usuario de la ref para la metadata de la pantalla compartida 
                         const call = myPeerRef.current.call(peerId, screenStream, { metadata: { userName: currentUserNameRef.current, isScreenShare: true } }); 
