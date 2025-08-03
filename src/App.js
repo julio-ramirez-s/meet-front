@@ -96,27 +96,24 @@ const useWebRTCLogic = (roomId) => {
             } else {
                  call.answer(stream); 
             }
-            call.on('stream', (remoteScreenStream) => {
-                // ⚠️ Evita agregar el stream propio de pantalla al estado de peers
-                if (peerId === myPeerRef.current.id) {
-                    console.log("[ScreenShare] Ignorando stream de pantalla propio.");
-                    return;
-                }
 
+            call.on('stream', (remoteStream) => {
+                console.log(`[PeerJS] Stream received from: ${peerId}. Name from metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
                 setPeers(prevPeers => {
                     const newPeers = { ...prevPeers };
-                    const key = peerId + '_screen';
-                    console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers);
+                    const key = peerId + (metadata.isScreenShare ? '_screen' : '');
+
+                    console.log(`[Peers State DEBUG] Before update for key ${key} (incoming stream):`, prevPeers); 
+                    // Actualiza o añade el peer, asegurando que el nombre se use desde los metadatos
                     newPeers[key] = { 
-                        stream: remoteScreenStream, 
-                        userName: prevPeers[peerId]?.userName || 'Usuario Desconocido', 
-                        isScreenShare: true 
+                        stream: remoteStream, 
+                        userName: metadata.userName || 'Usuario Desconocido', // Usa metadata.userName
+                        isScreenShare: metadata.isScreenShare 
                     };
-                    console.log(`[Peers State DEBUG] After update for screen stream (from my share) ${key}:`, newPeers);
+                    console.log(`[Peers State DEBUG] After update for key ${key} (incoming stream):`, newPeers); 
                     return newPeers;
                 });
             });
-
             
             call.on('close', () => {
                 console.log(`[PeerJS] Llamada cerrada con ${peerId}`);
@@ -304,11 +301,16 @@ const useWebRTCLogic = (roomId) => {
                         peerConnections.current[peerId + '_screen'] = call;
 
                         call.on('stream', (remoteScreenStream) => {
+                            // Evitar duplicado: el usuario que comparte pantalla no debe verse a sí mismo duplicado
+                            if (peerId === myPeerRef.current?.id) {
+                                console.log("[ScreenShare] Ignorando stream de pantalla propio.");
+                                return;
+                            }
+
                             setPeers(prevPeers => {
                                 const newPeers = { ...prevPeers };
                                 const key = peerId + '_screen';
-                                console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers); // LOG CLAVE
-                                // Asegura que el nombre se tome de la entrada principal del peer
+                                console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers);
                                 newPeers[key] = { 
                                     stream: remoteScreenStream, 
                                     userName: prevPeers[peerId]?.userName || 'Usuario Desconocido', 
@@ -318,6 +320,7 @@ const useWebRTCLogic = (roomId) => {
                                 return newPeers;
                             });
                         });
+
                         call.on('close', () => {
                             removePeer(peerId, true);
                         });
