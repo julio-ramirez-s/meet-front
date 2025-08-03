@@ -204,6 +204,11 @@ const useWebRTCLogic = (roomId) => {
             users.forEach(existingUser => {
                 if (existingUser.userId !== myPeerRef.current.id) {
                     connectToNewUser(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current);
+                    
+                    // CORRECCIÓN: Si el usuario ya está compartiendo pantalla, solicita ese stream.
+                    if (existingUser.isScreenShare) {
+                        connectToNewUser(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current, true);
+                    }
                 }
             });
         });
@@ -222,10 +227,7 @@ const useWebRTCLogic = (roomId) => {
             connectToNewUser(userId, remoteUserName, stream, currentUserNameRef.current);
 
             // También verifica si el usuario se ha unido y ha solicitado una pantalla compartida
-            const screenshares = roomUsers.filter(user => user.isScreenShare);
-            if(screenshares.length > 0) {
-                toast.info("Hay pantallas compartidas disponibles para ver. Haz clic en el botón 'Ver Pantallas'.");
-            }
+            // Se elimina la verificación aquí, ahora se hace en el evento `room-users` para nuevos usuarios.
         });
 
         socketRef.current.on('user-disconnected', (userId, disconnectedUserName) => {
@@ -270,6 +272,11 @@ const useWebRTCLogic = (roomId) => {
             
             // Actualizar la lista de usuarios de la sala
             setRoomUsers(prev => prev.map(user => user.userId === userId ? {...user, isScreenShare: true} : user));
+            // Conectar al nuevo stream de pantalla
+            // Los usuarios existentes ahora se conectan al nuevo stream de pantalla.
+            if(myPeerRef.current.id !== userId) {
+                connectToNewUser(userId, remoteUserName, stream, currentUserNameRef.current, true);
+            }
         });
 
         socketRef.current.on('user-stopped-screen-share', (userId) => {
