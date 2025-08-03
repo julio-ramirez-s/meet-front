@@ -12,7 +12,7 @@ const WebRTCContext = createContext();
 const useWebRTC = () => useContext(WebRTCContext);
 
 // --- HOOK PERSONALIZADO PARA LA LÓGICA DE WEBRTC ---
-const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
+const useWebRTCLogic = (roomId) => { 
     const [myStream, setMyStream] = useState(null);
     const [myScreenStream, setMyScreenStream] = useState(null);
     const [peers, setPeers] = useState({}); 
@@ -103,13 +103,14 @@ const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
                     const newPeers = { ...prevPeers };
                     const key = peerId + (metadata.isScreenShare ? '_screen' : '');
 
+                    console.log(`[Peers State DEBUG] Before update for key ${key} (incoming stream):`, prevPeers); // LOG CLAVE
                     // Actualiza o añade el peer, asegurando que el nombre se use desde los metadatos
                     newPeers[key] = { 
                         stream: remoteStream, 
                         userName: metadata.userName || 'Usuario Desconocido', // Usa metadata.userName
                         isScreenShare: metadata.isScreenShare 
                     };
-                    console.log("[Peers State] Updated peer stream (key, newPeers):", key, newPeers); 
+                    console.log(`[Peers State DEBUG] After update for key ${key} (incoming stream):`, newPeers); // LOG CLAVE
                     return newPeers;
                 });
             });
@@ -141,7 +142,7 @@ const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
                     // Si el peer ya existe (ej. por una llamada anterior), actualiza el nombre
                     newPeers[userId] = { ...newPeers[userId], userName: remoteUserName };
                 }
-                console.log(`[Peers State] Added/Updated user ${remoteUserName} to peers (initial/join):`, newPeers);
+                console.log(`[Peers State DEBUG] Added/Updated user ${remoteUserName} to peers (initial/join):`, newPeers);
                 return newPeers;
             });
 
@@ -191,14 +192,15 @@ const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
             console.log(`[PeerJS] Stream received from my call to: ${remoteUserName} (${peerId})`);
             setPeers(prevPeers => {
                 const newPeers = { ...prevPeers };
-                // Actualiza el stream para el peer ya añadido por 'user-joined' o crea uno si no existe
-                newPeers[peerId] = { 
-                    ...newPeers[peerId], 
+                const key = peerId; 
+                console.log(`[Peers State DEBUG] Before update for my call to ${peerId} (stream received):`, prevPeers); // LOG CLAVE
+                newPeers[key] = { 
+                    ...newPeers[key], 
                     stream: remoteStream, 
                     userName: remoteUserName, // Asegura que se use el nombre del usuario remoto
                     isScreenShare: false 
                 };
-                console.log("[Peers State] Updated peer stream from my call (key, newPeers):", peerId, newPeers);
+                console.log(`[Peers State DEBUG] After update for my call to ${peerId} (stream received):`, newPeers); // LOG CLAVE
                 return newPeers;
             });
         });
@@ -287,8 +289,9 @@ const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
 
             // Envía el stream de pantalla a todos los peers existentes
             Object.keys(peerConnections.current).forEach(peerKey => {
-                if (!peerKey.endsWith('_screen')) { // Solo enviar a peers que no sean de pantalla compartida
-                    const peerId = peerKey;
+                // Asegúrate de que no es una conexión de pantalla anterior (que no sea un stream de pantalla)
+                if (!peerKey.endsWith('_screen')) { 
+                    const peerId = peerKey; // Este es el peerId de la cámara del otro usuario
                     if(myPeerRef.current && peerConnections.current[peerId]){
                         console.log(`[PeerJS] Enviando pantalla a ${peerId}`);
                         // Usa el nombre de usuario de la ref para la metadata de la pantalla compartida
@@ -299,13 +302,14 @@ const useWebRTCLogic = (roomId) => { // userName ya no es un prop directo aquí
                             setPeers(prevPeers => {
                                 const newPeers = { ...prevPeers };
                                 const key = peerId + '_screen';
+                                console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers); // LOG CLAVE
                                 // Asegura que el nombre se tome de la entrada principal del peer
                                 newPeers[key] = { 
                                     stream: remoteScreenStream, 
                                     userName: prevPeers[peerId]?.userName || 'Usuario Desconocido', 
                                     isScreenShare: true 
                                 };
-                                console.log("[Peers State] Updated screen stream (key, newPeers):", key, newPeers);
+                                console.log(`[Peers State DEBUG] After update for screen stream (from my share) ${key}:`, newPeers);
                                 return newPeers;
                             });
                         });
@@ -358,7 +362,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 };
 
 const VideoGrid = () => {
-    const { myStream, myScreenStream, peers, currentUserName } = useWebRTC(); // Usa currentUserName del contexto
+    const { myStream, myScreenStream, peers, currentUserName } = useWebRTC(); 
     
     // Filtra los elementos de video para asegurar que no haya duplicados lógicos
     const videoElements = [
@@ -373,6 +377,10 @@ const VideoGrid = () => {
     ].filter(Boolean);
 
     console.log("VideoGrid rendering. Video Elements:", videoElements); 
+    videoElements.forEach(v => {
+        console.log(`  ID: ${v.id}, Name: ${v.userName}, isScreenShare: ${v.isScreenShare}, isLocal: ${v.isLocal}`);
+    });
+
 
     const getGridLayoutClass = (count) => {
         if (count === 1) return styles.grid_1;
@@ -428,7 +436,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
 };
 
 const ChatSidebar = ({ isOpen, onClose }) => {
-    const { chatMessages, sendMessage, currentUserName } = useWebRTC(); // Usa currentUserName del contexto
+    const { chatMessages, sendMessage, currentUserName } = useWebRTC(); 
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -457,7 +465,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
                     if (msg.type === 'system') {
                         return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
                     }
-                    const isMe = msg.user === currentUserName; // Compara con el currentUserName local
+                    const isMe = msg.user === currentUserName; 
                     return (
                         <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
                             <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
@@ -590,10 +598,10 @@ const Lobby = ({ onJoin }) => {
 export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState(''); // Estado local del nombre de usuario
-    const webRTCLogic = useWebRTCLogic('main-room'); // userName ya no se pasa como prop aquí
+    const webRTCLogic = useWebRTCLogic('main-room'); 
 
     const handleJoin = async (name, audioId, videoId) => {
-        setUserName(name); // Actualiza el estado del nombre de usuario en App
+        setUserName(name); 
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
             webRTCLogic.connect(stream, name); // Pasa el nombre actual a la función connect
