@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Settings, Users, ArrowLeft, ThumbsUp, Heart, PartyPopper } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -225,24 +225,24 @@ const useWebRTCLogic = (roomId) => {
 
             if (isScreenShare) {
                  setPeers(prevPeers => ({
-                    ...prevPeers,
-                    'screen-share': {
-                        stream: remoteStream,
-                        userName: remoteUserName,
-                        isScreenShare: true
-                    }
-                }));
-                screenSharePeer.current = peerId;
+                     ...prevPeers,
+                     'screen-share': {
+                         stream: remoteStream,
+                         userName: remoteUserName,
+                         isScreenShare: true
+                     }
+                 }));
+                 screenSharePeer.current = peerId;
             } else {
                  setPeers(prevPeers => ({
-                    ...prevPeers,
-                    [peerId]: {
-                        ...prevPeers[peerId],
-                        stream: remoteStream,
-                        userName: remoteUserName,
-                        isScreenShare: false
-                    }
-                }));
+                     ...prevPeers,
+                     [peerId]: {
+                         ...prevPeers[peerId],
+                         stream: remoteStream,
+                         userName: remoteUserName,
+                         isScreenShare: false
+                     }
+                 }));
             }
         });
 
@@ -469,6 +469,27 @@ const VideoGrid = () => {
 
 const Controls = ({ onToggleChat, onLeave }) => {
     const { toggleMute, toggleVideo, shareScreen, sendReaction, isMuted, isVideoOff, myScreenStream } = useWebRTC();
+    const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+    const emojiPickerRef = useRef(null);
+    const emojis = ['👍', '❤️', '🎉', '😂', '🔥', '👏', '😢', '🤔', '👀', '🥳'];
+
+    const handleSendReaction = (emoji) => {
+        sendReaction(emoji);
+        setIsEmojiPickerOpen(false);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+                setIsEmojiPickerOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [emojiPickerRef]);
+
     return (
         <footer className={styles.controlsFooter}>
             <button onClick={toggleMute} className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ''}`}>
@@ -483,16 +504,26 @@ const Controls = ({ onToggleChat, onLeave }) => {
             <button onClick={onToggleChat} className={styles.controlButton}>
                 <MessageSquare size={20} />
             </button>
-            <div className={styles.reactionButtons}>
-                <button onClick={() => sendReaction('👍')} className={styles.reactionButton}>
-                    <ThumbsUp size={20} />
-                </button>
-                <button onClick={() => sendReaction('❤️')} className={styles.reactionButton}>
-                    <Heart size={20} />
-                </button>
-                <button onClick={() => sendReaction('🎉')} className={styles.reactionButton}>
+            <div className={styles.reactionContainer} ref={emojiPickerRef}>
+                <button 
+                    onClick={() => setIsEmojiPickerOpen(prev => !prev)} 
+                    className={`${styles.controlButton} ${isEmojiPickerOpen ? styles.controlButtonActive : ''}`}
+                >
                     <PartyPopper size={20} />
                 </button>
+                {isEmojiPickerOpen && (
+                    <div className={styles.emojiPicker}>
+                        {emojis.map((emoji) => (
+                            <button 
+                                key={emoji} 
+                                onClick={() => handleSendReaction(emoji)} 
+                                className={styles.emojiButton}
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
