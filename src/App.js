@@ -623,13 +623,14 @@ export default function App() {
         setUserName(''); 
     }; 
     
-    // Asegurarse de limpiar al cerrar la pestaña 
-    useEffect(() => { 
-        window.addEventListener('beforeunload', webRTCLogic.cleanup); 
-        return () => { 
-            window.removeEventListener('beforeunload', webRTCを一cleanup); 
-        }; 
-    }, []); 
+    // Asegurarse de limpiar al cerrar la pestaña
+
+    useEffect(() => {
+        window.addEventListener('beforeunload', webRTCLogic.cleanup);
+        return () => {
+        window.removeEventListener('beforeunload', webRTCLogic.cleanup);
+        };
+    }, []);
 
     if (!isJoined) { 
         return <Lobby onJoin={handleJoin} />; 
