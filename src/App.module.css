@@ -5,7 +5,7 @@ body {
 .mainContainer {
     display: flex;
     height: 100vh;
-    background-color: #0c0d11; /* bg-slate-950 */
+    background-color: #1e293b; /* bg-slate-950 */
     color: #fff;
     font-family: sans-serif;
     overflow: hidden;
@@ -19,10 +19,57 @@ body {
     overflow: hidden; /* Evita que el contenido se desborde */
 }
 
+/* Estilos para el contenedor de reacciones y el menú de emojis */
+.reactionContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.emojiPicker {
+    position: absolute;
+    bottom: calc(100% + 10px); /* Posicionado encima del botón */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #3e3e4a;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    z-index: 1000;
+    width: 200px;
+}
+
+.emojiButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.emojiButton:hover {
+    background-color: #555566;
+    transform: scale(1.1);
+}
+
+.emojiButton:active {
+    transform: scale(0.95);
+}
+
+/* Estilos para que el botón de reacción se vea activo */
+.controlButtonActive {
+    background-color: #4a4a58;
+}
+
 /* ---------------- Video Grid ---------------- */
 
 .videoGridContainer {
     display: flex;
+    background-color: #1e293b; 
     grid-gap: 2rem;
     align-content: center;
     align-items: center;
