@@ -19,9 +19,6 @@ const useWebRTCLogic = (roomId) => {
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     
-    // Lista de usuarios en la sala
-    const [roomUsers, setRoomUsers] = useState([]);
-    
     // Estado para el stream de pantalla compartida remota activa
     const [remoteScreenStream, setRemoteScreenStream] = useState(null);
 
@@ -70,34 +67,26 @@ const useWebRTCLogic = (roomId) => {
         }
     };
     
-    // Función para conectar a un nuevo usuario.
-    const connectToNewUser = (peerId, remoteUserName, stream, localUserName, isScreenShare = false) => {
+    // Función para conectar a un usuario con un tipo de stream específico.
+    const connectToPeer = (peerId, remoteUserName, stream, localUserName, streamType) => {
         if (!myPeerRef.current || !stream) return;
 
-        // Si ya tenemos una conexión con este usuario/stream, no hacemos nada
-        const callKey = peerId + (isScreenShare ? '_screen' : '_video');
+        const callKey = peerId + '_' + streamType;
         if (peerConnections.current[callKey]) {
-            console.log(`[PeerJS] Una conexión con ${callKey} ya existe. Ignorando.`);
+            console.log(`[PeerJS] Una conexión ${callKey} ya existe. Ignorando.`);
             return;
         }
 
-        const metadata = { userName: localUserName, isScreenShare };
+        const metadata = { userName: localUserName, streamType };
         console.log(`[PeerJS] Llamando a nuevo usuario ${remoteUserName} (${peerId}) con mi metadata:`, metadata);
 
         const call = myPeerRef.current.call(peerId, stream, { metadata });
 
         call.on('stream', (remoteStream) => {
-            console.log(`[PeerJS] Stream recibido de mi llamada a: ${remoteUserName} (${peerId}). Es pantalla: ${isScreenShare}`);
-
-            if (isScreenShare) {
-                setRemoteScreenStream({
-                    stream: remoteStream,
-                    userName: remoteUserName,
-                    isScreenShare: true,
-                    peerId: peerId
-                });
-                screenSharePeer.current = peerId;
-            } else {
+            console.log(`[PeerJS] Stream de tipo '${streamType}' recibido de: ${remoteUserName} (${peerId}).`);
+            
+            // Si el stream que recibimos es de tipo video, lo añadimos a la lista de peers.
+            if (streamType === 'video') {
                 setPeers(prevPeers => ({
                     ...prevPeers,
                     [peerId]: {
@@ -107,12 +96,21 @@ const useWebRTCLogic = (roomId) => {
                         isScreenShare: false
                     }
                 }));
+            } else if (streamType === 'screen') {
+                // Si el stream que recibimos es de tipo pantalla, lo mostramos en el contenedor principal.
+                setRemoteScreenStream({
+                    stream: remoteStream,
+                    userName: remoteUserName,
+                    isScreenShare: true,
+                    peerId: peerId
+                });
+                screenSharePeer.current = peerId;
             }
         });
 
         call.on('close', () => {
-            console.log(`[PeerJS] Mi llamada con ${peerId} (${isScreenShare ? 'pantalla' : 'cámara'}) se cerró.`);
-            if (isScreenShare) {
+            console.log(`[PeerJS] Mi llamada con ${peerId} (${streamType}) se cerró.`);
+            if (streamType === 'screen') {
                 removeScreenShare(peerId);
             } else {
                 removePeer(peerId);
@@ -120,12 +118,12 @@ const useWebRTCLogic = (roomId) => {
         });
         
         call.on('error', (err) => {
-            console.error(`[PeerJS] Error en la llamada con ${peerId} (${isScreenShare ? 'pantalla' : 'cámara'}):`, err);
+            console.error(`[PeerJS] Error en la llamada con ${peerId} (${streamType}):`, err);
         });
 
         peerConnections.current[callKey] = call;
     };
-    
+
     const connect = (stream, currentUserName) => {
         currentUserNameRef.current = currentUserName;
 
@@ -153,7 +151,7 @@ const useWebRTCLogic = (roomId) => {
             const { peer: peerId, metadata } = call;
             console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
 
-            const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
+            const streamToSend = metadata.streamType === 'screen' ? myScreenStream : myStream;
             if (streamToSend) {
                 call.answer(streamToSend);
             } else {
@@ -161,9 +159,9 @@ const useWebRTCLogic = (roomId) => {
             }
 
             call.on('stream', (remoteStream) => {
-                console.log(`[PeerJS] Stream recibido de: ${peerId}. Nombre de usuario: ${metadata.userName}, ¿Es pantalla?: ${metadata.isScreenShare}`);
+                console.log(`[PeerJS] Stream recibido de: ${peerId}. Nombre: ${metadata.userName}, Tipo: ${metadata.streamType}`);
 
-                if (metadata.isScreenShare) {
+                if (metadata.streamType === 'screen') {
                      setRemoteScreenStream({
                         stream: remoteStream,
                         userName: metadata.userName || 'Usuario Desconocido',
@@ -171,7 +169,7 @@ const useWebRTCLogic = (roomId) => {
                         peerId: peerId
                     });
                     screenSharePeer.current = peerId;
-                } else {
+                } else if (metadata.streamType === 'video') {
                     setPeers(prevPeers => {
                         const newPeers = { ...prevPeers };
                         newPeers[peerId] = {
@@ -187,7 +185,7 @@ const useWebRTCLogic = (roomId) => {
 
             call.on('close', () => {
                 console.log(`[PeerJS] Llamada con ${peerId} cerrada.`);
-                if (metadata.isScreenShare) {
+                if (metadata.streamType === 'screen') {
                     removeScreenShare(peerId);
                 } else {
                     removePeer(peerId);
@@ -198,23 +196,23 @@ const useWebRTCLogic = (roomId) => {
                 console.error(`[PeerJS] Error en la llamada entrante de ${peerId}:`, err);
             });
 
-            peerConnections.current[peerId + (metadata.isScreenShare ? '_screen' : '_video')] = call;
+            peerConnections.current[peerId + '_' + metadata.streamType] = call;
         });
 
         // Cuando un nuevo usuario se une, recibe la lista de todos los usuarios
         // y se conecta automáticamente a sus streams de video y pantalla si están compartiendo.
         socketRef.current.on('room-users', ({ users }) => {
             console.log(`[Socket] Lista de usuarios existentes recibida:`, users);
-            setRoomUsers(users);
             
             users.forEach(existingUser => {
                 if (existingUser.userId !== myPeerRef.current.id) {
                     // Llamada para el stream de video
-                    connectToNewUser(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current, false);
+                    connectToPeer(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current, 'video');
                     
                     // Si el usuario ya está compartiendo su pantalla, también nos conectamos a ese stream
                     if (existingUser.isScreenShare) {
-                        connectToNewUser(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current, true);
+                        // Llamamos al usuario para obtener el stream de su pantalla
+                        connectToPeer(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current, 'screen');
                     }
                 }
             });
@@ -231,11 +229,11 @@ const useWebRTCLogic = (roomId) => {
             }));
 
             // Un usuario existente llama al nuevo usuario con su stream de video.
-            connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current, false);
+            connectToPeer(userId, remoteUserName, myStream, currentUserNameRef.current, 'video');
 
             // Si el usuario existente está compartiendo su pantalla, también llama al nuevo usuario con el stream de pantalla.
             if (myScreenStream) {
-                connectToNewUser(userId, remoteUserName, myScreenStream, currentUserNameRef.current, true);
+                connectToPeer(userId, remoteUserName, myScreenStream, currentUserNameRef.current, 'screen');
             }
         });
 
@@ -280,7 +278,7 @@ const useWebRTCLogic = (roomId) => {
             
             // Si no soy yo quien comparte y no estoy ya viendo una pantalla, me conecto.
             if(myPeerRef.current.id !== userId && !remoteScreenStream) {
-                connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current, true);
+                connectToPeer(userId, remoteUserName, myStream, currentUserNameRef.current, 'screen');
             }
         });
 
@@ -290,8 +288,6 @@ const useWebRTCLogic = (roomId) => {
                 setRemoteScreenStream(null);
             }
             removeScreenShare(userId);
-            // Actualizar la lista de usuarios de la sala
-            setRoomUsers(prev => prev.map(user => user.userId === userId ? {...user, isScreenShare: false} : user));
         });
     };
 
@@ -370,7 +366,7 @@ const useWebRTCLogic = (roomId) => {
             Object.keys(peers).forEach(peerId => {
                 const peerData = peers[peerId];
                 console.log(`[Compartir Pantalla] Llamando a peer ${peerId} para compartir mi pantalla...`);
-                connectToNewUser(peerId, peerData.userName, screenStream, currentUserNameRef.current, true);
+                connectToPeer(peerId, peerData.userName, screenStream, currentUserNameRef.current, 'screen');
             });
 
         } catch (err) {
@@ -384,7 +380,7 @@ const useWebRTCLogic = (roomId) => {
         initializeStream, connect, cleanup,
         toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction,
         currentUserName: currentUserNameRef.current,
-        roomUsers, remoteScreenStream
+        remoteScreenStream
     };
 };
 
@@ -708,6 +704,7 @@ const Lobby = ({ onJoin }) => {
         </div>
     );
 };
+
 
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
 export default function App() {
