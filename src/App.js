@@ -3,16 +3,14 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';import styles from './App.module.css';
+import 'react-toastify/dist/Reactify.css';
+import styles from './App.module.css';
 
 // --- CONTEXTO PARA WEBRTC ---
-// Crea un contexto para compartir el estado global de WebRTC
 const WebRTCContext = createContext();
-// Hook personalizado para acceder al contexto de WebRTC
 const useWebRTC = () => useContext(WebRTCContext);
 
 // --- HOOK PERSONALIZADO PARA LA LÓGICA DE WEBRTC ---
-// Este hook encapsula toda la lógica de conexión y gestión de la videollamada
 const useWebRTCLogic = (roomId) => {
     const [myStream, setMyStream] = useState(null);
     const [myScreenStream, setMyScreenStream] = useState(null);
@@ -28,7 +26,6 @@ const useWebRTCLogic = (roomId) => {
     const currentUserNameRef = useRef('');
     const screenSharePeer = useRef(null);
 
-    // Función para limpiar todas las conexiones y streams
     const cleanup = () => {
         console.log("Limpiando conexiones...");
         if (myStream) {
@@ -50,7 +47,6 @@ const useWebRTCLogic = (roomId) => {
         screenSharePeer.current = null;
     };
 
-    // Inicializa el stream local del usuario (asegurando audio y video)
     const initializeStream = async (audioDeviceId, videoDeviceId) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -67,16 +63,12 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
-    // Conecta al servidor de señalización y a PeerJS
     const connect = (stream, currentUserName) => {
         currentUserNameRef.current = currentUserName;
 
-        // La URL del servidor de señalización
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com";
 
-        // Conecta al servidor de sockets
         socketRef.current = io(SERVER_URL);
-        // Inicializa PeerJS para las conexiones P2P
         myPeerRef.current = new Peer(undefined, {
             host: new URL(SERVER_URL).hostname,
             port: new URL(SERVER_URL).port || 443,
@@ -84,14 +76,11 @@ const useWebRTCLogic = (roomId) => {
             secure: true,
         });
 
-        // Evento 'open' de PeerJS: cuando el peer local está listo
         myPeerRef.current.on('open', (peerId) => {
             console.log('Mi ID de Peer es: ' + peerId);
-            // Emite al servidor de sockets que el usuario se ha unido
             socketRef.current.emit('join-room', roomId, peerId, currentUserNameRef.current);
         });
 
-        // Escucha llamadas entrantes de otros usuarios
         myPeerRef.current.on('call', (call) => {
             const { peer: peerId, metadata } = call;
             console.log(`[PeerJS] Incoming call from ${peerId}. Metadata received:`, metadata);
@@ -144,7 +133,6 @@ const useWebRTCLogic = (roomId) => {
             peerConnections.current[peerId + (metadata.isScreenShare ? '_screen' : '')] = call;
         });
 
-        // Escucha eventos del servidor de sockets
         socketRef.current.on('user-joined', ({ userId, userName: remoteUserName }) => {
             console.log(`[Socket] Usuario ${remoteUserName} (${userId}) se unió.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${remoteUserName} se ha unido.`, id: Date.now() }]);
@@ -208,7 +196,6 @@ const useWebRTCLogic = (roomId) => {
         });
     };
 
-    // Realiza una llamada P2P a un nuevo usuario
     const connectToNewUser = (peerId, remoteUserName, stream, localUserName, isScreenShare = false) => {
         if (!myPeerRef.current || !stream) return;
 
@@ -255,7 +242,6 @@ const useWebRTCLogic = (roomId) => {
         peerConnections.current[peerId + (isScreenShare ? '_screen' : '')] = call;
     };
 
-    // Elimina un peer de video normal
     const removePeer = (peerId) => {
         if (peerConnections.current[peerId]) {
             peerConnections.current[peerId].close();
@@ -268,7 +254,6 @@ const useWebRTCLogic = (roomId) => {
         });
     };
     
-    // Elimina el peer de pantalla compartida
     const removeScreenShare = (peerId) => {
         if (screenSharePeer.current === peerId) {
             screenSharePeer.current = null;
@@ -286,7 +271,6 @@ const useWebRTCLogic = (roomId) => {
     };
 
 
-    // --- Funciones de control de la UI ---
     const toggleMute = () => {
         if (myStream) {
             myStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
@@ -313,7 +297,6 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
-    // Inicia o detiene la pantalla compartida
     const shareScreen = async () => {
         if (myScreenStream) {
             console.log("[ScreenShare] Stopping screen share.");
@@ -378,19 +361,14 @@ const useWebRTCLogic = (roomId) => {
 
 // --- COMPONENTES DE LA UI ---
 
-// Componente que muestra un video (local o remoto)
 const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, isLocal = false, selectedAudioOutput }) => {
     const videoRef = useRef();
 
-    // Sincroniza el stream y el dispositivo de salida de audio con el elemento de video
     useEffect(() => {
-        if (videoRef.current) {
-            // Asigna el stream al elemento de video
+        if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
             
-            // Asigna el dispositivo de salida de audio si está disponible
-            // `setSinkId` puede no estar soportado en todos los navegadores, se usa un try/catch
-            if (stream && selectedAudioOutput) {
+            if (selectedAudioOutput && videoRef.current.setSinkId) {
                 videoRef.current.setSinkId(selectedAudioOutput)
                     .then(() => {
                         console.log(`Audio output set to device ID: ${selectedAudioOutput}`);
@@ -418,7 +396,6 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
     );
 };
 
-// Componente que organiza la cuadrícula de videos
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
@@ -472,7 +449,6 @@ const VideoGrid = () => {
 };
 
 
-// Componente de la barra de controles de la reunión
 const Controls = ({ onToggleChat, onLeave }) => {
     const { toggleMute, toggleVideo, shareScreen, sendReaction, isMuted, isVideoOff, myScreenStream } = useWebRTC();
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -538,7 +514,6 @@ const Controls = ({ onToggleChat, onLeave }) => {
     );
 };
 
-// Componente del chat lateral
 const ChatSidebar = ({ isOpen, onClose }) => {
     const { chatMessages, sendMessage, currentUserName } = useWebRTC();
     const [message, setMessage] = useState('');
@@ -597,7 +572,6 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     );
 };
 
-// Componente que representa la sala de reunión
 const CallRoom = ({ onLeave }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
     return (
@@ -611,7 +585,6 @@ const CallRoom = ({ onLeave }) => {
     );
 };
 
-// Componente de la sala de espera (lobby)
 const Lobby = ({ onJoin }) => {
     const [userName, setUserName] = useState('');
     const [videoDevices, setVideoDevices] = useState([]);
@@ -625,12 +598,10 @@ const Lobby = ({ onJoin }) => {
     useEffect(() => {
         const getDevices = async () => {
             try {
-                // Se solicita permiso para acceder a los dispositivos
                 await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoInputs = devices.filter(d => d.kind === 'videoinput');
                 const audioInputs = devices.filter(d => d.kind === 'audioinput');
-                // Se filtran los dispositivos de salida de audio
                 const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
                 
                 setVideoDevices(videoInputs);
@@ -639,7 +610,6 @@ const Lobby = ({ onJoin }) => {
 
                 if (videoInputs.length > 0) setSelectedVideo(videoInputs[0].deviceId);
                 if (audioInputs.length > 0) setSelectedAudio(audioInputs[0].deviceId);
-                // Se establece el dispositivo de salida por defecto
                 if (audioOutputs.length > 0) setSelectedAudioOutput(audioOutputs[0].deviceId);
 
             } catch (err) {
@@ -655,7 +625,6 @@ const Lobby = ({ onJoin }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (userName.trim()) {
-            // Pasa el ID del dispositivo de salida de audio al unirse
             onJoin(userName, selectedAudio, selectedVideo, selectedAudioOutput);
         }
     };
@@ -720,11 +689,10 @@ const Lobby = ({ onJoin }) => {
 };
 
 
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
+// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
 export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
-    // Nuevo estado para la salida de audio seleccionada
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
     const webRTCLogic = useWebRTCLogic('main-room');
 
@@ -746,21 +714,28 @@ export default function App() {
     };
 
     useEffect(() => {
+        // En móviles, `beforeunload` no es confiable. Es mejor manejar la limpieza de otra forma
+        // o depender de que la app se desmonte cuando el usuario la cierra.
+        // Aquí lo mantendremos por si se usa en desktop, pero no será la solución para móviles.
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
         return () => {
             window.removeEventListener('beforeunload', webRTCLogic.cleanup);
         };
-    }, []);
+    }, [webRTCLogic]);
 
+    // Lógica corregida: 
+    // 1. Si no te has unido, muestra el lobby.
+    // 2. Si ya te uniste, usa el proveedor de contexto para que los componentes de la sala accedan al estado.
     if (!isJoined) {
         return <Lobby onJoin={handleJoin} />;
+    } else {
+        // PROPORCIONAR EL CONTEXTO AQUÍ
+        // De esta forma, `VideoGrid`, `Controls` y `ChatSidebar` podrán usar `useWebRTC()`
+        return (
+            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}>
+                <CallRoom onLeave={handleLeave} />
+                <ToastContainer />
+            </WebRTCContext.Provider>
+        );
     }
-
-    return (
-        <WebRTCContext.Provider value={{ ...webRTCLogic, currentUserName: userName, selectedAudioOutput }}>
-            <CallRoom onLeave={handleLeave} />
-            <ToastContainer />
-        </WebRTCContext.Provider>
-    );
 }
-
