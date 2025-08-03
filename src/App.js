@@ -103,14 +103,14 @@ const useWebRTCLogic = (roomId) => {
                     const newPeers = { ...prevPeers };
                     const key = peerId + (metadata.isScreenShare ? '_screen' : '');
 
-                    console.log(`[Peers State DEBUG] Before update for key ${key} (incoming stream):`, prevPeers); // LOG CLAVE
+                    console.log(`[Peers State DEBUG] Before update for key ${key} (incoming stream):`, prevPeers); 
                     // Actualiza o añade el peer, asegurando que el nombre se use desde los metadatos
                     newPeers[key] = { 
                         stream: remoteStream, 
                         userName: metadata.userName || 'Usuario Desconocido', // Usa metadata.userName
                         isScreenShare: metadata.isScreenShare 
                     };
-                    console.log(`[Peers State DEBUG] After update for key ${key} (incoming stream):`, newPeers); // LOG CLAVE
+                    console.log(`[Peers State DEBUG] After update for key ${key} (incoming stream):`, newPeers); 
                     return newPeers;
                 });
             });
@@ -193,14 +193,14 @@ const useWebRTCLogic = (roomId) => {
             setPeers(prevPeers => {
                 const newPeers = { ...prevPeers };
                 const key = peerId; 
-                console.log(`[Peers State DEBUG] Before update for my call to ${peerId} (stream received):`, prevPeers); // LOG CLAVE
+                console.log(`[Peers State DEBUG] Before update for my call to ${peerId} (stream received):`, prevPeers); 
                 newPeers[key] = { 
                     ...newPeers[key], 
                     stream: remoteStream, 
-                    userName: remoteUserName, // Asegura que se use el nombre del usuario remoto
+                    userName: remoteUserName, 
                     isScreenShare: false 
                 };
-                console.log(`[Peers State DEBUG] After update for my call to ${peerId} (stream received):`, newPeers); // LOG CLAVE
+                console.log(`[Peers State DEBUG] After update for my call to ${peerId} (stream received):`, newPeers); 
                 return newPeers;
             });
         });
@@ -257,6 +257,7 @@ const useWebRTCLogic = (roomId) => {
 
     const shareScreen = async () => {
         if (myScreenStream) { // Si ya se está compartiendo, detener
+            console.log("[ScreenShare] Stopping screen share. Current peers state:", peers); // LOG
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
@@ -266,6 +267,7 @@ const useWebRTCLogic = (roomId) => {
                     removePeer(key.replace('_screen', ''), true);
                 }
             });
+            console.log("[ScreenShare] After stopping screen share. Peers state should be cleaned of _screen entries."); // LOG
             return;
         }
 

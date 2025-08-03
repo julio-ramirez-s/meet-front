@@ -113,8 +113,8 @@
   position: absolute;
   bottom: 0.5rem;
   left: 0.5rem;
-  background-color: yellow; /* ¡CAMBIO TEMPORAL PARA DEPURACIÓN! */
-  color: black; /* ¡CAMBIO TEMPORAL PARA DEPURACIÓN! */
+  background-color: rgba(0, 0, 0, 0.5); 
+  color: white;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 0.375rem;
