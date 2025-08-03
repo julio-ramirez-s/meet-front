@@ -3,8 +3,7 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/React-Toastify.css';
-import styles from './App.module.css';
+import 'react-toastify/dist/ReactToastify.css';import styles from './App.module.css';
 
 // --- CONTEXTO PARA WEBRTC ---
 // Crea un contexto para compartir el estado global de WebRTC
