@@ -283,9 +283,10 @@ const useWebRTCLogic = (roomId) => {
     };
 
     const removePeer = (peerId) => {
-        if (peerConnections.current[peerId]) {
-            peerConnections.current[peerId].close();
-            delete peerConnections.current[peerId];
+        const callKey = peerId;
+        if (peerConnections.current[callKey]) {
+            peerConnections.current[callKey].close();
+            delete peerConnections.current[callKey];
         }
         setPeers(prev => {
             const newPeers = { ...prev };
@@ -335,8 +336,9 @@ const useWebRTCLogic = (roomId) => {
     };
 
     const shareScreen = async () => {
+        // Lógica para detener el uso compartido de la pantalla si ya está activa
         if (myScreenStream) {
-            console.log("[ScreenShare] Stopping screen share.");
+            console.log("[ScreenShare] Deteniendo el uso compartido de pantalla.");
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
@@ -348,12 +350,22 @@ const useWebRTCLogic = (roomId) => {
             setMyScreenStream(screenStream);
             console.log("Stream de pantalla inicializado.");
 
+            // Cuando el usuario deja de compartir desde el navegador (botón de la barra), emitimos el evento
             screenStream.getVideoTracks()[0].onended = () => {
                 setMyScreenStream(null);
                 socketRef.current.emit('stop-screen-share');
             };
 
+            // Notificamos al servidor que estamos compartiendo pantalla
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
+            
+            // LÓGICA CORREGIDA: Llamamos a todos los peers existentes para que se conecten a mi stream de pantalla
+            Object.keys(peers).forEach(peerId => {
+                const peerData = peers[peerId];
+                console.log(`[ScreenShare] Llamando a peer ${peerId} para compartir mi pantalla...`);
+                // Usamos connectToNewUser con el stream de la pantalla y el flag de isScreenShare en true
+                connectToNewUser(peerId, peerData.userName, screenStream, currentUserNameRef.current, true);
+            });
 
         } catch (err) {
             console.error("Error al compartir pantalla:", err);
