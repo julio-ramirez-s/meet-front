@@ -19,8 +19,8 @@ const useWebRTCLogic = (roomId) => {
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     
-    // Lista de usuarios presentes en la sala, incluyendo video y pantalla compartida
-    const [roomUsers, setRoomUsers] = useState({});
+    // CORRECCIÓN: Inicializar roomUsers como un array vacío
+    const [roomUsers, setRoomUsers] = useState([]);
     
     // Nuevo estado para la pantalla compartida remota seleccionada
     const [remoteScreenStream, setRemoteScreenStream] = useState(null);
