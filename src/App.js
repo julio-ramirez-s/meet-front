@@ -3,7 +3,7 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // <-- La línea corregida está aquí
+import 'react-toastify/dist/ReactToastify.css';
 import styles from './App.module.css';
 
 // --- CONTEXTO PARA WEBRTC ---
@@ -94,7 +94,7 @@ const useWebRTCLogic = (roomId) => {
 
             call.on('stream', (remoteStream) => {
                 console.log(`[PeerJS] Stream received from: ${peerId}. Name from metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
-                
+
                 if (metadata.isScreenShare) {
                     setPeers(prevPeers => {
                         const newPeers = { ...prevPeers };
@@ -154,7 +154,7 @@ const useWebRTCLogic = (roomId) => {
             console.log(`[Socket] Usuario ${disconnectedUserName} (${userId}) se desconectó.`);
             setChatMessages(prev => [...prev, { type: 'system', text: `${disconnectedUserName} se ha ido.`, id: Date.now() }]);
             toast.warn(`${disconnectedUserName} ha abandonado la sala.`);
-            
+
             if (screenSharePeer.current === userId) {
                 removeScreenShare(userId);
             }
@@ -208,25 +208,25 @@ const useWebRTCLogic = (roomId) => {
             console.log(`[PeerJS] Stream received from my call to: ${remoteUserName} (${peerId}). Is screen share: ${isScreenShare}`);
 
             if (isScreenShare) {
-                 setPeers(prevPeers => ({
-                     ...prevPeers,
-                     'screen-share': {
-                         stream: remoteStream,
-                         userName: remoteUserName,
-                         isScreenShare: true
-                     }
-                 }));
-                 screenSharePeer.current = peerId;
+                   setPeers(prevPeers => ({
+                       ...prevPeers,
+                       'screen-share': {
+                           stream: remoteStream,
+                           userName: remoteUserName,
+                           isScreenShare: true
+                       }
+                   }));
+                   screenSharePeer.current = peerId;
             } else {
-                 setPeers(prevPeers => ({
-                     ...prevPeers,
-                     [peerId]: {
-                         ...prevPeers[peerId],
-                         stream: remoteStream,
-                         userName: remoteUserName,
-                         isScreenShare: false
-                     }
-                 }));
+                   setPeers(prevPeers => ({
+                       ...prevPeers,
+                       [peerId]: {
+                           ...prevPeers[peerId],
+                           stream: remoteStream,
+                           userName: remoteUserName,
+                           isScreenShare: false
+                       }
+                   }));
             }
         });
 
@@ -253,7 +253,7 @@ const useWebRTCLogic = (roomId) => {
             return newPeers;
         });
     };
-    
+
     const removeScreenShare = (peerId) => {
         if (screenSharePeer.current === peerId) {
             screenSharePeer.current = null;
@@ -303,7 +303,7 @@ const useWebRTCLogic = (roomId) => {
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
-            
+
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen')) {
                     const peerId = key.replace('_screen', '');
@@ -336,7 +336,7 @@ const useWebRTCLogic = (roomId) => {
             };
 
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
-            
+
             Object.keys(peerConnections.current).forEach(peerKey => {
                 if (!peerKey.endsWith('_screen')) {
                     const peerId = peerKey;
@@ -367,7 +367,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
-            
+
             if (selectedAudioOutput && videoRef.current.setSinkId) {
                 videoRef.current.setSinkId(selectedAudioOutput)
                     .then(() => {
@@ -487,8 +487,8 @@ const Controls = ({ onToggleChat, onLeave }) => {
                 <MessageSquare size={20} />
             </button>
             <div className={styles.reactionContainer} ref={emojiPickerRef}>
-                <button 
-                    onClick={() => setIsEmojiPickerOpen(prev => !prev)} 
+                <button
+                    onClick={() => setIsEmojiPickerOpen(prev => !prev)}
                     className={`${styles.controlButton} ${isEmojiPickerOpen ? styles.controlButtonActive : ''}`}
                 >
                     <PartyPopper size={20} />
@@ -496,9 +496,9 @@ const Controls = ({ onToggleChat, onLeave }) => {
                 {isEmojiPickerOpen && (
                     <div className={styles.emojiPicker}>
                         {emojis.map((emoji) => (
-                            <button 
-                                key={emoji} 
-                                onClick={() => handleSendReaction(emoji)} 
+                            <button
+                                key={emoji}
+                                onClick={() => handleSendReaction(emoji)}
                                 className={styles.emojiButton}
                             >
                                 {emoji}
@@ -603,7 +603,7 @@ const Lobby = ({ onJoin }) => {
                 const videoInputs = devices.filter(d => d.kind === 'videoinput');
                 const audioInputs = devices.filter(d => d.kind === 'audioinput');
                 const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-                
+
                 setVideoDevices(videoInputs);
                 setAudioDevices(audioInputs);
                 setAudioOutputs(audioOutputs);
@@ -723,7 +723,7 @@ export default function App() {
         };
     }, [webRTCLogic]);
 
-    // Lógica corregida: 
+    // Lógica corregida:
     // 1. Si no te has unido, muestra el lobby.
     // 2. Si ya te uniste, usa el proveedor de contexto para que los componentes de la sala accedan al estado.
     if (!isJoined) {
