@@ -96,24 +96,27 @@ const useWebRTCLogic = (roomId) => {
             } else {
                  call.answer(stream); 
             }
+            call.on('stream', (remoteScreenStream) => {
+                // ⚠️ Evita agregar el stream propio de pantalla al estado de peers
+                if (peerId === myPeerRef.current.id) {
+                    console.log("[ScreenShare] Ignorando stream de pantalla propio.");
+                    return;
+                }
 
-            call.on('stream', (remoteStream) => {
-                console.log(`[PeerJS] Stream received from: ${peerId}. Name from metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
                 setPeers(prevPeers => {
                     const newPeers = { ...prevPeers };
-                    const key = peerId + (metadata.isScreenShare ? '_screen' : '');
-
-                    console.log(`[Peers State DEBUG] Before update for key ${key} (incoming stream):`, prevPeers); 
-                    // Actualiza o añade el peer, asegurando que el nombre se use desde los metadatos
+                    const key = peerId + '_screen';
+                    console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers);
                     newPeers[key] = { 
-                        stream: remoteStream, 
-                        userName: metadata.userName || 'Usuario Desconocido', // Usa metadata.userName
-                        isScreenShare: metadata.isScreenShare 
+                        stream: remoteScreenStream, 
+                        userName: prevPeers[peerId]?.userName || 'Usuario Desconocido', 
+                        isScreenShare: true 
                     };
-                    console.log(`[Peers State DEBUG] After update for key ${key} (incoming stream):`, newPeers); 
+                    console.log(`[Peers State DEBUG] After update for screen stream (from my share) ${key}:`, newPeers);
                     return newPeers;
                 });
             });
+
             
             call.on('close', () => {
                 console.log(`[PeerJS] Llamada cerrada con ${peerId}`);
