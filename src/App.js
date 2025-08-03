@@ -256,84 +256,78 @@ const useWebRTCLogic = (roomId) => {
     }; 
 
     const shareScreen = async () => { 
-        if (myScreenStream) { // Si ya se está compartiendo, detener 
-            console.log("[ScreenShare] Stopping screen share. Current peers state:", peers); // LOG 
-            myScreenStream.getTracks().forEach(track => track.stop()); 
-            socketRef.current.emit('stop-screen-share'); 
+    if (myScreenStream) { // Si ya se está compartiendo, detener 
+        console.log("[ScreenShare] Stopping screen share. Current peers state:", peers); 
+        myScreenStream.getTracks().forEach(track => track.stop()); 
+        socketRef.current.emit('stop-screen-share'); 
+        setMyScreenStream(null); 
+        // Cierra las conexiones de pantalla compartida con todos los peers 
+        Object.keys(peerConnections.current).forEach(key => { 
+            if (key.endsWith('_screen')) { 
+                removePeer(key.replace('_screen', ''), true); 
+            } 
+        }); 
+        console.log("[ScreenShare] After stopping screen share. Peers state should be cleaned of _screen entries."); 
+        return; 
+    } 
+
+    try { 
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });  
+        setMyScreenStream(screenStream); 
+        console.log("Stream de pantalla inicializado. Pistas de audio:", screenStream.getAudioTracks().length, "Pistas de video:", screenStream.getVideoTracks().length); 
+
+        screenStream.getVideoTracks()[0].onended = () => { 
             setMyScreenStream(null); 
-            // Cierra las conexiones de pantalla compartida con todos los peers 
+            socketRef.current.emit('stop-screen-share'); 
             Object.keys(peerConnections.current).forEach(key => { 
                 if (key.endsWith('_screen')) { 
                     removePeer(key.replace('_screen', ''), true); 
                 } 
             }); 
-            console.log("[ScreenShare] After stopping screen share. Peers state should be cleaned of _screen entries."); // LOG 
-            return; 
-        } 
+        }; 
 
-        try { 
-            // ¡IMPORTANTE! Pedir audio también al compartir pantalla 
-            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });  
-            setMyScreenStream(screenStream); 
-            console.log("Stream de pantalla inicializado. Pistas de audio:", screenStream.getAudioTracks().length, "Pistas de video:", screenStream.getVideoTracks().length); 
+        Object.keys(peerConnections.current).forEach(peerKey => { 
+            if (!peerKey.endsWith('_screen')) {
+                const peerId = peerKey;
+                if (peerId === myPeerRef.current?.id) return; // ✅ CORREGIDO: sin llaves innecesarias
 
-
-            screenStream.getVideoTracks()[0].onended = () => { // Cuando el usuario detiene desde el navegador 
-                setMyScreenStream(null); 
-                socketRef.current.emit('stop-screen-share'); 
-                // Cierra las conexiones de pantalla compartida con todos los peers 
-                Object.keys(peerConnections.current).forEach(key => { 
-                    if (key.endsWith('_screen')) { 
-                        removePeer(key.replace('_screen', ''), true); 
-                    } 
+                console.log(`[PeerJS] Enviando pantalla a ${peerId}`); 
+                const call = myPeerRef.current.call(peerId, screenStream, { 
+                    metadata: { userName: currentUserNameRef.current, isScreenShare: true } 
                 }); 
-            }; 
+                peerConnections.current[peerId + '_screen'] = call; 
 
-            // Envía el stream de pantalla a todos los peers existentes 
-            Object.keys(peerConnections.current).forEach(peerKey => { 
-                // Asegúrate de que no es una conexión de pantalla anterior (que no sea un stream de pantalla) 
-                if (!peerKey.endsWith('_screen')) {
-                    const peerId = peerKey;
-                    if (peerId === myPeerRef.current?.id) return; {// 👈 NO LLAMARTE A TI MISMO
-
-                        console.log(`[PeerJS] Enviando pantalla a ${peerId}`); 
-                        // Usa el nombre de usuario de la ref para la metadata de la pantalla compartida 
-                        const call = myPeerRef.current.call(peerId, screenStream, { metadata: { userName: currentUserNameRef.current, isScreenShare: true } }); 
-                        peerConnections.current[peerId + '_screen'] = call; 
-
-                        call.on('stream', (remoteScreenStream) => { 
-                            // Evitar duplicado: el usuario que comparte pantalla no debe verse a sí mismo duplicado 
-                            if (peerId === myPeerRef.current?.id) { 
-                                console.log("[ScreenShare] Ignorando stream de pantalla propio."); 
-                                return; 
-                            } 
-
-                            setPeers(prevPeers => { 
-                                const newPeers = { ...prevPeers }; 
-                                const key = peerId + '_screen'; 
-                                console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers); 
-                                newPeers[key] = {  
-                                    stream: remoteScreenStream,  
-                                    userName: prevPeers[peerId]?.userName || 'Usuario Desconocido',  
-                                    isScreenShare: true  
-                                }; 
-                                console.log(`[Peers State DEBUG] After update for screen stream (from my share) ${key}:`, newPeers); 
-                                return newPeers; 
-                            }); 
-                        }); 
-
-                        call.on('close', () => { 
-                            removePeer(peerId, true); 
-                        }); 
+                call.on('stream', (remoteScreenStream) => { 
+                    if (peerId === myPeerRef.current?.id) { 
+                        console.log("[ScreenShare] Ignorando stream de pantalla propio."); 
+                        return; 
                     } 
-                } 
-            }); 
 
-        } catch (err) { 
-            console.error("Error al compartir pantalla:", err); 
-            toast.error("No se pudo compartir la pantalla. Revisa los permisos."); 
-        } 
-    }; 
+                    setPeers(prevPeers => { 
+                        const newPeers = { ...prevPeers }; 
+                        const key = peerId + '_screen'; 
+                        console.log(`[Peers State DEBUG] Before update for screen stream (from my share) ${key}:`, prevPeers); 
+                        newPeers[key] = {  
+                            stream: remoteScreenStream,  
+                            userName: prevPeers[peerId]?.userName || 'Usuario Desconocido',  
+                            isScreenShare: true  
+                        }; 
+                        console.log(`[Peers State DEBUG] After update for screen stream (from my share) ${key}:`, newPeers); 
+                        return newPeers; 
+                    }); 
+                }); 
+
+                call.on('close', () => { 
+                    removePeer(peerId, true); 
+                }); 
+            } 
+        }); 
+
+    } catch (err) { 
+        console.error("Error al compartir pantalla:", err); 
+        toast.error("No se pudo compartir la pantalla. Revisa los permisos."); 
+    } 
+}; 
 
     return { 
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, 
