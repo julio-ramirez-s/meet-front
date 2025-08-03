@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Settings, Users, ArrowLeft, ThumbsUp, Heart, PartyPopper, PictureInPicture, PictureInPicture2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Settings, Users, ArrowLeft, ThumbsUp, Heart, PartyPopper } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -224,7 +224,7 @@ const useWebRTCLogic = (roomId) => {
             console.log(`[PeerJS] Stream received from my call to: ${remoteUserName} (${peerId}). Is screen share: ${isScreenShare}`);
 
             if (isScreenShare) {
-                setPeers(prevPeers => ({
+                 setPeers(prevPeers => ({
                     ...prevPeers,
                     'screen-share': {
                         stream: remoteStream,
@@ -234,7 +234,7 @@ const useWebRTCLogic = (roomId) => {
                 }));
                 screenSharePeer.current = peerId;
             } else {
-                setPeers(prevPeers => ({
+                 setPeers(prevPeers => ({
                     ...prevPeers,
                     [peerId]: {
                         ...prevPeers[peerId],
@@ -275,7 +275,7 @@ const useWebRTCLogic = (roomId) => {
             screenSharePeer.current = null;
             setPeers(prev => {
                 const newPeers = { ...prev };
-                delete newPeers['screen-share']; // Elimina el peer de pantalla de la UI local
+                delete newPeers['screen-share'];
                 return newPeers;
             });
             // También cierra la llamada si existe
@@ -408,7 +408,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
     );
 };
 
-const VideoGrid = React.forwardRef(({ pipWindow }, ref) => {
+const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName } = useWebRTC();
 
     const videoElements = [
@@ -449,11 +449,9 @@ const VideoGrid = React.forwardRef(({ pipWindow }, ref) => {
 
     const gridLayoutClass = getGridLayoutClass(sideContent.length);
 
-    // La clase del contenedor cambia si está en una ventana PiP
-    const containerClass = pipWindow ? styles.pipGridContainer : styles.videoGridContainer;
 
     return (
-        <div ref={ref} className={containerClass}>
+        <div className={styles.videoGridContainer}>
             {mainContent && (
                 <div className={styles.mainVideo}>
                     <VideoPlayer key={mainContent.id} {...mainContent} />
@@ -466,10 +464,10 @@ const VideoGrid = React.forwardRef(({ pipWindow }, ref) => {
             </div>
         </div>
     );
-});
+};
 
 
-const Controls = ({ onToggleChat, onLeave, togglePictureInPicture, pipWindow }) => {
+const Controls = ({ onToggleChat, onLeave }) => {
     const { toggleMute, toggleVideo, shareScreen, sendReaction, isMuted, isVideoOff, myScreenStream } = useWebRTC();
     return (
         <footer className={styles.controlsFooter}>
@@ -481,9 +479,6 @@ const Controls = ({ onToggleChat, onLeave, togglePictureInPicture, pipWindow }) 
             </button>
             <button onClick={shareScreen} className={`${styles.controlButton} ${myScreenStream ? styles.controlButtonScreenShare : ''}`}>
                 <ScreenShare size={20} />
-            </button>
-            <button onClick={togglePictureInPicture} className={styles.controlButton}>
-                {pipWindow ? <PictureInPicture2 size={20} /> : <PictureInPicture size={20} />}
             </button>
             <button onClick={onToggleChat} className={styles.controlButton}>
                 <MessageSquare size={20} />
@@ -567,64 +562,11 @@ const ChatSidebar = ({ isOpen, onClose }) => {
 
 const CallRoom = ({ onLeave }) => {
     const [isChatOpen, setIsChatOpen] = useState(false);
-    
-    // --- LÓGICA DE PICTURE-IN-PICTURE (PiP) ---
-    const videoContainerRef = useRef(null);
-    const [pipWindow, setPipWindow] = useState(null);
-
-    const togglePictureInPicture = useCallback(async () => {
-        if (!('documentPictureInPicture' in window)) {
-            toast.error('Tu navegador no soporta la Document Picture-in-Picture API.');
-            return;
-        }
-
-        if (!pipWindow) {
-            try {
-                // Abre una nueva ventana PiP
-                const pipWindowInstance = await window.documentPictureInPicture.requestWindow();
-                setPipWindow(pipWindowInstance);
-
-                // Mueve el contenedor de videos a la nueva ventana
-                const containerElement = videoContainerRef.current;
-                if (containerElement) {
-                    pipWindowInstance.document.body.appendChild(containerElement);
-                    // Copia los estilos del documento principal a la ventana PiP
-                    const stylesheets = document.querySelectorAll('link[rel="stylesheet"], style');
-                    stylesheets.forEach(stylesheet => {
-                        pipWindowInstance.document.head.appendChild(stylesheet.cloneNode(true));
-                    });
-
-                    // Si se cierra la ventana PiP, mueve el contenedor de vuelta
-                    pipWindowInstance.addEventListener('pagehide', () => {
-                        document.body.appendChild(containerElement);
-                        setPipWindow(null);
-                    });
-                }
-            } catch (error) {
-                console.error('Error al solicitar la ventana PiP:', error);
-                toast.error('No se pudo abrir la ventana PiP. Asegúrate de que no haya una ya abierta.');
-            }
-        } else {
-            // Cierra la ventana PiP si ya está abierta
-            pipWindow.close();
-        }
-    }, [pipWindow]);
-
-    useEffect(() => {
-        // Limpia el estado si el componente se desmonta mientras PiP está activo
-        return () => {
-            if (pipWindow) {
-                pipWindow.close();
-            }
-        };
-    }, [pipWindow]);
-    
     return (
         <div className={styles.mainContainer}>
             <main className={styles.mainContent}>
-                {/* Solo renderizamos el VideoGrid si no está en modo PiP */}
-                {!pipWindow && <VideoGrid ref={videoContainerRef} pipWindow={pipWindow} />}
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} togglePictureInPicture={togglePictureInPicture} pipWindow={pipWindow} />
+                <VideoGrid />
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} />
             </main>
             <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
         </div>
