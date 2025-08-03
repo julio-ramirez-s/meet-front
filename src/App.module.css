@@ -1,4 +1,7 @@
 /* Base de la aplicación */
+body {
+    background-color: #1e293b; /* Aquí defines el color */
+}
 .mainContainer {
     display: flex;
     height: 100vh;
