@@ -441,6 +441,18 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
+    // 🧠 Nuevo estado para detectar la orientación de la pantalla.
+    const [isHorizontal, setIsHorizontal] = useState(window.innerWidth > window.innerHeight);
+
+    useEffect(() => {
+        // Listener para actualizar el estado cada vez que se redimensiona la ventana
+        const handleResize = () => {
+            setIsHorizontal(window.innerWidth > window.innerHeight);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const videoElements = [
         myStream && { id: 'my-video', stream: myStream, userName: `${currentUserName} (Tú)`, isLocal: true, muted: true },
         myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserName} (Tú)`, isLocal: true, isScreenShare: true, muted: true },
@@ -464,15 +476,8 @@ const VideoGrid = () => {
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
-    const getGridLayoutClass = (count) => {
-        if (count <= 1) return styles.grid_1;
-        if (count === 2) return styles.grid_2;
-        if (count <= 4) return styles.grid_4;
-        if (count <= 6) return styles.grid_6;
-        return styles.grid_8_plus;
-    };
-
-    const gridLayoutClass = getGridLayoutClass(sideContent.length);
+    // 🧠 La clase de layout ahora se elige dinámicamente según la orientación
+    const gridLayoutClass = isHorizontal ? styles.horizontalGrid : styles.verticalGrid;
 
     return (
         <div className={styles.videoGridContainer}>
@@ -481,6 +486,7 @@ const VideoGrid = () => {
                     <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
                 </div>
             )}
+            {/* 🧠 Se aplica la clase dinámica al contenedor de videos secundarios */}
             <div className={`${styles.videoSecondaryGrid} ${gridLayoutClass}`}>
                 {sideContent.map(v => (
                     <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
