@@ -115,7 +115,7 @@ body {
     padding: 1rem;
     overflow: auto;
     background-color: #1e293b;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
 }
 
@@ -138,18 +138,6 @@ body {
     gap: 1rem;
 }
 
-
-
-.App_videoGridContainer__ZNyW- {
-    background-color: #1e293b;
-    display: flex;
-    flex-grow: 1;
-    gap: 1rem;
-    overflow: hidden;
-    padding: 1rem;
-    align-items: center;
-    justify-content: center;
-}
 .App_videoWrapper__ROG2R {
     align-items: center;
     aspect-ratio: 20 / 8;
