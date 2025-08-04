@@ -312,6 +312,7 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
+
     const toggleMute = () => {
         if (myStream) {
             myStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
@@ -344,6 +345,7 @@ const useWebRTCLogic = (roomId) => {
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
+
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen')) {
                     const peerId = key.replace('_screen', '');
@@ -374,7 +376,9 @@ const useWebRTCLogic = (roomId) => {
                     }
                 });
             };
+
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
+
             Object.keys(peerConnections.current).forEach(peerKey => {
                 if (!peerKey.endsWith('_screen')) {
                     const peerId = peerKey;
@@ -382,13 +386,19 @@ const useWebRTCLogic = (roomId) => {
                     connectToNewUser(peerId, peers[peerId]?.userName, screenStream, currentUserNameRef.current, true);
                 }
             });
+
         } catch (err) {
             console.error("Error al compartir pantalla:", err);
             toast.error("No se pudo compartir la pantalla. Revisa los permisos.");
         }
     };
 
-    return { myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, initializeStream, connect, cleanup, toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, currentUserName: currentUserNameRef.current };
+    return {
+        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff,
+        initializeStream, connect, cleanup,
+        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction,
+        currentUserName: currentUserNameRef.current
+    };
 };
 
 // --- COMPONENTES DE LA UI ---
