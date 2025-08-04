@@ -108,12 +108,17 @@ body {
 
 /* ---------------- Video Grid ---------------- */
 .videoGridContainer {
-    flex-grow: 1;
-    display: flex; /* Nuevo: Usa flexbox para el layout principal */
-    gap: 1rem;
-    padding: 1rem;
-    overflow: hidden; /* Evita desbordamiento */
     background-color: #1e293b;
+    display: flex;
+    flex-grow: 1;
+    gap: 1rem;
+    overflow: hidden;
+    padding: 1rem;
+    flex-wrap: wrap;
+    flex-direction: column;
+    justify-content: center;
+    align-content: stretch;
+    align-items: center;
 }
 
 .mainVideoContainer {
