@@ -20,22 +20,6 @@ body {
 }
 
 /* Estilos para el contenedor de reacciones y el menú de emojis */
-.App_emojiPicker__P1zD6 {
-    background-color: #3e3e4a;
-    border-radius: 12px;
-    bottom: calc(100% + 10px);
-    box-shadow: 0 4px 20px #0000004d;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    left: 50%;
-    padding: 8px;
-    position: absolute;
-    transform: translateX(-50%);
-    width: 400px;
-    z-index: 1000;
-    justify-content: center;
-}
 .reactionContainer {
     position: relative;
     display: inline-block;
@@ -58,6 +42,7 @@ body {
     gap: 4px;
     z-index: 1000;
     width: 400px;
+    justify-content: center;
 }
 
 .emojiButton {
