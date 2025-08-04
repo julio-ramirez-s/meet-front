@@ -116,7 +116,7 @@ body {
     background-color: #1e293b;
 }
 
-/* Diseño para pantalla horizontal */
+/* Diseño para pantalla horizontal (PC) */
 .videoGridHorizontal {
     display: flex;
     flex-direction: row;
@@ -140,7 +140,6 @@ body {
     align-items: center;
     justify-content: flex-start;
 }
-
 
 .mainVideoWrapper {
     flex-grow: 1;
@@ -522,4 +521,3 @@ body {
 .joinButtonIcon {
     margin-right: 0.5rem;
 }
-
