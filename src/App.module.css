@@ -41,7 +41,8 @@ body {
     flex-wrap: wrap;
     gap: 4px;
     z-index: 2000; /* Z-index más alto que la barra de control */
-    width: 200px;
+    width: 375px;
+    justify-content: center;
 }
 
 .emojiButton {
