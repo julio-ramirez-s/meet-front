@@ -617,7 +617,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     return (
         <aside className={`${styles.chatSidebar} ${isOpen ? styles.chatSidebarOpen : ''}`}>
             <header className={styles.chatHeader}>
-                <h2 className={styles.chatTitle}>Chat</h2>
+                <h2 className={styles.chatTitle}>Chat de Mundi-Link</h2>
                 <button onClick={onClose} className={styles.closeChatButton}>
                     <X size={20} />
                 </button>
@@ -716,7 +716,8 @@ const Lobby = ({ onJoin }) => {
         <div className={styles.lobbyContainer}>
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
-                    <h1 className={styles.lobbyTitle}>Unirse a la Sala</h1>
+                    <img src="%PUBLIC_URL%/logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
+                    <h1 className={styles.lobbyTitle}>Unirse a Mundi-Link</h1>
                     <form onSubmit={handleSubmit} className={styles.lobbyForm}>
                         <div className={styles.formGroup}>
                             <label htmlFor="userName" className={styles.formLabel}>Tu nombre</label>
@@ -762,7 +763,7 @@ const Lobby = ({ onJoin }) => {
                         )}
                         <button type="submit" disabled={!userName.trim() || isLoading} className={styles.joinButton}>
                             <LogIn className={styles.joinButtonIcon} size={20} />
-                            Unirse
+                            Unirse a la llamada
                         </button>
                     </form>
                 </div>
