@@ -109,51 +109,44 @@ body {
 /* ---------------- Video Grid ---------------- */
 .videoGridContainer {
     flex-grow: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    grid-auto-rows: minmax(150px, auto);
+    display: flex; /* Nuevo: Usa flexbox para el layout principal */
     gap: 1rem;
     padding: 1rem;
-    justify-content: center;
-    align-content: center;
-    overflow-y: auto;
+    overflow: hidden; /* Evita desbordamiento */
     background-color: #1e293b;
 }
 
-.mainVideo {
-    grid-column: 1 / -1;
+.mainVideoContainer {
+    flex-grow: 1; /* El video principal ocupa el espacio restante */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.videoSecondaryGrid {
-    display: grid;
+.videoSidebar {
+    display: flex;
+    flex-direction: column; /* Nuevo: Videos en columna */
     gap: 1rem;
-}
-
-.grid_1 {
-    grid-template-columns: 1fr;
-}
-.grid_2 {
-    grid-template-columns: repeat(2, 1fr);
-}
-.grid_3, .grid_4 {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-}
-.grid_5, .grid_6 {
-    grid-template-columns: repeat(3, 1fr);
-}
-.grid_8_plus {
-    grid-template-columns: repeat(4, 1fr);
+    min-width: 150px; /* Ancho fijo para la barra lateral */
+    max-width: 25%; /* Nuevo: Evita que la sidebar sea muy ancha */
+    overflow-y: auto; /* Permite scroll si hay muchos videos */
+    align-items: flex-end;
 }
 
 @media (max-width: 768px) {
     .videoGridContainer {
-        grid-template-columns: 1fr;
+        flex-direction: column;
     }
-    .videoSecondaryGrid {
-        grid-template-columns: 1fr;
+    .mainVideoContainer {
+        height: 60%;
+    }
+    .videoSidebar {
+        flex-direction: row;
+        min-width: auto;
+        max-width: 100%;
+        height: 20%;
+        overflow-y: hidden;
+        overflow-x: auto;
     }
 }
 
@@ -162,7 +155,7 @@ body {
     position: relative;
     width: 100%;
     /* Utiliza aspect-ratio para mantener la proporción 16:9 */
-    aspect-ratio: 16 / 9; 
+    aspect-ratio: 16 / 9;
     background-color: #1e293b; /* bg-slate-800 */
     border-radius: 0.5rem; /* rounded-lg */
     overflow: hidden;
@@ -191,7 +184,7 @@ body {
     position: absolute;
     bottom: 0.5rem;
     left: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.5); 
+    background-color: rgba(0, 0, 0, 0.5);
     color: white;
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
