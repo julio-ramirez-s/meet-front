@@ -23,6 +23,9 @@ body {
 .reactionContainer {
     position: relative;
     display: inline-block;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .emojiPicker {
@@ -60,26 +63,98 @@ body {
     transform: scale(0.95);
 }
 
+.commonEmojiButton {
+    padding: 0.75rem;
+    border-radius: 9999px; /* rounded-full */
+    background-color: #334155; /* bg-slate-700 */
+    transition-property: background-color;
+    transition-duration: 300ms;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.commonEmojiButton:hover {
+    background-color: #475569; /* hover:bg-slate-600 */
+}
+
+.plusButton {
+    padding: 0.75rem;
+    border-radius: 9999px; /* rounded-full */
+    background-color: #334155; /* bg-slate-700 */
+    transition-property: background-color;
+    transition-duration: 300ms;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.plusButton:hover {
+    background-color: #475569; /* hover:bg-slate-600 */
+}
+
+
 /* Estilos para que el botón de reacción se vea activo */
 .controlButtonActive {
     background-color: #4a4a58;
 }
 
 /* ---------------- Video Grid ---------------- */
-
 .videoGridContainer {
-    display: flex;
-    background-color: #1e293b; 
-    grid-gap: 2rem;
-    align-content: center;
-    align-items: center;
-    flex-grow: 20;
-    gap: 1rem;
+    flex-grow: 1;
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    justify-content: center;
-    overflow-y: auto;
+    grid-auto-rows: minmax(150px, auto);
+    gap: 1rem;
     padding: 1rem;
-    justify-items: stretch;
+    justify-content: center;
+    align-content: center;
+    overflow-y: auto;
+    background-color: #1e293b;
+}
+
+.mainVideo {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.videoSecondaryGrid {
+    display: grid;
+    gap: 1rem;
+}
+
+.grid_1 {
+    grid-template-columns: 1fr;
+}
+.grid_2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+.grid_3, .grid_4 {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+.grid_5, .grid_6 {
+    grid-template-columns: repeat(3, 1fr);
+}
+.grid_8_plus {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 768px) {
+    .videoGridContainer {
+        grid-template-columns: 1fr;
+    }
+    .videoSecondaryGrid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Contenedor del video */
@@ -174,31 +249,6 @@ body {
 .controlButtonScreenShare:hover {
     background-color: #22c55e;
 }
-
-.reactionButtons {
-    display: flex;
-    gap: 0.25rem; /* Espacio entre botones de reacción */
-    background-color: #1e293b; /* Un color de fondo para agruparlos */
-    border-radius: 9999px;
-    padding: 0.25rem;
-}
-
-.reactionButton {
-    padding: 0.5rem;
-    border-radius: 9999px;
-    background-color: transparent; /* Sin fondo para que se vea el del contenedor */
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.reactionButton:hover {
-    background-color: rgba(255, 255, 255, 0.1); /* Ligero hover */
-}
-
 
 .leaveButton {
     padding: 0.75rem 1rem;
@@ -452,3 +502,4 @@ body {
 .joinButtonIcon {
     margin-right: 0.5rem;
 }
+
