@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper, Plus } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -490,7 +490,6 @@ const VideoGrid = () => {
     );
 };
 
-
 const Controls = ({ onToggleChat, onLeave }) => {
     const { 
         toggleMute, toggleVideo, shareScreen, sendReaction,
@@ -510,6 +509,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
         '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
         '👀', '👄','🫦', '🫶', '💪'
     ];
+    
     
     const handleSendReaction = (emoji) => {
         sendReaction(emoji);
@@ -589,7 +589,6 @@ const Controls = ({ onToggleChat, onLeave }) => {
         </footer>
     );
 };
-
 
 const ChatSidebar = ({ isOpen, onClose }) => {
     const { chatMessages, sendMessage, currentUserName } = useWebRTC();
