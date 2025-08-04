@@ -312,7 +312,6 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
-
     const toggleMute = () => {
         if (myStream) {
             myStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
@@ -345,7 +344,6 @@ const useWebRTCLogic = (roomId) => {
             myScreenStream.getTracks().forEach(track => track.stop());
             socketRef.current.emit('stop-screen-share');
             setMyScreenStream(null);
-
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen')) {
                     const peerId = key.replace('_screen', '');
@@ -376,9 +374,7 @@ const useWebRTCLogic = (roomId) => {
                     }
                 });
             };
-
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
-
             Object.keys(peerConnections.current).forEach(peerKey => {
                 if (!peerKey.endsWith('_screen')) {
                     const peerId = peerKey;
@@ -386,19 +382,13 @@ const useWebRTCLogic = (roomId) => {
                     connectToNewUser(peerId, peers[peerId]?.userName, screenStream, currentUserNameRef.current, true);
                 }
             });
-
         } catch (err) {
             console.error("Error al compartir pantalla:", err);
             toast.error("No se pudo compartir la pantalla. Revisa los permisos.");
         }
     };
 
-    return {
-        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff,
-        initializeStream, connect, cleanup,
-        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction,
-        currentUserName: currentUserNameRef.current
-    };
+    return { myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, initializeStream, connect, cleanup, toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, currentUserName: currentUserNameRef.current };
 };
 
 // --- COMPONENTES DE LA UI ---
@@ -431,6 +421,16 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, peers, myScreenStream, currentUserName, selectedAudioOutput } = useWebRTC();
 
+    const [isHorizontal, setIsHorizontal] = useState(window.innerWidth > window.innerHeight);
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsHorizontal(window.innerWidth > window.innerHeight);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const allVideos = [];
     if (myStream) {
         allVideos.push({ id: 'local', stream: myStream, userName: currentUserName, isLocal: true, muted: true });
@@ -448,61 +448,25 @@ const VideoGrid = () => {
         }
     });
 
-    const isHorizontal = window.innerWidth > window.innerHeight;
     const gridClass = isHorizontal ? styles.horizontalGrid : styles.verticalGrid;
-    const isSharingScreen = myScreenStream || allVideos.some(v => v.isScreenShare && !v.isLocal);
-
-    if (isSharingScreen) {
-        const mainVideo = allVideos.find(v => v.isScreenShare) || allVideos.find(v => v.isLocal);
-        const otherVideos = allVideos.filter(v => v !== mainVideo);
-
-        return (
-            <div className={styles.videoGridContainer}>
-                {mainVideo && (
-                    <div className={styles.mainVideoWrapper}>
-                        <VideoPlayer
-                            stream={mainVideo.stream}
-                            userName={mainVideo.userName}
-                            muted={mainVideo.muted}
-                            isLocal={mainVideo.isLocal}
-                            isScreenShare={mainVideo.isScreenShare}
-                            selectedAudioOutput={selectedAudioOutput}
-                        />
-                    </div>
-                )}
-                <div className={styles.videoSidebar}>
-                    {otherVideos.map((video) => (
-                        <div key={video.id} className={styles.videoSidebarItem}>
-                            <VideoPlayer
-                                stream={video.stream}
-                                userName={video.userName}
-                                muted={video.muted}
-                                isLocal={video.isLocal}
-                                isScreenShare={video.isScreenShare}
-                                selectedAudioOutput={selectedAudioOutput}
-                            />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    } else {
-        return (
-            <div className={`${styles.videoGridContainer} ${gridClass}`}>
-                {allVideos.map(video => (
-                    <VideoPlayer
-                        key={video.id}
-                        stream={video.stream}
-                        userName={video.userName}
-                        muted={video.muted}
-                        isLocal={video.isLocal}
-                        isScreenShare={video.isScreenShare}
-                        selectedAudioOutput={selectedAudioOutput}
-                    />
-                ))}
-            </div>
-        );
-    }
+    
+    // La lógica de pantalla compartida ha sido revertida.
+    // Todos los videos, incluyendo la pantalla compartida, se muestran en la misma cuadrícula.
+    return (
+        <div className={`${styles.videoGridContainer} ${gridClass}`}>
+            {allVideos.map(video => (
+                <VideoPlayer
+                    key={video.id}
+                    stream={video.stream}
+                    userName={video.userName}
+                    muted={video.muted}
+                    isLocal={video.isLocal}
+                    isScreenShare={video.isScreenShare}
+                    selectedAudioOutput={selectedAudioOutput}
+                />
+            ))}
+        </div>
+    );
 };
 
 const ChatBox = ({ messages, onClose, onSendMessage, onSendReaction }) => {
