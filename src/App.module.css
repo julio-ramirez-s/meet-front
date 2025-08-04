@@ -140,8 +140,8 @@ body {
 
 .App_videoWrapper__ROG2R {
     align-items: center;
-    aspect-ratio: 20 / 8;
-    background-color: #1e293b;
+    aspect-ratio: 12 / 9;
+    background-color: #000000;
     border: 2px solid #334155;
     border-radius: .5rem;
     box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
