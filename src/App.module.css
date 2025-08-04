@@ -22,15 +22,15 @@ body {
 /* Estilos para el contenedor de reacciones y el menú de emojis */
 .reactionContainer {
     position: relative;
-    display: inline-block;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    z-index: 1000; /* Asegura que la reacción está encima de la barra */
 }
 
 .emojiPicker {
-    position: absolute;
-    bottom: calc(100% + 10px); /* Posicionado encima del botón */
+    position: fixed; /* Cambiado a fixed para evitar que se recorte */
+    bottom: calc(4.75rem + 10px); /* Calculado para estar encima del footer */
     left: 50%;
     transform: translateX(-50%);
     background-color: #3e3e4a;
@@ -40,9 +40,8 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-    z-index: 1000;
-    width: 375px;
-    justify-content: center;
+    z-index: 2000; /* Z-index más alto que la barra de control */
+    width: 200px;
 }
 
 .emojiButton {
@@ -100,7 +99,6 @@ body {
 .plusButton:hover {
     background-color: #475569; /* hover:bg-slate-600 */
 }
-
 
 /* Estilos para que el botón de reacción se vea activo */
 .controlButtonActive {
@@ -211,6 +209,7 @@ body {
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap; /* Permite que los botones se envuelvan en pantallas pequeñas */
+    z-index: 100; /* Añadido para asegurar que está por encima de los videos */
 }
 @media (min-width: 640px) {
     .controlsFooter {
@@ -503,4 +502,3 @@ body {
 .joinButtonIcon {
     margin-right: 0.5rem;
 }
-
