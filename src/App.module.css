@@ -102,18 +102,20 @@ body {
 }
 
 /* ---------------- Video Grid ---------------- */
+/* Contenedor principal para la cuadrícula de videos */
 .videoGridContainer {
     flex-grow: 1;
     display: flex;
     gap: 1rem;
     padding: 1rem;
     overflow: auto;
-    background-color: var(--background-dark);
+    background-color: #1e293b;
     align-items: stretch;
     justify-content: center;
 }
 
 /* Estilos para la cuadrícula horizontal (orientación horizontal) */
+/* Esta regla solo se aplica cuando el dispositivo está en orientación 'landscape' */
 @media (orientation: landscape) {
     .horizontalGrid {
         display: grid;
@@ -131,42 +133,48 @@ body {
     gap: 1rem;
 }
 
-.mainVideo {
+.mainVideoWrapper {
     flex-grow: 1;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.videoSecondaryGrid {
+.videoSidebar {
     display: flex;
+    flex-direction: column; /* Nuevo: Videos en columna */
     gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    min-width: 150px; /* Ancho fijo para la barra lateral */
+    max-width: 25%; /* Nuevo: Evita que la sidebar sea muy ancha */
+    overflow-y: auto; /* Permite scroll si hay muchos videos */
+    align-items: flex-end;
 }
 
 @media (max-width: 768px) {
     .videoGridContainer {
         flex-direction: column;
     }
-    .mainVideo {
+    .mainVideoWrapper {
         height: 60%;
     }
-    .videoSecondaryGrid {
+    .videoSidebar {
         flex-direction: row;
+        min-width: auto;
+        max-width: 100%;
         height: 20%;
         overflow-y: hidden;
         overflow-x: auto;
     }
 }
 
+/* Contenedor del video */
 .videoWrapper {
     align-items: center;
-    aspect-ratio: 16 / 9; /* Aspecto más moderno */
+    aspect-ratio: 12 / 9;
     background-color: #000000;
-    border: 2px solid var(--border-color);
-    border-radius: .75rem; /* Bordes más redondeados */
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+    border: 2px solid #334155;
+    border-radius: .5rem;
+    box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
     display: flex;
     justify-content: center;
     position: relative;
@@ -177,11 +185,11 @@ body {
 .videoElement {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Para que el video llene el contenedor */
+    object-fit: contain; /* 🧠 Importante: que no se deforme ni se recorte */
     max-width: 100%;
     max-height: 100%;
-    border-radius: .75rem;
 }
+
 
 .localVideo {
     transform: scaleX(-1);
@@ -191,15 +199,14 @@ body {
     position: absolute;
     bottom: 0.5rem;
     left: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.6);
-    color: var(--text-light);
-    font-size: 0.875rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px; /* Pill-shaped */
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
     font-weight: 500;
-    z-index: 10;
+    z-index: 10; /* Asegura que esté por encima del video */
 }
-
 /* ---------------- Controles ---------------- */
 .controlsFooter {
     background-color: rgba(15, 23, 42, 0.8);
