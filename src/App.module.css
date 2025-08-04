@@ -138,20 +138,6 @@ body {
     gap: 1rem;
 }
 
-.App_videoWrapper__ROG2R {
-    align-items: center;
-    aspect-ratio: 12 / 9;
-    background-color: #000000;
-    border: 2px solid #334155;
-    border-radius: .5rem;
-    box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
-    display: flex;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-    transition: transform .3s ease-in-out;
-    width: 100%;
-}
 .mainVideoWrapper {
     flex-grow: 1;
     display: flex;
@@ -184,6 +170,22 @@ body {
         overflow-y: hidden;
         overflow-x: auto;
     }
+}
+
+/* Contenedor del video */
+.videoWrapper {
+    align-items: center;
+    aspect-ratio: 12 / 9;
+    background-color: #000000;
+    border: 2px solid #334155;
+    border-radius: .5rem;
+    box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    transition: transform .3s ease-in-out;
+    width: 100%;
 }
 
 .videoElement {
