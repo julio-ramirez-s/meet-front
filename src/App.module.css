@@ -55,7 +55,6 @@ body {
     gap: 4px;
     z-index: 200;
     width: 90%;
-    max-width: 400px;
     justify-content: center;
 }
 
