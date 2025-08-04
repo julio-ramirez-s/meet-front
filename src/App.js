@@ -716,7 +716,7 @@ const Lobby = ({ onJoin }) => {
         <div className={styles.lobbyContainer}>
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
-                    <img src="%PUBLIC_URL%/logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
+                    <img src=".\public\logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
                     <h1 className={styles.lobbyTitle}>Unirse a Mundi-Link</h1>
                     <form onSubmit={handleSubmit} className={styles.lobbyForm}>
                         <div className={styles.formGroup}>
