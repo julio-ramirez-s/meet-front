@@ -182,7 +182,7 @@ body {
     box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
     display: flex;
     justify-content: center;
-    overflow: hidden;
+    overflow: scroll;
     position: relative;
     transition: transform .3s ease-in-out;
     width: 100%;
