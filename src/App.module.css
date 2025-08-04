@@ -25,8 +25,7 @@ body {
     border-radius: 12px;
     bottom: calc(100% + 10px);
     box-shadow: 0 4px 20px #0000004d;
-    display: flex
-;
+    display: flex;
     flex-wrap: wrap;
     gap: 4px;
     left: 50%;
