@@ -41,7 +41,7 @@ body {
     flex-wrap: wrap;
     gap: 4px;
     z-index: 2000; /* Z-index más alto que la barra de control */
-    width: 375px;
+    width: 90%;
     justify-content: center;
 }
 
