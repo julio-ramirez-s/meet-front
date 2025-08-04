@@ -107,40 +107,35 @@ body {
 }
 
 /* ---------------- Video Grid ---------------- */
+/* Contenedor principal para la cuadrícula de videos */
 .videoGridContainer {
     flex-grow: 1;
     display: flex;
     gap: 1rem;
     padding: 1rem;
-    overflow: hidden;
+    overflow: auto;
     background-color: #1e293b;
     align-items: center;
     justify-content: center;
 }
 
-.App_videoGridContainer__ZNyW- {
-    background-color: #1e293b;
-    display: flex;
-    flex-grow: 1;
-    gap: 1rem;
-    overflow: hidden;
-    padding: 1rem;
-    align-items: center;
-    justify-content: center;
+/* Estilos para la cuadrícula horizontal (orientación horizontal) */
+/* Esta regla solo se aplica cuando el dispositivo está en orientación 'landscape' */
+@media (orientation: landscape) {
+    .horizontalGrid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+    }
 }
-.App_videoWrapper__ROG2R {
-    align-items: center;
-    aspect-ratio: 20 / 8;
-    background-color: #1e293b;
-    border: 2px solid #334155;
-    border-radius: .5rem;
-    box-shadow: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
+
+/* Estilos para la cuadrícula vertical (orientación vertical, por defecto) */
+.verticalGrid {
     display: flex;
-    justify-content: center;
-    overflow: hidden;
-    position: relative;
-    transition: transform .3s ease-in-out;
-    width: 100%;
+    flex-direction: column;
+    gap: 1rem;
 }
 .mainVideoWrapper {
     flex-grow: 1;
