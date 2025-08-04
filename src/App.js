@@ -440,7 +440,19 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
+    const [isVerticalScreen, setIsVerticalScreen] = useState(window.innerWidth < window.innerHeight);
 
+    useEffect(() => {
+        const handleResize = () => {
+            setIsVerticalScreen(window.innerWidth < window.innerHeight);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
+    // Filtra y prepara todos los streams de video para su renderización
     const videoElements = [
         myStream && { id: 'my-video', stream: myStream, userName: `${currentUserName} (Tú)`, isLocal: true, muted: true },
         myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserName} (Tú)`, isLocal: true, isScreenShare: true, muted: true },
@@ -460,36 +472,37 @@ const VideoGrid = () => {
             }))
     ].filter(Boolean);
 
-    const isSharingScreen = videoElements.some(v => v.isScreenShare);
-    const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
-    const sideContent = videoElements.filter(v => !v.isScreenShare);
+    // Separar los videos de cámara de las pantallas compartidas
+    const screenShareVideos = videoElements.filter(v => v.isScreenShare);
+    const cameraVideos = videoElements.filter(v => !v.isScreenShare);
 
-    const getGridLayoutClass = (count) => {
-        if (count <= 1) return styles.grid_1;
-        if (count === 2) return styles.grid_2;
-        if (count <= 4) return styles.grid_4;
-        if (count <= 6) return styles.grid_6;
-        return styles.grid_8_plus;
-    };
-
-    const gridLayoutClass = getGridLayoutClass(sideContent.length);
+    const hasScreenShare = screenShareVideos.length > 0;
 
     return (
         <div className={styles.videoGridContainer}>
-            {mainContent && (
-                <div className={styles.mainVideo}>
-                    <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
+            {hasScreenShare ? (
+                <>
+                    <div className={styles.mainVideoWrapper}>
+                        {screenShareVideos.map(v => (
+                            <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
+                        ))}
+                    </div>
+                    <div className={styles.videoSidebar}>
+                        {cameraVideos.map(v => (
+                            <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className={isVerticalScreen ? styles.videoGridVertical : styles.videoGridHorizontal}>
+                    {cameraVideos.map(v => (
+                        <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
+                    ))}
                 </div>
             )}
-            <div className={`${styles.videoSecondaryGrid} ${gridLayoutClass}`}>
-                {sideContent.map(v => (
-                    <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
-                ))}
-            </div>
         </div>
     );
 };
-
 
 const Controls = ({ onToggleChat, onLeave }) => {
     const { 
