@@ -111,6 +111,7 @@ body {
     background-color: #1e293b;
     align-items: stretch;
     justify-content: center;
+    align-items: flex-start;
 }
 
 /* Estilos para la cuadrícula horizontal (orientación horizontal) */
