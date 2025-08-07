@@ -425,11 +425,13 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
-    const [isHorizontal, setIsHorizontal] = useState(window.innerWidth > window.innerHeight);
+    // 🧠 Nuevo estado para detectar si es una pantalla de escritorio (basado en el ancho)
+    const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
 
     useEffect(() => {
+        // Listener para actualizar el estado cada vez que se redimensiona la ventana
         const handleResize = () => {
-            setIsHorizontal(window.innerWidth > window.innerHeight);
+            setIsDesktop(window.innerWidth > 768); // Umbral común para escritorio
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
@@ -458,7 +460,9 @@ const VideoGrid = () => {
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
-    const gridLayoutClass = isHorizontal ? styles.horizontalGrid : styles.verticalGrid;
+    // 🧠 La clase de layout ahora se elige dinámicamente según si es desktop o móvil
+    // Si es desktop, queremos una columna (desktopLayout). Si es móvil, queremos cuadrícula (mobileLayout).
+    const secondaryGridLayoutClass = isDesktop ? styles.desktopLayout : styles.mobileLayout;
 
     return (
         <div className={styles.videoGridContainer}>
@@ -467,7 +471,8 @@ const VideoGrid = () => {
                     <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
                 </div>
             )}
-            <div className={`${styles.videoSecondaryGrid} ${gridLayoutClass}`}>
+            {/* 🧠 Se aplica la clase dinámica al contenedor de videos secundarios */}
+            <div className={`${styles.videoSecondaryGrid} ${secondaryGridLayoutClass}`}>
                 {sideContent.map(v => (
                     <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
                 ))}

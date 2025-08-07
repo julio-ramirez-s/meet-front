@@ -129,41 +129,86 @@ body {
 
 /* Contenedor para los videos secundarios (cámaras) */
 .videoSecondaryGrid {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; /* Por defecto a flex */
     gap: 1rem;
     flex-shrink: 0;
+    align-items: center; /* Centrar elementos */
+    justify-content: center; /* Centrar elementos */
 }
 
-/* Estilos para la cuadrícula horizontal (orientación landscape) */
-@media (orientation: landscape) {
+/* Diseño para escritorio: Cuadrícula para videos secundarios */
+@media (min-width: 769px) { /* Escritorio */
     .videoGridContainer {
-        flex-direction: row;
+        flex-direction: row; /* Contenido principal y barra lateral */
     }
-    .videoSecondaryGrid {
-        flex-direction: column;
-        width: 25%;
+    .desktopLayout { /* Se aplica a videoSecondaryGrid cuando es escritorio */
+        flex-direction: row; /* Organizar en una fila */
+        flex-wrap: wrap; /* Permitir que se envuelvan para crear cuadrícula */
+        width: 100%; /* Ocupar todo el ancho disponible */
+        justify-content: center; /* Centrar elementos en la cuadrícula */
     }
-}
-
-/* Estilos para la cuadrícula vertical (orientación portrait, por defecto) */
-@media (orientation: portrait), (max-width: 768px) {
-    .videoGridContainer {
-        flex-direction: column;
-    }
-    .videoSecondaryGrid {
-        flex-direction: row;
-        width: 100%;
-        overflow-x: auto;
-        min-height: 20%;
-    }
-    .videoSecondaryGrid .videoWrapper {
+    .desktopLayout .videoWrapper {
         flex-shrink: 0;
-        width: 200px;
-        height: auto;
+        width: calc(33.33% - 0.67rem); /* 3 columnas por defecto en escritorio */
+        max-width: 400px; /* Tamaño máximo para video individual en cuadrícula */
+        aspect-ratio: 16 / 9;
+    }
+    /* Ajustar para más columnas en pantallas más grandes de escritorio */
+    @media (min-width: 1024px) {
+        .desktopLayout .videoWrapper {
+            width: calc(25% - 0.75rem); /* 4 columnas */
+        }
+    }
+    @media (min-width: 1440px) {
+        .desktopLayout .videoWrapper {
+            width: calc(20% - 0.8rem); /* 5 columnas */
+        }
     }
 }
+
+/* Diseño para móvil: Columna para videos secundarios */
+@media (max-width: 768px) { /* Móvil */
+    .videoGridContainer {
+        flex-direction: column; /* Contenido principal encima de los videos secundarios */
+    }
+    .mobileLayout { /* Se aplica a videoSecondaryGrid cuando es móvil */
+        flex-direction: column; /* Organizar en una columna */
+        width: 100%;
+        overflow-y: auto; /* Permitir scroll vertical si es necesario */
+        min-height: 20%; /* Darle una altura mínima */
+    }
+    .mobileLayout .videoWrapper {
+        width: 100%; /* Los videos ocupan todo el ancho de la columna */
+        aspect-ratio: 16 / 9;
+    }
+}
+
+/* Por defecto para videoGridContainer cuando no hay video principal (todos son secundarios) */
+/* Esto se aplica cuando no hay pantalla compartida activa */
+.videoGridContainer:not(:has(.mainVideo)) {
+    flex-wrap: wrap; /* Permitir que todos los videos se envuelvan */
+    align-items: center;
+    justify-content: center;
+}
+
+.videoGridContainer:not(:has(.mainVideo)) .videoWrapper {
+    width: calc(50% - 0.5rem); /* Por defecto a 2 columnas si no hay video principal */
+    max-width: 300px; /* Limitar tamaño */
+    aspect-ratio: 16 / 9;
+}
+
+/* Ajustar para un mayor número de videos cuando no hay video principal en escritorio */
+@media (min-width: 1024px) {
+    .videoGridContainer:not(:has(.mainVideo)) .videoWrapper {
+        width: calc(33.33% - 0.67rem); /* 3 columnas */
+    }
+}
+@media (min-width: 1440px) {
+    .videoGridContainer:not(:has(.mainVideo)) .videoWrapper {
+        width: calc(25% - 0.75rem); /* 4 columnas */
+    }
+}
+
 
 /* Contenedor del video */
 .videoWrapper {
