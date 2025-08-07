@@ -104,14 +104,14 @@ body {
 /* Contenedor principal para la cuadrícula de videos */
 .videoGridContainer {
     flex-grow: 1;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     padding: 1rem;
     overflow: auto;
     background-color: #1e293b;
     align-items: stretch;
     justify-content: center;
-    align-items: flex-start;
 }
 
 /* Estilos para la cuadrícula horizontal (orientación horizontal) */
@@ -152,7 +152,8 @@ body {
 
 @media (max-width: 768px) {
     .videoGridContainer {
-        flex-direction: column;
+        display: grid;
+    grid-template-columns: repeat(2, 1fr);
     }
     .mainVideoWrapper {
         height: 60%;
