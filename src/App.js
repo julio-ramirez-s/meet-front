@@ -441,7 +441,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
-    // Nuevo estado para detectar la orientación de la pantalla.
+    // 🧠 Nuevo estado para detectar la orientación de la pantalla.
     const [isHorizontal, setIsHorizontal] = useState(window.innerWidth > window.innerHeight);
 
     useEffect(() => {
@@ -476,17 +476,17 @@ const VideoGrid = () => {
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
-    // La clase de layout ahora se elige dinámicamente según la orientación
+    // 🧠 La clase de layout ahora se elige dinámicamente según la orientación
     const gridLayoutClass = isHorizontal ? styles.horizontalGrid : styles.verticalGrid;
-    const mainVideoClass = isSharingScreen ? styles.mainVideoShare : styles.videoGridContainer;
 
     return (
-        <div className={mainVideoClass}>
+        <div className={styles.videoGridContainer}>
             {mainContent && (
                 <div className={styles.mainVideo}>
                     <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
                 </div>
             )}
+            {/* 🧠 Se aplica la clase dinámica al contenedor de videos secundarios */}
             <div className={`${styles.videoSecondaryGrid} ${gridLayoutClass}`}>
                 {sideContent.map(v => (
                     <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
