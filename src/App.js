@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper, Plus } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper, Plus, Sun, Moon } from 'lucide-react'; // Importar Sun y Moon
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -482,10 +482,10 @@ const VideoGrid = () => {
 };
 
 
-const Controls = ({ onToggleChat, onLeave }) => {
+const Controls = ({ onToggleChat, onLeave, toggleTheme, isLightMode }) => { // Recibir toggleTheme y isLightMode
     const { 
         toggleMute, toggleVideo, shareScreen, sendReaction,
-        isMuted, isVideoOff, myScreenStream, peers // 'peers' ahora está disponible
+        isMuted, isVideoOff, myScreenStream, peers
     } = useWebRTC();
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -493,11 +493,11 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const commonEmojis = ['👍', '😂', '🎉', '❤️', '👏'];
 
     const emojis = [
-        '👍', '�', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+        '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
         '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
         '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨',
         '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
-        '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
+        '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '�',
         '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
         '👀', '👄','🫦', '🫶', '💪'
     ];
@@ -525,7 +525,6 @@ const Controls = ({ onToggleChat, onLeave }) => {
     }, [emojiPickerRef]);
 
     const isSharingMyScreen = !!myScreenStream;
-    // Correcto: usar peers['screen-share'] para saber si alguien más está compartiendo
     const isViewingRemoteScreen = !!peers['screen-share']; 
 
     return (
@@ -539,7 +538,6 @@ const Controls = ({ onToggleChat, onLeave }) => {
             <button 
                 onClick={shareScreen} 
                 className={`${styles.controlButton} ${isSharingMyScreen ? styles.controlButtonScreenShare : ''}`}
-                // El botón se deshabilita si alguien más está compartiendo pantalla
                 disabled={isViewingRemoteScreen && !isSharingMyScreen} 
             >
                 <ScreenShare size={20} />
@@ -577,6 +575,10 @@ const Controls = ({ onToggleChat, onLeave }) => {
                     </div>
                 )}
             </div>
+            {/* Nuevo botón para cambiar tema */}
+            <button onClick={toggleTheme} className={styles.controlButton}>
+                {isLightMode ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
             </button>
@@ -642,13 +644,13 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     );
 };
 
-const CallRoom = ({ onLeave }) => {
+const CallRoom = ({ onLeave, toggleTheme, isLightMode }) => { // Recibir toggleTheme y isLightMode
     const [isChatOpen, setIsChatOpen] = useState(false);
     return (
-        <div className={styles.mainContainer}>
+        <div className={`${styles.mainContainer} ${isLightMode ? styles.lightMode : ''}`}> {/* Aplicar clase lightMode */}
             <main className={styles.mainContent}>
                 <VideoGrid />
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} />
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} toggleTheme={toggleTheme} isLightMode={isLightMode} /> {/* Pasar props */}
             </main>
             <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
         </div>
@@ -765,6 +767,7 @@ export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
+    const [isLightMode, setIsLightMode] = useState(false); // Nuevo estado para el tema
     const webRTCLogic = useWebRTCLogic('main-room');
 
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
@@ -784,6 +787,10 @@ export default function App() {
         setSelectedAudioOutput('');
     };
 
+    const toggleTheme = () => { // Función para cambiar el tema
+        setIsLightMode(prevMode => !prevMode);
+    };
+
     useEffect(() => {
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
         return () => {
@@ -796,7 +803,7 @@ export default function App() {
     } else {
         return (
             <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}>
-                <CallRoom onLeave={handleLeave} />
+                <CallRoom onLeave={handleLeave} toggleTheme={toggleTheme} isLightMode={isLightMode} /> {/* Pasar props */}
                 <ToastContainer />
             </WebRTCContext.Provider>
         );
