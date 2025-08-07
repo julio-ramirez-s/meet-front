@@ -104,73 +104,73 @@ body {
 /* Contenedor principal para la cuadrícula de videos */
 .videoGridContainer {
     flex-grow: 1;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    padding: 1rem;
-    overflow: auto;
-    background-color: #1e293b;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Estilos cuando se comparte pantalla */
-.mainVideoShare {
-    flex-grow: 1;
     display: flex;
     gap: 1rem;
     padding: 1rem;
     overflow: auto;
     background-color: #1e293b;
+    align-items: stretch;
+    justify-content: center;
     align-items: flex-start;
-    justify-content: center;
 }
 
-.mainVideo {
-    flex-grow: 1;
-    width: 100%;
-    height: 100%;
-}
-
-.videoSecondaryGrid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: center;
-    align-items: center;
-}
-
-.horizontalGrid {
-    flex-direction: row;
-    align-items: center;
-}
-
-.verticalGrid {
-    flex-direction: column;
-    align-items: center;
-}
-
-@media (min-width: 768px) and (orientation: landscape) {
-    .videoSecondaryGrid.horizontalGrid {
+/* Estilos para la cuadrícula horizontal (orientación horizontal) */
+/* Esta regla solo se aplica cuando el dispositivo está en orientación 'landscape' */
+@media (orientation: landscape) {
+    .horizontalGrid {
         display: grid;
-        grid-template-columns: repeat(1, 1fr);
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        gap: 1rem;
+        padding: 1rem;
     }
 }
 
-@media (max-width: 767px), (orientation: portrait) {
-    .videoGridContainer, .mainVideoShare {
-        flex-direction: column;
-    }
-    .videoSecondaryGrid {
-        flex-direction: column;
-    }
+/* Estilos para la cuadrícula vertical (orientación vertical, por defecto) */
+.verticalGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
+.mainVideoWrapper {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.videoSidebar {
+    display: flex;
+    flex-direction: column; /* Nuevo: Videos en columna */
+    gap: 1rem;
+    min-width: 150px; /* Ancho fijo para la barra lateral */
+    max-width: 25%; /* Nuevo: Evita que la sidebar sea muy ancha */
+    overflow-y: auto; /* Permite scroll si hay muchos videos */
+    align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+    .videoGridContainer {
+        flex-direction: column;
+    }
+    .mainVideoWrapper {
+        height: 60%;
+    }
+    .videoSidebar {
+        flex-direction: row;
+        min-width: auto;
+        max-width: 100%;
+        height: 20%;
+        overflow-y: hidden;
+        overflow-x: auto;
+    }
+}
 
 /* Contenedor del video */
 .videoWrapper {
     align-items: center;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 12 / 9;
     background-color: #000000;
     border: 2px solid #334155;
     border-radius: .5rem;
