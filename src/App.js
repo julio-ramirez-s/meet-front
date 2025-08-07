@@ -324,35 +324,35 @@ const useWebRTCLogic = (roomId) => {
     };
 
     const shareScreen = async () => {
+        // Si ya estoy compartiendo mi pantalla, la detengo
         if (myScreenStream) {
-            console.log("[ScreenShare] Stopping screen share.");
+            console.log("[ScreenShare] Deteniendo compartición de pantalla.");
             myScreenStream.getTracks().forEach(track => track.stop());
-            socketRef.current.emit('stop-screen-share');
-            setMyScreenStream(null);
+            setMyScreenStream(null); // Establecer a null inmediatamente
+            socketRef.current.emit('stop-screen-share'); // Notificar a los demás
 
+            // Limpiar conexiones PeerJS relacionadas con mi compartición de pantalla
             Object.keys(peerConnections.current).forEach(key => {
-                if (key.endsWith('_screen')) {
-                    const peerId = key.replace('_screen', '');
+                if (key.endsWith('_screen')) { // Estas son las llamadas que yo inicié para enviar mi pantalla
                     peerConnections.current[key].close();
                     delete peerConnections.current[key];
-                    setPeers(prevPeers => {
-                        const newPeers = { ...prevPeers };
-                        delete newPeers['screen-share'];
-                        return newPeers;
-                    });
                 }
             });
-            return;
+            return; // Salir de la función después de detener
         }
 
+        // Si no estoy compartiendo, inicio la compartición
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
             setMyScreenStream(screenStream);
             console.log("Stream de pantalla inicializado.");
 
+            // Adjuntar listener 'onended' para detener automáticamente si el usuario cierra desde el navegador
             screenStream.getVideoTracks()[0].onended = () => {
-                setMyScreenStream(null);
-                socketRef.current.emit('stop-screen-share');
+                console.log("[ScreenShare] Compartición de pantalla finalizada por controles del navegador.");
+                setMyScreenStream(null); // Actualizar estado
+                socketRef.current.emit('stop-screen-share'); // Notificar a los demás
+                // Limpiar también las conexiones PeerJS aquí
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
                         peerConnections.current[key].close();
@@ -363,10 +363,12 @@ const useWebRTCLogic = (roomId) => {
 
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
 
+            // Notificar a los peers existentes para que se conecten a mi stream de pantalla
             Object.keys(peerConnections.current).forEach(peerKey => {
+                // Solo conectar a peers que no sean mi propia conexión de pantalla compartida
                 if (!peerKey.endsWith('_screen')) {
                     const peerId = peerKey;
-                    if (peerId === myPeerRef.current?.id) return;
+                    if (peerId === myPeerRef.current?.id) return; // No llamarme a mí mismo
                     connectToNewUser(peerId, peers[peerId]?.userName, screenStream, currentUserNameRef.current, true);
                 }
             });
@@ -425,13 +427,12 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
-    // 🧠 Nuevo estado para detectar si es una pantalla de escritorio (basado en el ancho)
+    // Estado para detectar si es una pantalla de escritorio (basado en el ancho)
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
 
     useEffect(() => {
-        // Listener para actualizar el estado cada vez que se redimensiona la ventana
         const handleResize = () => {
-            setIsDesktop(window.innerWidth > 768); // Umbral común para escritorio
+            setIsDesktop(window.innerWidth > 768);
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
@@ -460,8 +461,8 @@ const VideoGrid = () => {
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
-    // 🧠 La clase de layout ahora se elige dinámicamente según si es desktop o móvil
-    // Si es desktop, queremos una columna (desktopLayout). Si es móvil, queremos cuadrícula (mobileLayout).
+    // La clase de layout ahora se elige dinámicamente según si es desktop o móvil
+    // Si es desktop, queremos una cuadrícula (desktopLayout). Si es móvil, queremos columna (mobileLayout).
     const secondaryGridLayoutClass = isDesktop ? styles.desktopLayout : styles.mobileLayout;
 
     return (
@@ -471,7 +472,6 @@ const VideoGrid = () => {
                     <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
                 </div>
             )}
-            {/* 🧠 Se aplica la clase dinámica al contenedor de videos secundarios */}
             <div className={`${styles.videoSecondaryGrid} ${secondaryGridLayoutClass}`}>
                 {sideContent.map(v => (
                     <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
@@ -485,7 +485,7 @@ const VideoGrid = () => {
 const Controls = ({ onToggleChat, onLeave }) => {
     const { 
         toggleMute, toggleVideo, shareScreen, sendReaction,
-        isMuted, isVideoOff, myScreenStream, peers
+        isMuted, isVideoOff, myScreenStream, peers // 'peers' ahora está disponible
     } = useWebRTC();
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -493,7 +493,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const commonEmojis = ['👍', '😂', '🎉', '❤️', '👏'];
 
     const emojis = [
-        '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+        '👍', '�', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
         '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
         '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨',
         '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
@@ -525,7 +525,8 @@ const Controls = ({ onToggleChat, onLeave }) => {
     }, [emojiPickerRef]);
 
     const isSharingMyScreen = !!myScreenStream;
-    const isViewingRemoteScreen = !!peers['screen-share'];
+    // Correcto: usar peers['screen-share'] para saber si alguien más está compartiendo
+    const isViewingRemoteScreen = !!peers['screen-share']; 
 
     return (
         <footer className={styles.controlsFooter}>
@@ -538,7 +539,8 @@ const Controls = ({ onToggleChat, onLeave }) => {
             <button 
                 onClick={shareScreen} 
                 className={`${styles.controlButton} ${isSharingMyScreen ? styles.controlButtonScreenShare : ''}`}
-                disabled={isViewingRemoteScreen}
+                // El botón se deshabilita si alguien más está compartiendo pantalla
+                disabled={isViewingRemoteScreen && !isSharingMyScreen} 
             >
                 <ScreenShare size={20} />
             </button>
