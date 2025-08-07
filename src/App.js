@@ -19,7 +19,6 @@ const useWebRTCLogic = (roomId) => {
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
     
-    // Lista de usuarios presentes en la sala, incluyendo video y pantalla compartida
     const [roomUsers, setRoomUsers] = useState({});
 
     const socketRef = useRef(null);
@@ -66,12 +65,9 @@ const useWebRTCLogic = (roomId) => {
         }
     };
     
-    // Función para conectar con un nuevo usuario.
-    // Se usa tanto cuando un usuario existente se une como cuando yo me uno y los veo a ellos.
     const connectToNewUser = (peerId, remoteUserName, stream, localUserName, isScreenShare = false) => {
         if (!myPeerRef.current || !stream) return;
 
-        // Si ya tenemos una conexión con este usuario/stream, no hacemos nada
         const callKey = peerId + (isScreenShare ? '_screen' : '');
         if (peerConnections.current[callKey]) {
             console.log(`[PeerJS] Ya existe una conexión con ${callKey}. Ignorando.`);
@@ -136,8 +132,6 @@ const useWebRTCLogic = (roomId) => {
 
         myPeerRef.current.on('open', (peerId) => {
             console.log('Mi ID de Peer es: ' + peerId);
-            // Cuando un usuario se une, el servidor debe notificar a todos
-            // y enviar al nuevo usuario una lista de los usuarios existentes.
             socketRef.current.emit('join-room', roomId, peerId, currentUserNameRef.current);
         });
 
@@ -145,7 +139,6 @@ const useWebRTCLogic = (roomId) => {
             const { peer: peerId, metadata } = call;
             console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
 
-            // Responde a la llamada con mi stream de video o pantalla compartida
             const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
             if (streamToSend) {
                 call.answer(streamToSend);
@@ -194,18 +187,14 @@ const useWebRTCLogic = (roomId) => {
             peerConnections.current[peerId + (metadata.isScreenShare ? '_screen' : '')] = call;
         });
 
-        // LÓGICA MODIFICADA: El nuevo usuario recibe una lista de todos los usuarios existentes
-        // Esto permite que el nuevo usuario inicie llamadas a todos los demás.
         socketRef.current.on('room-users', ({ users }) => {
             console.log(`[Socket] Recibida lista de usuarios existentes:`, users);
             setRoomUsers(users);
             
-            // Un nuevo usuario se une a la sala. Debe iniciar llamadas a todos los usuarios existentes.
             users.forEach(existingUser => {
                 if (existingUser.userId !== myPeerRef.current.id) {
                     connectToNewUser(existingUser.userId, existingUser.userName, stream, currentUserNameRef.current);
                     
-                    // También verifica si el usuario existente está compartiendo pantalla
                     if (existingUser.isScreenShare) {
                         connectToNewUser(existingUser.userId, existingUser.userName, myScreenStream, currentUserNameRef.current, true);
                     }
@@ -223,7 +212,6 @@ const useWebRTCLogic = (roomId) => {
                 [userId]: { stream: null, userName: remoteUserName, isScreenShare: false }
             }));
 
-            // Lógica existente: un usuario existente llama al nuevo usuario
             connectToNewUser(userId, remoteUserName, stream, currentUserNameRef.current);
 
             if (myScreenStream && myPeerRef.current) {
@@ -265,15 +253,11 @@ const useWebRTCLogic = (roomId) => {
             });
         });
 
-        // LÓGICA MODIFICADA: Cuando un usuario empieza a compartir,
-        // los demás usuarios deben iniciar una llamada a esa transmisión de pantalla
         socketRef.current.on('user-started-screen-share', ({ userId, userName: remoteUserName }) => {
             console.log(`[Socket] ${remoteUserName} (${userId}) ha empezado a compartir pantalla.`);
             toast.info(`${remoteUserName} está compartiendo su pantalla.`);
             
-            // Iniciar la llamada para recibir el stream de la pantalla compartida
             if (myPeerRef.current) {
-                 // Si el stream de video ya existe, se envía con la llamada para obtener el de pantalla
                 connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current, true);
             }
         });
@@ -441,11 +425,9 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
-    // 🧠 Nuevo estado para detectar la orientación de la pantalla.
     const [isHorizontal, setIsHorizontal] = useState(window.innerWidth > window.innerHeight);
 
     useEffect(() => {
-        // Listener para actualizar el estado cada vez que se redimensiona la ventana
         const handleResize = () => {
             setIsHorizontal(window.innerWidth > window.innerHeight);
         };
@@ -476,7 +458,6 @@ const VideoGrid = () => {
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
-    // 🧠 La clase de layout ahora se elige dinámicamente según la orientación
     const gridLayoutClass = isHorizontal ? styles.horizontalGrid : styles.verticalGrid;
 
     return (
@@ -486,7 +467,6 @@ const VideoGrid = () => {
                     <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
                 </div>
             )}
-            {/* 🧠 Se aplica la clase dinámica al contenedor de videos secundarios */}
             <div className={`${styles.videoSecondaryGrid} ${gridLayoutClass}`}>
                 {sideContent.map(v => (
                     <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
@@ -500,7 +480,7 @@ const VideoGrid = () => {
 const Controls = ({ onToggleChat, onLeave }) => {
     const { 
         toggleMute, toggleVideo, shareScreen, sendReaction,
-        isMuted, isVideoOff, myScreenStream, remoteScreenStream
+        isMuted, isVideoOff, myScreenStream, peers
     } = useWebRTC();
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -540,7 +520,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
     }, [emojiPickerRef]);
 
     const isSharingMyScreen = !!myScreenStream;
-    const isViewingRemoteScreen = !!remoteScreenStream;
+    const isViewingRemoteScreen = !!peers['screen-share'];
 
     return (
         <footer className={styles.controlsFooter}>

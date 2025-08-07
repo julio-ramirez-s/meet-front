@@ -20,7 +20,7 @@ body {
     height: 100vh;
     background-color: var(--background-dark);
     color: var(--text-light);
-    font-family: 'Inter', sans-serif; /* Se sugiere un font más moderno */
+    font-family: 'Inter', sans-serif;
     overflow: hidden;
 }
 
@@ -55,6 +55,7 @@ body {
     gap: 4px;
     z-index: 200;
     width: 90%;
+    max-width: 400px;
     justify-content: center;
 }
 
@@ -95,13 +96,11 @@ body {
     background-color: var(--border-color);
 }
 
-/* Estilos para que el botón de reacción se vea activo */
 .controlButtonActive {
     background-color: var(--primary-blue) !important;
 }
 
 /* ---------------- Video Grid ---------------- */
-/* Contenedor principal para la cuadrícula de videos */
 .videoGridContainer {
     flex-grow: 1;
     display: flex;
@@ -111,66 +110,65 @@ body {
     background-color: #1e293b;
     align-items: stretch;
     justify-content: center;
-    align-items: flex-start;
 }
 
-/* Estilos para la cuadrícula horizontal (orientación horizontal) */
-/* Esta regla solo se aplica cuando el dispositivo está en orientación 'landscape' */
-@media (orientation: landscape) {
-    .horizontalGrid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        grid-template-rows: repeat(2, 1fr);
-        gap: 1rem;
-        padding: 1rem;
-    }
-}
-
-/* Estilos para la cuadrícula vertical (orientación vertical, por defecto) */
-.verticalGrid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.mainVideoWrapper {
+/* Contenedor principal para el video más grande (pantalla compartida) */
+.mainVideo {
     flex-grow: 1;
     display: flex;
     justify-content: center;
     align-items: center;
+    max-height: 100%;
 }
 
-.videoSidebar {
+.mainVideo .videoWrapper {
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Contenedor para los videos secundarios (cámaras) */
+.videoSecondaryGrid {
     display: flex;
-    flex-direction: column; /* Nuevo: Videos en columna */
+    align-items: center;
+    justify-content: center;
     gap: 1rem;
-    min-width: 150px; /* Ancho fijo para la barra lateral */
-    max-width: 25%; /* Nuevo: Evita que la sidebar sea muy ancha */
-    overflow-y: auto; /* Permite scroll si hay muchos videos */
-    align-items: flex-end;
+    flex-shrink: 0;
 }
 
-@media (max-width: 768px) {
+/* Estilos para la cuadrícula horizontal (orientación landscape) */
+@media (orientation: landscape) {
+    .videoGridContainer {
+        flex-direction: row;
+    }
+    .videoSecondaryGrid {
+        flex-direction: column;
+        width: 25%;
+    }
+}
+
+/* Estilos para la cuadrícula vertical (orientación portrait, por defecto) */
+@media (orientation: portrait), (max-width: 768px) {
     .videoGridContainer {
         flex-direction: column;
     }
-    .mainVideoWrapper {
-        height: 60%;
-    }
-    .videoSidebar {
+    .videoSecondaryGrid {
         flex-direction: row;
-        min-width: auto;
-        max-width: 100%;
-        height: 20%;
-        overflow-y: hidden;
+        width: 100%;
         overflow-x: auto;
+        min-height: 20%;
+    }
+    .videoSecondaryGrid .videoWrapper {
+        flex-shrink: 0;
+        width: 200px;
+        height: auto;
     }
 }
 
 /* Contenedor del video */
 .videoWrapper {
     align-items: center;
-    aspect-ratio: 12 / 9;
+    aspect-ratio: 16 / 9;
     background-color: #000000;
     border: 2px solid #334155;
     border-radius: .5rem;
@@ -185,11 +183,10 @@ body {
 .videoElement {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* 🧠 Importante: que no se deforme ni se recorte */
+    object-fit: contain;
     max-width: 100%;
     max-height: 100%;
 }
-
 
 .localVideo {
     transform: scaleX(-1);
@@ -205,7 +202,7 @@ body {
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
     font-weight: 500;
-    z-index: 10; /* Asegura que esté por encima del video */
+    z-index: 10;
 }
 /* ---------------- Controles ---------------- */
 .controlsFooter {
@@ -415,7 +412,7 @@ body {
 
 .lobbyFormWrapper {
     width: 100%;
-    max-width: 32rem; /* Aumenta el ancho para un mejor look */
+    max-width: 32rem;
 }
 
 .lobbyCard {
@@ -428,7 +425,7 @@ body {
 }
 
 .lobbyLogo {
-    height: 96px; /* Tamaño del logo */
+    height: 96px;
     margin-bottom: 1rem;
 }
 
