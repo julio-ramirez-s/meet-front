@@ -481,7 +481,121 @@ const VideoGrid = () => {
 };
 
 
+const Controls = ({ onToggleChat, onLeave, cycleTheme, appTheme }) => { // Recibir cycleTheme y appTheme
+    const { 
+        toggleMute, toggleVideo, shareScreen, sendReaction,
+        isMuted, isVideoOff, myScreenStream, peers
+    } = useWebRTC();
+    
+    const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+    const emojiPickerRef = useRef(null);
+    
+    // Emojis condicionales
+    const commonEmojis = appTheme === 'hot' 
+    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] 
+    : ['👍', '😆', '❤️', '🎉', '🥺'];
 
+    const emojis = appTheme === 'hot'   
+        ? [
+            '🌶️', '🥵', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
+            '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
+            '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
+         ]
+        : [
+            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
+            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
+            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
+            '👀', '👄','🫦', '🫶', '💪'
+        ];
+    
+    
+    const handleSendReaction = (emoji) => {
+        sendReaction(emoji);
+        setIsEmojiPickerOpen(false);
+    };
+
+    const handleToggleEmojiPicker = () => {
+        setIsEmojiPickerOpen(prev => !prev);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+                setIsEmojiPickerOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [emojiPickerRef]);
+
+    const isSharingMyScreen = !!myScreenStream;
+    const isViewingRemoteScreen = !!peers['screen-share']; 
+
+    return (
+        <footer className={styles.controlsFooter}>
+            <button onClick={toggleMute} className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ''}`}>
+                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <button onClick={toggleVideo} className={`${styles.controlButton} ${isVideoOff ? styles.controlButtonActive : ''}`}>
+                {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+            </button>
+            <button 
+                onClick={shareScreen} 
+                className={`${styles.controlButton} ${isSharingMyScreen ? styles.controlButtonScreenShare : ''}`}
+                disabled={isViewingRemoteScreen && !isSharingMyScreen} 
+            >
+                <ScreenShare size={20} />
+            </button>
+            <button onClick={onToggleChat} className={styles.controlButton}>
+                <MessageSquare size={20} />
+            </button>
+            <div className={styles.reactionContainer} ref={emojiPickerRef}>
+                {commonEmojis.map((emoji) => (
+                    <button
+                        key={emoji}
+                        onClick={() => handleSendReaction(emoji)}
+                        className={`${styles.controlButton} ${styles.commonEmojiButton}`}
+                    >
+                        {emoji}
+                    </button>
+                ))}
+                <button
+                    onClick={handleToggleEmojiPicker}
+                    className={`${styles.controlButton} ${styles.plusButton} ${isEmojiPickerOpen ? styles.controlButtonActive : ''}`}
+                >
+                    <Plus size={20} />
+                </button>
+                {isEmojiPickerOpen && (
+                    <div className={styles.emojiPicker}>
+                        {emojis.map((emoji) => (
+                            <button
+                                key={emoji}
+                                onClick={() => handleSendReaction(emoji)}
+                                className={styles.emojiButton}
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {/* Botón para cambiar tema */}
+            <button onClick={cycleTheme} className={styles.controlButton}>
+                {appTheme === 'dark' && <Sun size={20} />}
+                {appTheme === 'light' && <Moon size={20} />}
+                {appTheme === 'hot' && <Flame size={20} />}
+            </button>
+            <button onClick={onLeave} className={styles.leaveButton}>
+                Salir
+            </button>
+        </footer>
+    );
+};
 
 const ChatSidebar = ({ isOpen, onClose, appTheme }) => { // Recibir appTheme
     const { chatMessages, sendMessage, currentUserName } = useWebRTC();
