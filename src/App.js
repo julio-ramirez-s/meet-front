@@ -158,7 +158,10 @@ const useWebRTCLogic = (roomId) => {
     // Función para conectar a un nuevo usuario Peer
     const connectToNewUser = useCallback((peerId, remoteUserName, streamToOffer, localUserName, isScreenShare = false) => {
         if (!myPeerRef.current || !streamToOffer || !streamToOffer.active) {
-            console.log("No se puede conectar a nuevo usuario: Peer o stream no disponibles/activos.");
+            console.log("ERROR: No se puede conectar a nuevo usuario: Peer o stream no disponibles/activos.");
+            if (streamToOffer) {
+                console.log(`DEBUG: [connectToNewUser] Stream a ofrecer: ID=${streamToOffer.id}, activo=${streamToOffer.active}, videoTracks=${streamToOffer.getVideoTracks().length}, audioTracks=${streamToOffer.getAudioTracks().length}`);
+            }
             return;
         }
 
@@ -170,17 +173,22 @@ const useWebRTCLogic = (roomId) => {
 
         const metadata = { userName: localUserName, isScreenShare };
         console.log(`[PeerJS] Llamando a nuevo usuario ${remoteUserName} (${peerId}) con mi metadata:`, metadata);
+        console.log(`[PeerJS] Stream que se ofrece: ID=${streamToOffer.id}, Activo=${streamToOffer.active}, VideoTracks=${streamToOffer.getVideoTracks().length}, AudioTracks=${streamToOffer.getAudioTracks().length}`);
+
 
         try {
             const call = myPeerRef.current.call(peerId, streamToOffer, { metadata });
 
             call.on('stream', (remoteStream) => {
-                console.log(`[PeerJS] Stream recibido de mi llamada a: ${remoteUserName} (${peerId}). Es pantalla: ${isScreenShare}`);
+                console.log(`[PeerJS][OUTGOING CALL] Stream recibido de mi llamada a: ${remoteUserName} (${peerId}). Es pantalla: ${isScreenShare}`);
                 console.log("Remote Stream recibido:", remoteStream);
                 console.log("Remote Stream activo:", remoteStream.active);
                 console.log("Remote Stream pistas de video:", remoteStream.getVideoTracks().length);
                 remoteStream.getVideoTracks().forEach((track, index) => {
                     console.log(`Remote video track ${index} enabled: ${track.enabled}`);
+                });
+                remoteStream.getAudioTracks().forEach((track, index) => {
+                    console.log(`Remote audio track ${index} enabled: ${track.enabled}`);
                 });
 
 
@@ -244,6 +252,9 @@ const useWebRTCLogic = (roomId) => {
 
         if (socketRef.current && socketRef.current.connected) {
             console.log("Socket.IO ya conectado, no re-inicializando.");
+            // Si ya está conectado, no necesitamos re-inicializar, solo unir la sala de nuevo si es necesario
+            socketRef.current.emit('join-room', currentRoomIdRef.current, myPeerRef.current?.id, currentUserNameRef.current);
+            return;
         } else if (socketRef.current) {
             socketRef.current.disconnect();
             socketRef.current = null;
@@ -251,6 +262,9 @@ const useWebRTCLogic = (roomId) => {
 
         if (myPeerRef.current && !myPeerRef.current.destroyed) {
             console.log("PeerJS ya inicializado, no re-inicializando.");
+            // Si PeerJS ya está inicializado, sólo hay que abrir la conexión.
+            socketRef.current.emit('join-room', currentRoomIdRef.current, myPeerRef.current?.id, currentUserNameRef.current);
+            return;
         } else if (myPeerRef.current) {
             myPeerRef.current.destroy();
             myPeerRef.current = null;
@@ -326,11 +340,13 @@ const useWebRTCLogic = (roomId) => {
                 myPeerRef.current.on('call', (call) => {
                     const { userName: remoteUserName, isScreenShare } = call.metadata || {};
                     const callKey = call.peer + (isScreenShare ? '_screen' : '');
-                    console.log(`[PeerJS] Recibiendo llamada de ${call.peer} (nombre: ${remoteUserName}, pantalla: ${isScreenShare}).`);
+                    console.log(`[PeerJS][INCOMING CALL] Recibiendo llamada de ${call.peer} (nombre: ${remoteUserName}, pantalla: ${isScreenShare}).`);
+                    console.log("[PeerJS][INCOMING CALL] Metadata de la llamada:", call.metadata);
+
 
                     // Usar myStreamRef.current para acceder al stream más actual
                     if (!myStreamRef.current || !myStreamRef.current.active) {
-                        console.error("No se puede responder a la llamada: stream local no disponible o inactivo (usando myStreamRef).");
+                        console.error("ERROR: No se puede responder a la llamada: stream local no disponible o inactivo (usando myStreamRef).");
                         toast.error("Tu cámara o micrófono no están activos. No se pudo conectar la videollamada.");
                         call.close();
                         return;
@@ -339,12 +355,15 @@ const useWebRTCLogic = (roomId) => {
                     call.answer(myStreamRef.current); // Responder la llamada con el stream más actual
 
                     call.on('stream', (remoteStream) => {
-                        console.log(`[PeerJS] Stream recibido de llamada entrante de: ${call.peer}. Es pantalla: ${isScreenShare}`);
+                        console.log(`[PeerJS][INCOMING CALL] Stream recibido de llamada entrante de: ${call.peer}. Es pantalla: ${isScreenShare}`);
                         console.log("Incoming Remote Stream recibido:", remoteStream);
                         console.log("Incoming Remote Stream activo:", remoteStream.active);
                         console.log("Incoming Remote Stream pistas de video:", remoteStream.getVideoTracks().length);
                         remoteStream.getVideoTracks().forEach((track, index) => {
-                            console.log(`Incoming remote video track ${index} enabled: ${track.enabled}`);
+                            console.log(`Incoming remote video track ${index} enabled: ${track.enabled}, readyState: ${track.readyState}`);
+                        });
+                        remoteStream.getAudioTracks().forEach((track, index) => {
+                            console.log(`Incoming remote audio track ${index} enabled: ${track.enabled}, readyState: ${track.readyState}`);
                         });
 
                         if (isScreenShare) {
@@ -572,7 +591,6 @@ const useWebRTCLogic = (roomId) => {
     };
     const sendReaction = (emoji) => {
         if (socketRef.current) {
-            // CORRECCIÓN: Usar socketRef.current para acceder a la instancia de socket.io
             socketRef.current.emit('reaction', emoji);
         }
     };
@@ -605,13 +623,24 @@ const useWebRTCLogic = (roomId) => {
 
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-            console.log("DEBUG: Stream obtenido de getDisplayMedia:", screenStream);
+            // --- NUEVOS LOGS Y VALIDACIÓN PARA DEBUGGING ---
+            console.log("DEBUG: [shareScreen] Stream obtenido de getDisplayMedia:", screenStream);
             screenStream.getTracks().forEach(track => {
-                console.log(`DEBUG: Track ID: ${track.id}, Kind: ${track.kind}, Label: ${track.label}, Enabled: ${track.enabled}`);
+                console.log(`DEBUG: [shareScreen] Track ID: ${track.id}, Kind: ${track.kind}, Label: ${track.label}, Enabled: ${track.enabled}, ReadyState: ${track.readyState}`);
                 if (track.kind === 'video') {
-                    console.log(`DEBUG: Video track settings:`, track.getSettings());
+                    console.log(`DEBUG: [shareScreen] Video track settings:`, track.getSettings());
                 }
             });
+
+            const videoTracks = screenStream.getVideoTracks();
+            if (videoTracks.length === 0 || !videoTracks[0].enabled || videoTracks[0].readyState === 'ended') {
+                toast.error("Tu selección de pantalla no incluye una pista de video activa o válida. Asegúrate de seleccionar una pantalla/ventana.");
+                console.error("ERROR: [shareScreen] getDisplayMedia no devolvió pistas de video activas.");
+                screenStream.getTracks().forEach(track => track.stop()); // Stop any tracks if invalid
+                setMyScreenStream(null); // Ensure state is clean
+                return;
+            }
+            // --- FIN NUEVOS LOGS Y VALIDACIÓN ---
 
             setMyScreenStream(screenStream);
             console.log("Stream de pantalla inicializado.");
@@ -639,13 +668,20 @@ const useWebRTCLogic = (roomId) => {
             // Reconnect existing peers with the screen stream
             Object.values(roomUsers).forEach(user => {
                 if (user.userId && user.userId !== myPeerRef.current.id) {
+                    console.log(`DEBUG: [shareScreen] Llamando a ${user.userName} (${user.userId}) para compartir pantalla.`);
                     connectToNewUser(user.userId, user.userName, screenStream, currentUserNameRef.current, true);
                 }
             });
 
         } catch (err) {
             console.error("Error al compartir pantalla:", err);
-            toast.error("No se pudo compartir la pantalla. Revisa los permisos o intenta de nuevo.");
+            if (err.name === "NotAllowedError") {
+                toast.error("Permiso para compartir pantalla denegado. Por favor, concede los permisos en tu navegador.");
+            } else if (err.name === "NotFoundError" || err.name === "AbortError") {
+                toast.error("No se encontró ninguna pantalla/ventana para compartir o la selección fue cancelada.");
+            } else {
+                toast.error("No se pudo compartir la pantalla. Revisa los permisos o intenta de nuevo.");
+            }
         }
     };
 
@@ -814,8 +850,8 @@ const Controls = ({ onToggleChat, onLeave }) => {
 
     // Emojis
     const commonEmojis = appTheme === 'hot'
-    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥']
-    : ['👍', '😆', '❤️', '�', '🥺'];
+    ? ['❤️', '🥵', '😍', '💋', '❤️‍�']
+    : ['👍', '😆', '❤️', '🎉', '🥺'];
 
 
     const emojis = appTheme === 'hot'
