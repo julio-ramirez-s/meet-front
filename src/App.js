@@ -107,6 +107,11 @@ const useWebRTCLogic = (roomId) => {
         }
     }, []);
     
+    const callKey = peerId + (isScreenShare ? '_screen' : '');
+        if (peerConnections.current[callKey]) {
+            console.log(`[PeerJS] Ya existe una conexión con ${callKey}. Ignorando.`);
+            return;
+        }
     // Función para conectar a un nuevo usuario Peer
     const connectToNewUser = useCallback((peerId, remoteUserName, streamToOffer, localUserName, isScreenShare = false) => {
         if (!myPeerRef.current || !streamToOffer || !streamToOffer.active) { // Asegura que el stream a ofrecer esté activo
