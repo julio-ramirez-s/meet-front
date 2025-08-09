@@ -105,9 +105,40 @@ const useWebRTCLogic = (roomId) => {
             setMyStream(null); // Asegura que el stream sea null si hay un error
             return null;
         }
-    }, []); // Dependencias vacías, ya que no depende de estados/props que cambien
+    }, []); 
 
     
+    // Funciones removePeer y removeScreenShare movidas aquí para que connectToNewUser las capture.
+    const removePeer = useCallback((peerId) => { 
+        if (peerConnections.current[peerId]) {
+            peerConnections.current[peerId].close();
+            delete peerConnections.current[peerId];
+        }
+        setPeers(prev => {
+            const newPeers = { ...prev };
+            delete newPeers[peerId];
+            return newPeers;
+        });
+        console.log(`Peer ${peerId} eliminado.`);
+    }, []);
+    
+    const removeScreenShare = useCallback((peerId) => { 
+        if (screenSharePeer.current === peerId) {
+            screenSharePeer.current = null;
+            setPeers(prev => {
+                const newPeers = { ...prev };
+                delete newPeers['screen-share'];
+                return newPeers;
+            });
+            const callKey = peerId + '_screen';
+            if (peerConnections.current[callKey]) {
+                peerConnections.current[callKey].close();
+                delete peerConnections.current[callKey];
+            }
+            console.log(`Screen share de ${peerId} eliminado.`);
+        }
+    }, []);
+
     // Función para conectar a un nuevo usuario Peer
     const connectToNewUser = useCallback((peerId, remoteUserName, streamToOffer, localUserName, isScreenShare = false) => {
         if (!myPeerRef.current || !streamToOffer || !streamToOffer.active) { // Asegura que el stream a ofrecer esté activo
@@ -360,8 +391,13 @@ const useWebRTCLogic = (roomId) => {
             setConnectionStatus('disconnected');
             toast.error('Error de conexión al servidor de chat.');
         });
+    }, [myStream, myScreenStream, savedAudioInputDeviceId, savedVideoInputDeviceId, initializeStream, connectToNewUser, removePeer, removeScreenShare]); // Dependencias para initializeConnections
 
+    // Este useEffect ahora está en el nivel superior del hook useWebRTCLogic
+    useEffect(() => {
         // Eventos de Socket.IO que dependen de PeerJS y Streams
+        if (!socketRef.current || !myPeerRef.current) return; // Asegúrate de que existan antes de configurar listeners
+
         socketRef.current.on('room-users', ({ users }) => {
             console.log(`[Socket] Recibida lista de usuarios existentes:`, users);
             setRoomUsers(users);
@@ -369,9 +405,9 @@ const useWebRTCLogic = (roomId) => {
             // Re-establecer llamadas a usuarios existentes con el stream activo
             users.forEach(existingUser => {
                 if (myPeerRef.current && existingUser.userId !== myPeerRef.current.id) {
-                    // Aquí se usa activeStream, que se obtiene al inicio de initializeConnections
-                    if (activeStream && activeStream.active) {
-                        connectToNewUser(existingUser.userId, existingUser.userName, activeStream, userNameToUse);
+                    // Aquí se usa myStream, que es el estado actual del componente
+                    if (myStream && myStream.active) {
+                        connectToNewUser(existingUser.userId, existingUser.userName, myStream, currentUserNameRef.current);
                     } else {
                         console.warn("No hay stream local activo disponible para conectar a usuarios existentes.");
                     }
@@ -390,13 +426,13 @@ const useWebRTCLogic = (roomId) => {
             }));
             
             if (myStream && myStream.active) { // Asegúrate de que el stream local esté activo
-                connectToNewUser(userId, remoteUserName, myStream, userNameToUse);
+                connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current);
             } else {
                 console.warn("No hay stream local activo disponible para conectar a usuarios que se unen.");
             }
 
             if (myScreenStream && myScreenStream.active && myPeerRef.current) {
-                connectToNewUser(userId, remoteUserName, myScreenStream, userNameToUse, true);
+                connectToNewUser(userId, remoteUserName, myScreenStream, currentUserNameRef.current, true);
             }
         });
 
@@ -444,7 +480,7 @@ const useWebRTCLogic = (roomId) => {
             }
 
             if (screenSharePeer.current !== userId) {
-                connectToNewUser(userId, remoteUserName, myStream, userNameToUse, true);
+                connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current, true);
             }
         });
 
@@ -459,37 +495,23 @@ const useWebRTCLogic = (roomId) => {
             toast.info(`El tema ha cambiado a ${theme}.`);
         });
 
-    }, [myStream, myScreenStream, savedAudioInputDeviceId, savedVideoInputDeviceId, initializeStream, connectToNewUser, removePeer, removeScreenShare]); // Agregadas/revisadas dependencias necesarias
-
-    // Funciones de control remoto (mismo que antes)
-    const removePeer = useCallback((peerId) => { 
-        if (peerConnections.current[peerId]) {
-            peerConnections.current[peerId].close();
-            delete peerConnections.current[peerId];
-        }
-        setPeers(prev => {
-            const newPeers = { ...prev };
-            delete newPeers[peerId];
-            return newPeers;
-        });
-        console.log(`Peer ${peerId} eliminado.`);
-    }, []);
-    const removeScreenShare = useCallback((peerId) => { 
-        if (screenSharePeer.current === peerId) {
-            screenSharePeer.current = null;
-            setPeers(prev => {
-                const newPeers = { ...prev };
-                delete newPeers['screen-share'];
-                return newPeers;
-            });
-            const callKey = peerId + '_screen';
-            if (peerConnections.current[callKey]) {
-                peerConnections.current[callKey].close();
-                delete peerConnections.current[callKey];
+        // Cleanup function for this useEffect
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.off('room-users');
+                socketRef.current.off('user-joined');
+                socketRef.current.off('user-disconnected');
+                socketRef.current.off('createMessage');
+                socketRef.current.off('reaction-received');
+                socketRef.current.off('user-started-screen-share');
+                socketRef.current.off('user-stopped-screen-share');
+                socketRef.current.off('theme-changed');
             }
-            console.log(`Screen share de ${peerId} eliminado.`);
-        }
-    }, []);
+        };
+
+    }, [myStream, myScreenStream, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers]); // Dependencias para este useEffect
+
+
     const toggleMute = () => { 
         if (myStream) {
             myStream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
@@ -533,7 +555,7 @@ const useWebRTCLogic = (roomId) => {
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen') && peerConnections.current[key]) { 
                     peerConnections.current[key].close();
-                    delete peerConnections.current[key]; // Corrected line
+                    delete peerConnections.current[key]; 
                 }
             });
             return; 
@@ -693,7 +715,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
             '🌶️', '🥵', '😈', '💋', '🔥', '🥰', '😏' 
          ]
         : [
-            '👍', '👎', '👏', '🙌', '🤝', '🙏', '👋', '😃', '😄', '😁', '😂' 
+            '👍', '👎', '👏', '🙌', '🤝', '🙏', '👋', '�', '😄', '😁', '😂' 
         ];
     
     
@@ -1096,7 +1118,6 @@ export default function App() {
         setSelectedAudioOutput(audioOutputId);
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
-            // Asegúrate de que webRTCLogic.connect reciba los parámetros correctos
             webRTCLogic.connect(finalUserName, audioId, videoId); // Pasa el nombre de usuario y los IDs de los dispositivos
             setIsJoined(true);
         }
