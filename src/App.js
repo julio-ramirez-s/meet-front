@@ -210,162 +210,138 @@ const useWebRTCLogic = (roomId) => {
         }
     }, [removePeer, removeScreenShare]); // Dependencias: removePeer y removeScreenShare
 
-    // --- PRIMER useEffect: Inicialización de Socket.IO y PeerJS ---
-    // Este useEffect ahora solo se encarga de crear las instancias de Socket.IO y PeerJS,
-    // y de adjuntar los listeners de "vida" (connect, disconnect, reconnect, error).
-    useEffect(() => {
+    // Forward declaration for `connect` so `setupSocketAndPeer` can use it
+    const connect = useRef(null);
+
+
+    // Función para (re)inicializar Socket.IO y PeerJS.
+    // Movida fuera de useEffect y envuelta en useCallback para ser accesible globalmente en el hook.
+    const setupSocketAndPeer = useCallback((userNameToUse, initialStream) => {
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // URL del backend
 
-        // Función para (re)inicializar Socket.IO y PeerJS.
-        // Solo se llama cuando connect se activa con el nombre de usuario y el stream.
-        const setupSocketAndPeer = (userNameToUse) => {
-            if (socketRef.current && socketRef.current.connected) {
-                console.log("Socket.IO ya conectado, no re-inicializando.");
-            } else if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-            }
-
-            if (myPeerRef.current && !myPeerRef.current.destroyed) {
-                console.log("PeerJS ya inicializado, no re-inicializando.");
-            } else if (myPeerRef.current) {
-                myPeerRef.current.destroy();
-                myPeerRef.current = null;
-            }
-
-            setConnectionStatus('reconnecting');
-
-            // Inicializar Socket.IO
-            socketRef.current = io(SERVER_URL, {
-                reconnection: true,
-                reconnectionAttempts: Infinity,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000,
-                randomizationFactor: 0.5
-            });
-
-            // Listeners de Socket.IO
-            socketRef.current.on('connect', () => {
-                console.log('✅ Socket.IO conectado.');
-                setConnectionStatus('connected');
-                toast.success('Conectado al servidor de chat.');
-
-                // Inicializar PeerJS solo después de que Socket.IO esté conectado
-                if (!myPeerRef.current || myPeerRef.current.destroyed) {
-                    myPeerRef.current = new Peer(undefined, {
-                        host: new URL(SERVER_URL).hostname,
-                        port: new URL(SERVER_URL).port || 443,
-                        path: '/peerjs/myapp',
-                        secure: true,
-                        config: { 
-                            'iceServers': [
-                                { urls: 'stun:stun.l.google.com:19302' },
-                                { urls: 'stun:stun1.l.google.com:19302' },
-                            ]
-                        }
-                    });
-
-                    myPeerRef.current.on('open', (peerId) => {
-                        console.log('Mi ID de Peer es: ' + peerId);
-                        // currentUserNameRef.current ya está establecido aquí desde 'connect'
-                        socketRef.current.emit('join-room', currentRoomIdRef.current, peerId, currentUserNameRef.current);
-                        setConnectionStatus('connected');
-                    });
-
-                    myPeerRef.current.on('disconnected', () => {
-                        console.log('❌ PeerJS desconectado. Intentando re-inicializar...');
-                        setConnectionStatus('reconnecting');
-                        toast.warn('Conexión de video perdida. Intentando reconectar...');
-                        setTimeout(() => {
-                            if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId) {
-                                // Llama a la función `connect` principal para re-inicializar todo
-                                connect(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId);
-                            } else {
-                                console.warn("No hay suficientes datos para re-inicializar la conexión PeerJS automáticamente.");
-                                toast.error("No se pudo reconectar automáticamente. Intenta salir y volver a unirte.");
-                                setConnectionStatus('disconnected');
-                            }
-                        }, 3000); 
-                    });
-
-                    myPeerRef.current.on('error', (err) => {
-                        console.error('❌ Error de PeerJS:', err);
-                        setConnectionStatus('disconnected');
-                        toast.error(`Error en conexión PeerJS: ${err.type}.`);
-                        if (err.type === 'peer-unavailable' || err.type === 'server-error' || err.type === 'network') {
-                            console.log("Reintentando inicialización de PeerJS debido a error de servidor/red.");
-                            if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId) {
-                                setTimeout(() => connect(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId), 5000);
-                            }
-                        }
-                    });
-                }
-            });
-
-            socketRef.current.on('disconnect', (reason) => {
-                console.log('❌ Socket.IO desconectado:', reason);
-                setConnectionStatus('disconnected');
-                toast.error(`Desconectado del servidor de chat: ${reason}. Intentando reconectar...`);
-                // Limpiar conexiones PeerJS aquí también para evitar cuellos de botella
-                Object.values(peerConnections.current).forEach(call => {
-                    if (call && call.open) call.close();
-                });
-                peerConnections.current = {};
-                setPeers({}); // Limpiar peers en la UI
-                screenSharePeer.current = null;
-                if (myPeerRef.current) {
-                    myPeerRef.current.destroy(); // Destruir PeerJS al desconectarse el socket
-                    myPeerRef.current = null;
-                }
-            });
-
-            socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-                console.log(`🔌 Intentando reconectar Socket.IO (intento ${attemptNumber})...`);
-                setConnectionStatus('reconnecting');
-                toast.info(`Intentando reconectar (intento ${attemptNumber})...`);
-            });
-
-            socketRef.current.on('reconnect', (attemptNumber) => {
-                console.log(`✅ Socket.IO reconectado después de ${attemptNumber} intentos.`);
-                setConnectionStatus('connected');
-                toast.success('¡Reconectado al servidor!');
-                // Al reconectar el socket, re-inicializar PeerJS/Socket.IO a través de la función principal 'connect'
-                if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId) {
-                     connect(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId);
-                } else {
-                     console.warn("No se puede re-unir a la sala después de la reconexión: faltan datos.");
-                }
-            });
-
-            socketRef.current.on('connect_error', (error) => {
-                console.error('❌ Error de conexión de Socket.IO:', error);
-                setConnectionStatus('disconnected');
-                toast.error('Error de conexión al servidor de chat.');
-            });
-        };
-
-        // La función `connect` (definida más abajo) será responsable de llamar a `setupSocketAndPeer`.
-        // Este `useEffect` ahora solo hace el cleanup cuando el componente se desmonta.
-        return () => {
-            if (socketRef.current) socketRef.current.disconnect();
-            if (myPeerRef.current) myPeerRef.current.destroy();
-        };
-    }, [roomId, savedAudioInputDeviceId, savedVideoInputDeviceId]); // Depende de roomId y los device IDs para re-setup en un cambio crítico
-
-
-    // --- SEGUNDO useEffect: Listeners de Socket.IO y PeerJS (que dependen de instancias ya creadas) ---
-    useEffect(() => {
-        // Solo configurar listeners si las referencias existen
-        if (!socketRef.current || !myPeerRef.current) {
-            console.log("Esperando que socketRef o myPeerRef estén disponibles para configurar listeners.");
-            return;
+        if (socketRef.current && socketRef.current.connected) {
+            console.log("Socket.IO ya conectado, no re-inicializando.");
+        } else if (socketRef.current) {
+            socketRef.current.disconnect();
+            socketRef.current = null;
         }
 
-        console.log("Configurando listeners de Socket.IO y PeerJS...");
+        if (myPeerRef.current && !myPeerRef.current.destroyed) {
+            console.log("PeerJS ya inicializado, no re-inicializando.");
+        } else if (myPeerRef.current) {
+            myPeerRef.current.destroy();
+            myPeerRef.current = null;
+        }
 
-        // Los listeners myPeerRef.current.on('call') se adjuntan dentro de setupSocketAndPeer cuando se crea myPeerRef.
-        // Asegúrate de que solo estén allí y no se dupliquen.
+        setConnectionStatus('reconnecting');
 
+        // Inicializar Socket.IO
+        socketRef.current = io(SERVER_URL, {
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            randomizationFactor: 0.5
+        });
+
+        // Listeners de Socket.IO
+        socketRef.current.on('connect', () => {
+            console.log('✅ Socket.IO conectado.');
+            setConnectionStatus('connected');
+            toast.success('Conectado al servidor de chat.');
+
+            // Inicializar PeerJS solo después de que Socket.IO esté conectado
+            if (!myPeerRef.current || myPeerRef.current.destroyed) {
+                myPeerRef.current = new Peer(undefined, {
+                    host: new URL(SERVER_URL).hostname,
+                    port: new URL(SERVER_URL).port || 443,
+                    path: '/peerjs/myapp',
+                    secure: true,
+                    config: { 
+                        'iceServers': [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                        ]
+                    }
+                });
+
+                myPeerRef.current.on('open', (peerId) => {
+                    console.log('Mi ID de Peer es: ' + peerId);
+                    socketRef.current.emit('join-room', currentRoomIdRef.current, peerId, currentUserNameRef.current);
+                    setConnectionStatus('connected');
+                });
+
+                myPeerRef.current.on('disconnected', () => {
+                    console.log('❌ PeerJS desconectado. Intentando re-inicializar...');
+                    setConnectionStatus('reconnecting');
+                    toast.warn('Conexión de video perdida. Intentando reconectar...');
+                    setTimeout(() => {
+                        if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId && connect.current) {
+                            // Llama a la función `connect` principal para re-inicializar todo
+                            connect.current(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId);
+                        } else {
+                            console.warn("No hay suficientes datos para re-inicializar la conexión PeerJS automáticamente.");
+                            toast.error("No se pudo reconectar automáticamente. Intenta salir y volver a unirte.");
+                            setConnectionStatus('disconnected');
+                        }
+                    }, 3000); 
+                });
+
+                myPeerRef.current.on('error', (err) => {
+                    console.error('❌ Error de PeerJS:', err);
+                    setConnectionStatus('disconnected');
+                    toast.error(`Error en conexión PeerJS: ${err.type}.`);
+                    if (err.type === 'peer-unavailable' || err.type === 'server-error' || err.type === 'network') {
+                        console.log("Reintentando inicialización de PeerJS debido a error de servidor/red.");
+                        if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId && connect.current) {
+                            setTimeout(() => connect.current(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId), 5000);
+                        }
+                    }
+                });
+            }
+        });
+
+        socketRef.current.on('disconnect', (reason) => {
+            console.log('❌ Socket.IO desconectado:', reason);
+            setConnectionStatus('disconnected');
+            toast.error(`Desconectado del servidor de chat: ${reason}. Intentando reconectar...`);
+            // Limpiar conexiones PeerJS aquí también para evitar cuellos de botella
+            Object.values(peerConnections.current).forEach(call => {
+                if (call && call.open) call.close();
+            });
+            peerConnections.current = {};
+            setPeers({}); // Limpiar peers en la UI
+            screenSharePeer.current = null;
+            if (myPeerRef.current) {
+                myPeerRef.current.destroy(); // Destruir PeerJS al desconectarse el socket
+                myPeerRef.current = null;
+            }
+        });
+
+        socketRef.current.on('reconnect_attempt', (attemptNumber) => {
+            console.log(`🔌 Intentando reconectar Socket.IO (intento ${attemptNumber})...`);
+            setConnectionStatus('reconnecting');
+            toast.info(`Intentando reconectar (intento ${attemptNumber})...`);
+        });
+
+        socketRef.current.on('reconnect', (attemptNumber) => {
+            console.log(`✅ Socket.IO reconectado después de ${attemptNumber} intentos.`);
+            setConnectionStatus('connected');
+            toast.success('¡Reconectado al servidor!');
+            // Al reconectar el socket, re-inicializar PeerJS/Socket.IO a través de la función principal 'connect'
+            if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId && connect.current) {
+                 connect.current(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId);
+            } else {
+                 console.warn("No se puede re-unir a la sala después de la reconexión: faltan datos.");
+            }
+        });
+
+        socketRef.current.on('connect_error', (error) => {
+            console.error('❌ Error de conexión de Socket.IO:', error);
+            setConnectionStatus('disconnected');
+            toast.error('Error de conexión al servidor de chat.');
+        });
+        
         // Listeners de Socket.IO para eventos de la sala
         socketRef.current.on('room-users', ({ users }) => {
             console.log(`[Socket] Recibida lista de usuarios existentes:`, users);
@@ -373,8 +349,8 @@ const useWebRTCLogic = (roomId) => {
             
             users.forEach(existingUser => {
                 if (myPeerRef.current && existingUser.userId !== myPeerRef.current.id) {
-                    if (myStream && myStream.active) { 
-                        connectToNewUser(existingUser.userId, existingUser.userName, myStream, currentUserNameRef.current);
+                    if (initialStream && initialStream.active) { 
+                        connectToNewUser(existingUser.userId, existingUser.userName, initialStream, currentUserNameRef.current);
                     } else {
                         console.warn("No hay stream local activo disponible para conectar a usuarios existentes.");
                     }
@@ -392,8 +368,8 @@ const useWebRTCLogic = (roomId) => {
                 [userId]: { stream: null, userName: remoteUserName, isScreenShare: false }
             }));
             
-            if (myStream && myStream.active) { 
-                connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current);
+            if (initialStream && initialStream.active) { 
+                connectToNewUser(userId, remoteUserName, initialStream, currentUserNameRef.current);
             } else {
                 console.warn("No hay stream local activo disponible para conectar a usuarios que se unen.");
             }
@@ -462,23 +438,15 @@ const useWebRTCLogic = (roomId) => {
             toast.info(`El tema ha cambiado a ${theme}.`);
         });
 
-        // Función de limpieza para este useEffect
-        return () => {
-            console.log("Desmontando listeners de Socket.IO y PeerJS...");
-            if (socketRef.current) {
-                socketRef.current.off('room-users');
-                socketRef.current.off('user-joined');
-                socketRef.current.off('user-disconnected');
-                socketRef.current.off('createMessage');
-                socketRef.current.off('reaction-received');
-                socketRef.current.off('user-started-screen-share');
-                socketRef.current.off('user-stopped-screen-share');
-                socketRef.current.off('theme-changed');
-            }
-            // Los listeners de PeerJS 'call', 'close', 'error' se manejan dentro de connectToNewUser y myPeerRef.current.on('call')
-        };
+    }, [currentUserNameRef, myScreenStream, myStream, roomId, savedAudioInputDeviceId, savedVideoInputDeviceId, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, connect]); // Dependencies added for setupSocketAndPeer
 
-    }, [socketRef.current, myPeerRef.current, myStream, myScreenStream, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, currentUserNameRef]); 
+    // Primer useEffect: Ahora solo para el cleanup global.
+    useEffect(() => {
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
+            if (myPeerRef.current) myPeerRef.current.destroy();
+        };
+    }, []); // Empty dependency array, runs only on mount/unmount
 
 
     const toggleMute = () => { 
@@ -565,7 +533,9 @@ const useWebRTCLogic = (roomId) => {
     };
 
     // La función connect ahora envuelve initializeStream y setupSocketAndPeer
-    const connect = useCallback(async (userName, audioDeviceId, videoDeviceId) => {
+    // Asignamos la función a connect.current para que pueda ser llamada recursivamente
+    // y desde el exterior del hook.
+    connect.current = useCallback(async (userName, audioDeviceId, videoDeviceId) => {
         currentUserNameRef.current = userName; // Asegura que el nombre de usuario esté disponible para setupSocketAndPeer
         
         // 1. Obtener el stream de medios
@@ -577,21 +547,14 @@ const useWebRTCLogic = (roomId) => {
         }
 
         // 2. Setup Socket.IO y PeerJS
-        // Llama a esta función aquí, después de que el nombre de usuario y el stream estén listos.
-        // Asegúrate de pasar el nombre de usuario actual.
-        setupSocketAndPeer(userName); // `setupSocketAndPeer` se define en el primer useEffect.
-                                      // Se auto-maneja la creación de socketRef y myPeerRef
+        setupSocketAndPeer(userName, stream); // Pasa el stream y el nombre de usuario a setupSocketAndPeer
 
-    }, [initializeStream]); // Depende solo de initializeStream, setupSocketAndPeer y currentUserNameRef se manejan internamente
+    }, [initializeStream, setupSocketAndPeer]); // Dependencias: initializeStream y setupSocketAndPeer
 
-    // La definición de setupSocketAndPeer debe estar en un ámbito donde `connect` pueda accederla,
-    // o `connect` debe recibirla como un argumento. Dada la estructura,
-    // la forma más limpia es hacer que `connect` sea una función que desencadene el setup,
-    // y que `setupSocketAndPeer` sea una función interna de `useWebRTCLogic` que se usa en `connect`.
 
     return {
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, connectionStatus, 
-        initializeStream, connect, cleanup,
+        initializeStream, connect: connect.current, cleanup, // Expone connect.current
         toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, 
         currentUserNameRef // Devuelve la referencia completa para que App.js pueda asignarle el valor
     };
@@ -723,9 +686,26 @@ const Controls = ({ onToggleChat, onLeave }) => {
         sendThemeChange(nextTheme);
     };
 
-    // Emojis extremadamente simplificados para depuración
-    const commonEmojis = ['👍', '❤️']; 
-    const emojis = ['😊', '😂', '👍', '👎']; 
+    // Emojis
+    const commonEmojis = appTheme === 'hot' 
+    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] 
+    : ['👍', '😆', '❤️', '🎉', '🥺'];
+
+    const emojis = appTheme === 'hot'   
+        ? [
+            '🌶️', '�', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
+            '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
+            '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
+         ]
+        : [
+            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
+            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
+            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
+            '👀', '👄','🫦', '🫶', '💪'
+        ];
     
     
     const handleSendReaction = (emoji) => {
@@ -806,12 +786,17 @@ const Controls = ({ onToggleChat, onLeave }) => {
                     </div>
                 )}
             </div>
-            {/* Botón único para cambiar tema */}
-            <button onClick={handleCycleTheme} className={`${styles.controlButton} ${styles.themeButton}`} disabled={controlsDisabled}>
-                {appTheme === 'dark' && <Moon size={20} />}
-                {appTheme === 'light' && <Sun size={20} />}
-                {appTheme === 'hot' && <Flame size={20} />}
-            </button>
+            <div className={styles.themeControls}>
+                <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                    <Moon size={20} />
+                </button>
+                <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                    <Sun size={20} />
+                </button>
+                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                    <Flame size={20} />
+                </button>
+            </div>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
             </button>
@@ -967,7 +952,7 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
                         ) : (
                             <>
                                 {videoDevices.length > 0 && (
-                                    <div className className={styles.formGroup}>
+                                    <div className={styles.formGroup}>
                                         <label htmlFor="videoDevice" className={styles.formLabel}>Cámara</label>
                                         <select id="videoDevice" value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)}
                                             className={styles.formSelect}>
