@@ -251,7 +251,12 @@ const useWebRTCLogic = (roomId) => {
                     const { peer: peerId, metadata } = call;
                     console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
 
-                    const streamToSend = metadata.isScreenShare ? myScreenStream : activeStream;
+                    // Importante: usar los streams más actualizados directamente del estado
+                    const currentMyStream = myStream; // Captura el valor actual del estado
+                    const currentMyScreenStream = myScreenStream; // Captura el valor actual del estado
+
+                    const streamToSend = metadata.isScreenShare ? currentMyScreenStream : currentMyStream;
+                    
                     if (streamToSend && streamToSend.active) { // Asegura que el stream esté activo al responder
                         call.answer(streamToSend);
                     } else {
@@ -683,23 +688,15 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const emojiPickerRef = useRef(null);
     
     const commonEmojis = appTheme === 'hot' 
-    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] // Corregido: '❤️‍?' a '❤️‍🔥'
-    : ['👍', '😆', '❤️', '🎉', '🥺'];
+    ? ['❤️', '🥵', '😍'] // Simplificado para evitar problemas
+    : ['👍', '😆', '❤️']; // Simplificado para evitar problemas
 
     const emojis = appTheme === 'hot'   
         ? [
-            '🌶️', '🥵', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
-            '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
-            '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
+            '🌶️', '🥵', '😈', '�', '🔥', '🥰', '😏' // Simplificado
          ]
         : [
-            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
-            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '�', '😶', '😏', '😒', '😬', '😮‍💨',
-            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
-            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
-            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
-            '👀', '👄','🫦', '🫶', '💪'
+            '👍', '👎', '👏', '🙌', '🤝', '🙏', '👋', '😃', '😄', '😁', '😂' // Simplificado
         ];
     
     
