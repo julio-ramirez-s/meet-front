@@ -3,7 +3,7 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/React-toastify.css';
+import 'react-toastify/dist/ReactToastify.css'; // Corrected import path for CSS
 import styles from './App.module.css';
 
 // --- CONTEXTO PARA WEBRTC ---
@@ -726,26 +726,9 @@ const Controls = ({ onToggleChat, onLeave }) => {
     };
 
     // Emojis extremadamente simplificados para depuración
-    const commonEmojis = appTheme === 'hot' 
-    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] 
-    : ['👍', '😆', '❤️', '🎉', '🥺'];
-
-    const emojis = appTheme === 'hot'   
-        ? [
-            '🌶️', '🥵', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
-            '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
-            '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
-         ]
-        : [
-            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
-            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
-            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
-            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
-            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
-            '👀', '👄','🫦', '🫶', '💪'
-        ];
-
+    const commonEmojis = ['👍', '❤️']; 
+    const emojis = ['😊', '😂', '👍', '👎']; 
+    
     
     const handleSendReaction = (emoji) => {
         sendReaction(emoji);
