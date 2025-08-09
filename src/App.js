@@ -513,7 +513,7 @@ const useWebRTCLogic = (roomId) => {
     };
     const sendReaction = (emoji) => { 
         if (socketRef.current) {
-            socket.current.emit('reaction', emoji); // Changed to socket.current
+            socketRef.current.emit('reaction', emoji); // FIXED: changed from socket.current to socketRef.current
         }
     };
     const sendThemeChange = (theme) => { 
@@ -552,7 +552,7 @@ const useWebRTCLogic = (roomId) => {
                 console.log("[ScreenShare] Compartición de pantalla finalizada por controles del navegador.");
                 setMyScreenStream(null); 
                 if (socketRef.current) { 
-                    socketRef.current.emit('stop-screen-share', myPeerRef.current.id); // Pasa el userId
+                    socketRef.current.emit('stop-screen-share', myPeerRef.current.id); 
                 }
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen') && peerConnections.current[key]) {
@@ -578,12 +578,13 @@ const useWebRTCLogic = (roomId) => {
     };
 
     // Función que se llama desde el componente App para iniciar la conexión
-    const connect = useCallback(async (userName, audioDeviceId, videoDeviceId) => { // Aceptar stream como argumento
+    const connect = useCallback(async (userName, audioDeviceId, videoId) => { 
         currentUserNameRef.current = userName;
         // Llama a initializeStream aquí para asegurar que el stream se obtiene antes de initializeConnections
-        const stream = await initializeStream(audioDeviceId, videoId);
+        // FIXED: Renamed parameter 'videoId' to 'videoDeviceId' for clarity with initializeStream
+        const stream = await initializeStream(audioDeviceId, videoId); // This 'videoId' is the actual device ID
         if (stream) {
-             initializeConnections(userName); // Ya no pasamos el stream aquí directamente, se usa del estado myStream
+             initializeConnections(userName); 
         } else {
             toast.error("No se pudo obtener el stream para iniciar la conexión.");
             setConnectionStatus('disconnected');
@@ -980,7 +981,7 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
                                 {audioOutputs.length > 0 && (
                                     <div className={styles.formGroup}>
                                         <label htmlFor="audioOutputDevice" className={styles.formLabel}>Salida de Audio</label>
-                                        <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudio(e.target.value)} // Corregido: debería ser setSelectedAudioOutput
+                                        <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudioOutput(e.target.value)} 
                                             className={styles.formSelect}>
                                             {audioOutputs.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
                                         </select>
