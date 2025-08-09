@@ -683,7 +683,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const emojiPickerRef = useRef(null);
     
     const commonEmojis = appTheme === 'hot' 
-    ? ['❤️', '🥵', '😍', '💋', '❤️‍�'] 
+    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] // Corregido: '❤️‍?' a '❤️‍🔥'
     : ['👍', '😆', '❤️', '🎉', '🥺'];
 
     const emojis = appTheme === 'hot'   
@@ -695,7 +695,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
         : [
             '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
             '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '�', '😶', '😏', '😒', '😬', '😮‍💨',
             '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
             '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
             '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
@@ -1121,7 +1121,7 @@ export default function App() {
             toast.success('¡Internet reconectado! Intentando restablecer la conexión.', { autoClose: 5000 });
             // Si la aplicación ya estaba en una llamada, intenta reconectar PeerJS/Socket.IO
             if (isJoined && webRTCLogic.connectionStatus !== 'connected') {
-                // webRTCLogic.connect() se encarga de re-inicializar Peer y Socket si ya están destruidos/desconectados
+                // webRTCLogic.connect() se encarga de re-inicializar Peer y Socket si ya están destruidos/conectados
                 // Sin embargo, para que funcione bien, el stream original debe estar disponible.
                 // Una forma más robusta sería guardar las device IDs y re-obtener el stream.
                 // Por simplicidad, asumimos que el stream original de la conexión se mantiene o se re-obtiene correctamente.
