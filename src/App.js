@@ -674,36 +674,127 @@ const VideoGrid = () => {
 
 
 const Controls = ({ onToggleChat, onLeave }) => { 
-    const { toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, isMuted, isVideoOff, myScreenStream, peers, appTheme, connectionStatus } = useWebRTC();
+    const { 
+        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, 
+        isMuted, isVideoOff, myScreenStream, peers, appTheme, connectionStatus 
+    } = useWebRTC();
+    
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
-    const commonEmojis = appTheme === 'hot' ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] : ['👍', '😆', '❤️', '🎉', '🥺'];
-    const emojis = appTheme === 'hot' ? ['🌶️', '🥵', '😈', '💋', '❤️‍🔥', '�', '🥰', '😏', '🤤', '🫦', '👄', '?', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦', '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'] : ['👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️', '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '?', '😑', '😶', '😏', '😒', '😬', '😮‍💨', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱', '💔', '💕', '💞', '💗', '💖', '💘', '🎉', '👀', '👄','🫦', '🫶', '💪'];
     
-    const handleSendReaction = (emoji) => { sendReaction(emoji); setIsEmojiPickerOpen(false); };
-    const handleToggleEmojiPicker = () => { setIsEmojiPickerOpen(prev => !prev); };
-    useEffect(() => { /* ... */ }, [emojiPickerRef]);
+    const commonEmojis = appTheme === 'hot' 
+    ? ['❤️', '🥵', '😍', '💋', '❤️‍�'] 
+    : ['👍', '😆', '❤️', '🎉', '🥺'];
+
+    const emojis = appTheme === 'hot'   
+        ? [
+            '🌶️', '🥵', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
+            '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
+            '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
+         ]
+        : [
+            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
+            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
+            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
+            '👀', '👄','🫦', '🫶', '💪'
+        ];
+    
+    
+    const handleSendReaction = (emoji) => {
+        sendReaction(emoji);
+        setIsEmojiPickerOpen(false);
+    };
+
+    const handleToggleEmojiPicker = () => {
+        setIsEmojiPickerOpen(prev => !prev);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+                setIsEmojiPickerOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [emojiPickerRef]);
+
     const isSharingMyScreen = !!myScreenStream;
     const isViewingRemoteScreen = !!peers['screen-share']; 
+
+    // Deshabilitar controles si no hay conexión
     const controlsDisabled = connectionStatus !== 'connected';
 
     return (
         <footer className={styles.controlsFooter}>
-            <button onClick={toggleMute} className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}> {isMuted ? <MicOff size={20} /> : <Mic size={20} />} </button>
-            <button onClick={toggleVideo} className={`${styles.controlButton} ${isVideoOff ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}> {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />} </button>
-            <button onClick={shareScreen} className={`${styles.controlButton} ${isSharingMyScreen ? styles.controlButtonScreenShare : ''}`} disabled={controlsDisabled || (isViewingRemoteScreen && !isSharingMyScreen)} > <ScreenShare size={20} /> </button>
-            <button onClick={onToggleChat} className={styles.controlButton} disabled={controlsDisabled}> <MessageSquare size={20} /> </button>
+            <button onClick={toggleMute} className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+            </button>
+            <button onClick={toggleVideo} className={`${styles.controlButton} ${isVideoOff ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+            </button>
+            <button 
+                onClick={shareScreen} 
+                className={`${styles.controlButton} ${isSharingMyScreen ? styles.controlButtonScreenShare : ''}`}
+                disabled={controlsDisabled || (isViewingRemoteScreen && !isSharingMyScreen)} 
+            >
+                <ScreenShare size={20} />
+            </button>
+            <button onClick={onToggleChat} className={styles.controlButton} disabled={controlsDisabled}>
+                <MessageSquare size={20} />
+            </button>
             <div className={styles.reactionContainer} ref={emojiPickerRef}>
-                {commonEmojis.map((emoji) => ( <button key={emoji} onClick={() => handleSendReaction(emoji)} className={`${styles.controlButton} ${styles.commonEmojiButton}`} disabled={controlsDisabled}> {emoji} </button> ))}
-                <button onClick={handleToggleEmojiPicker} className={`${styles.controlButton} ${styles.plusButton} ${isEmojiPickerOpen ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}> <Plus size={20} /> </button>
-                {isEmojiPickerOpen && ( <div className={styles.emojiPicker}> {emojis.map((emoji) => ( <button key={emoji} onClick={() => handleSendReaction(emoji)} className={styles.emojiButton} disabled={controlsDisabled}> {emoji} </button> ))} </div> )}
+                {commonEmojis.map((emoji) => (
+                    <button
+                        key={emoji}
+                        onClick={() => handleSendReaction(emoji)}
+                        className={`${styles.controlButton} ${styles.commonEmojiButton}`}
+                        disabled={controlsDisabled}
+                    >
+                        {emoji}
+                    </button>
+                ))}
+                <button
+                    onClick={handleToggleEmojiPicker}
+                    className={`${styles.controlButton} ${styles.plusButton} ${isEmojiPickerOpen ? styles.controlButtonActive : ''}`}
+                    disabled={controlsDisabled}
+                >
+                    <Plus size={20} />
+                </button>
+                {isEmojiPickerOpen && (
+                    <div className={styles.emojiPicker}>
+                        {emojis.map((emoji) => (
+                            <button
+                                key={emoji}
+                                onClick={() => handleSendReaction(emoji)}
+                                className={styles.emojiButton}
+                                disabled={controlsDisabled}
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
             <div className={styles.themeControls}>
-                <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}> <Moon size={20} /> </button>
-                <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}> <Sun size={20} /> </button>
-                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}> <Flame size={20} /> </button>
+                <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                    <Moon size={20} />
+                </button>
+                <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                    <Sun size={20} />
+                </button>
+                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
+                    <Flame size={20} />
+                </button>
             </div>
-            <button onClick={onLeave} className={styles.leaveButton}> Salir </button>
+            <button onClick={onLeave} className={styles.leaveButton}>
+                Salir
+            </button>
         </footer>
     );
 };
@@ -712,18 +803,61 @@ const ChatSidebar = ({ isOpen, onClose }) => {
     const { chatMessages, sendMessage, currentUserName, appTheme, connectionStatus } = useWebRTC(); 
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
-    useEffect(() => { /* ... */ }, [chatMessages]);
-    const handleSend = (e) => { /* ... */ };
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [chatMessages]);
+
+    const handleSend = (e) => {
+        e.preventDefault();
+        if (message.trim()) {
+            sendMessage(message);
+            setMessage('');
+        }
+    };
+
     const chatTitleText = appTheme === 'hot' ? 'Chat de Mundi-Hot' : 'Chat de Mundi-Link';
+
+    // Deshabilitar el input y el botón de enviar si no hay conexión
     const chatDisabled = connectionStatus !== 'connected';
 
     return (
         <aside className={`${styles.chatSidebar} ${isOpen ? styles.chatSidebarOpen : ''}`}>
-            <header className={styles.chatHeader}> <h2 className={styles.chatTitle}>{chatTitleText}</h2> <button onClick={onClose} className={styles.closeChatButton}> <X size={20} /> </button> </header>
-            <div className={styles.chatMessages}> {/* ... */} <div ref={messagesEndRef} /> </div>
+            <header className={styles.chatHeader}>
+                <h2 className={styles.chatTitle}>{chatTitleText}</h2>
+                <button onClick={onClose} className={styles.closeChatButton}>
+                    <X size={20} />
+                </button>
+            </header>
+            <div className={styles.chatMessages}>
+                {chatMessages.map((msg) => {
+                    if (msg.type === 'system') {
+                        return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
+                    }
+                    const isMe = msg.user === currentUserName;
+                    return (
+                        <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
+                            <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
+                                {!isMe && <div className={styles.chatUserName}>{msg.user}</div>}
+                                <p className={styles.chatMessageText}>{msg.text}</p>
+                            </div>
+                        </div>
+                    );
+                })}
+                <div ref={messagesEndRef} />
+            </div>
             <form onSubmit={handleSend} className={styles.chatForm}>
-                <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} className={styles.chatInput} placeholder="Escribe un mensaje..." disabled={chatDisabled} />
-                <button type="submit" className={styles.chatSendButton} disabled={chatDisabled}> <Send size={18} /> </button>
+                <input
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className={styles.chatInput}
+                    placeholder="Escribe un mensaje..."
+                    disabled={chatDisabled} // Deshabilitar si no hay conexión
+                />
+                <button type="submit" className={styles.chatSendButton} disabled={chatDisabled}>
+                    <Send size={18} />
+                </button>
             </form>
         </aside>
     );
@@ -734,7 +868,10 @@ const CallRoom = ({ onLeave }) => {
     const { appTheme } = useWebRTC(); 
     return (
         <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> 
-            <main className={styles.mainContent}> <VideoGrid /> <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> </main>
+            <main className={styles.mainContent}>
+                <VideoGrid />
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> 
+            </main>
             <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> 
         </div>
     );
@@ -750,9 +887,10 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => { 
+    useEffect(() => {
         const getDevices = async () => {
             try {
+                // Pedir permisos primero para que los labels de los dispositivos no estén vacíos
                 await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); 
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoInputs = devices.filter(d => d.kind === 'videoinput');
@@ -776,12 +914,14 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
         };
         getDevices();
     }, []);
-    const handleSubmit = (e) => { 
+
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (userName.trim()) {
             onJoin(userName, selectedAudio, selectedVideo, selectedAudioOutput);
         }
     };
+
     const lobbyTitleText = 'Unirse a Mundi-Link'; 
 
     return (
@@ -791,13 +931,53 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
                     <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
                     <h1 className={styles.lobbyTitle}>{lobbyTitleText}</h1>
                     <form onSubmit={handleSubmit} className={styles.lobbyForm}>
-                        <div className={styles.formGroup}> <label htmlFor="userName" className={styles.formLabel}>Tu nombre</label> <input id="userName" type="text" value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="Ingresa tu nombre" className={styles.formInput} disabled={!!authenticatedUserName} /> </div>
-                        {isLoading ? ( <div className={styles.loadingMessage}>Cargando dispositivos...</div> ) : ( <>
-                                {videoDevices.length > 0 && ( <div className={styles.formGroup}> <label htmlFor="videoDevice" className={styles.formLabel}>Cámara</label> <select id="videoDevice" value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)} className={styles.formSelect}> {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)} </select> </div> )}
-                                {audioDevices.length > 0 && ( <div className={styles.formGroup}> <label htmlFor="audioDevice" className={styles.formLabel}>Micrófono</label> <select id="audioDevice" value={selectedAudio} onChange={(e) => setSelectedAudio(e.target.value)} className={styles.formSelect}> {audioDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)} </select> </div> )}
-                                {audioOutputs.length > 0 && ( <div className={styles.formGroup}> <label htmlFor="audioOutputDevice" className={styles.formLabel}>Salida de Audio</label> <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudioOutput(e.target.value)} className={styles.formSelect}> {audioOutputs.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)} </select> </div> )}
-                            </> )}
-                        <button type="submit" disabled={!userName.trim() || isLoading} className={styles.joinButton}> <LogIn className={styles.joinButtonIcon} size={20} /> Unirse a la llamada </button>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="userName" className={styles.formLabel}>Tu nombre</label>
+                            <input
+                                id="userName" type="text" value={userName}
+                                onChange={(e) => setUserName(e.target.value)}
+                                placeholder="Ingresa tu nombre"
+                                className={styles.formInput}
+                                disabled={!!authenticatedUserName} 
+                            />
+                        </div>
+                        {isLoading ? (
+                            <div className={styles.loadingMessage}>Cargando dispositivos...</div>
+                        ) : (
+                            <>
+                                {videoDevices.length > 0 && (
+                                    <div className={styles.formGroup}>
+                                        <label htmlFor="videoDevice" className={styles.formLabel}>Cámara</label>
+                                        <select id="videoDevice" value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)}
+                                            className={styles.formSelect}>
+                                            {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {audioDevices.length > 0 && (
+                                    <div className={styles.formGroup}>
+                                        <label htmlFor="audioDevice" className={styles.formLabel}>Micrófono</label>
+                                        <select id="audioDevice" value={selectedAudio} onChange={(e) => setSelectedAudio(e.target.value)}
+                                            className={styles.formSelect}>
+                                            {audioDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                {audioOutputs.length > 0 && (
+                                    <div className={styles.formGroup}>
+                                        <label htmlFor="audioOutputDevice" className={styles.formLabel}>Salida de Audio</label>
+                                        <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudioOutput(e.target.value)}
+                                            className={styles.formSelect}>
+                                            {audioOutputs.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                        <button type="submit" disabled={!userName.trim() || isLoading} className={styles.joinButton}>
+                            <LogIn className={styles.joinButtonIcon} size={20} />
+                            Unirse a la llamada
+                        </button>
                     </form>
                 </div>
             </div>
@@ -811,6 +991,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
     const [accessCode, setAccessCode] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [loading, setLoading] = useState(false);
+
     const SERVER_BASE_URL = "https://meet-clone-v0ov.onrender.com"; 
 
     const handleSubmit = async (e) => {
@@ -821,15 +1002,26 @@ const AuthScreen = ({ onAuthSuccess }) => {
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', },
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ username, password, accessCode }),
             });
+
             const data = await response.json();
-            if (response.ok) { toast.success(data.message); onAuthSuccess(username); } else { toast.error(data.message || 'Error en la autenticación.'); }
+
+            if (response.ok) {
+                toast.success(data.message);
+                onAuthSuccess(username); 
+            } else {
+                toast.error(data.message || 'Error en la autenticación.');
+            }
         } catch (error) {
             console.error('Error de red o del servidor:', error);
             toast.error('No se pudo conectar con el servidor de autenticación.');
-        } finally { setLoading(false); }
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -837,13 +1029,52 @@ const AuthScreen = ({ onAuthSuccess }) => {
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
                     <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
-                    <h1 className={styles.lobbyTitle}>{isRegistering ? 'Registrarse en Mundi-Link' : 'Iniciar Sesión en Mundi-Link'}</h1>
+                    <h1 className={styles.lobbyTitle}>
+                        {isRegistering ? 'Registrarse en Mundi-Link' : 'Iniciar Sesión en Mundi-Link'}
+                    </h1>
                     <form onSubmit={handleSubmit} className={styles.lobbyForm}>
-                        <div className={styles.formGroup}> <label htmlFor="authUsername" className={styles.formLabel}>Nombre de usuario</label> <input id="authUsername" type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Tu nombre de usuario" className={styles.formInput} required /> </div>
-                        <div className={styles.formGroup}> <label htmlFor="authPassword" className={styles.formLabel}>Contraseña</label> <input id="authPassword" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Tu contraseña" className={styles.formInput} required /> </div>
-                        <div className={styles.formGroup}> <label htmlFor="authAccessCode" className={styles.formLabel}>Código de Acceso</label> <input id="authAccessCode" type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="Código de acceso" className={styles.formInput} required /> </div>
-                        <button type="submit" disabled={loading || !username || !password || !accessCode} className={styles.joinButton}> {loading ? 'Cargando...' : isRegistering ? <><UserPlus size={20} className={styles.joinButtonIcon} /> Registrarse</> : <><LogIn size={20} className={styles.joinButtonIcon} /> Iniciar Sesión</>} </button>
-                        <button type="button" onClick={() => setIsRegistering(prev => !prev)} className={styles.joinButton} style={{ backgroundColor: 'transparent', color: 'var(--primary-color)', boxShadow: 'none' }} disabled={loading}> {isRegistering ? '¿Ya tienes una cuenta? Inicia Sesión' : '¿No tienes cuenta? Regístrate'} </button>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="authUsername" className={styles.formLabel}>Nombre de usuario</label>
+                            <input
+                                id="authUsername" type="text" value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Tu nombre de usuario"
+                                className={styles.formInput}
+                                required
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="authPassword" className={styles.formLabel}>Contraseña</label>
+                            <input
+                                id="authPassword" type="password" value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Tu contraseña"
+                                className={styles.formInput}
+                                required
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="authAccessCode" className={styles.formLabel}>Código de Acceso</label>
+                            <input
+                                id="authAccessCode" type="password" value={accessCode}
+                                onChange={(e) => setAccessCode(e.target.value)}
+                                placeholder="Código de acceso"
+                                className={styles.formInput}
+                                required
+                            />
+                        </div>
+                        <button type="submit" disabled={loading || !username || !password || !accessCode} className={styles.joinButton}>
+                            {loading ? 'Cargando...' : isRegistering ? <><UserPlus size={20} className={styles.joinButtonIcon} /> Registrarse</> : <><LogIn size={20} className={styles.joinButtonIcon} /> Iniciar Sesión</>}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => setIsRegistering(prev => !prev)} 
+                            className={styles.joinButton} 
+                            style={{ backgroundColor: 'transparent', color: 'var(--primary-color)', boxShadow: 'none' }}
+                            disabled={loading}
+                        >
+                            {isRegistering ? '¿Ya tienes una cuenta? Inicia Sesión' : '¿No tienes cuenta? Regístrate'}
+                        </button>
                     </form>
                 </div>
             </div>
@@ -852,7 +1083,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
 };
 
 
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
+// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [authenticatedUserName, setAuthenticatedUserName] = useState(''); 
@@ -869,9 +1100,11 @@ export default function App() {
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         const finalUserName = authenticatedUserName || name; 
         setSelectedAudioOutput(audioOutputId);
-        // Ahora, webRTCLogic.connect se encarga de todo el proceso de stream y conexión
-        await webRTCLogic.connect(finalUserName, audioId, videoId); 
-        setIsJoined(true);
+        const stream = await webRTCLogic.initializeStream(audioId, videoId);
+        if (stream) {
+            webRTCLogic.connect(stream, finalUserName); // Pasa el stream inicial y el nombre de usuario
+            setIsJoined(true);
+        }
     };
 
     const handleLeave = () => {
@@ -883,8 +1116,20 @@ export default function App() {
     };
 
     useEffect(() => {
+        // Listener para el estado de la red global del navegador
         const handleOnline = () => {
-            toast.success('¡Internet reconectado! La aplicación intentará restablecer la conexión.', { autoClose: 5000 });
+            toast.success('¡Internet reconectado! Intentando restablecer la conexión.', { autoClose: 5000 });
+            // Si la aplicación ya estaba en una llamada, intenta reconectar PeerJS/Socket.IO
+            if (isJoined && webRTCLogic.connectionStatus !== 'connected') {
+                // webRTCLogic.connect() se encarga de re-inicializar Peer y Socket si ya están destruidos/desconectados
+                // Sin embargo, para que funcione bien, el stream original debe estar disponible.
+                // Una forma más robusta sería guardar las device IDs y re-obtener el stream.
+                // Por simplicidad, asumimos que el stream original de la conexión se mantiene o se re-obtiene correctamente.
+                if (webRTCLogic.myStream) {
+                   // No es necesario llamar connect aquí, los listeners de PeerJS/Socket.IO ya lo manejan
+                   // initializeConnections lo haría si se detecta una desconexión Peer/Socket.
+                }
+            }
         };
         const handleOffline = () => {
             toast.error('¡Internet desconectado! La conexión de la llamada podría interrumpirse.', { autoClose: false });
@@ -892,6 +1137,8 @@ export default function App() {
 
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+
+        // Limpieza de WebRTC al cerrar la ventana
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
 
         return () => {
@@ -899,7 +1146,7 @@ export default function App() {
             window.removeEventListener('offline', handleOffline);
             window.removeEventListener('beforeunload', webRTCLogic.cleanup);
         };
-    }, [webRTCLogic]); 
+    }, [isJoined, webRTCLogic]); // webRTCLogic es una dependencia porque sus propiedades cambian, aunque el objeto en sí es el mismo
 
     if (!isAuthenticated) {
         return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
