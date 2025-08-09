@@ -37,7 +37,7 @@ const useWebRTCLogic = (roomId) => {
 
     const cleanupInProgress = useRef(false);
 
-    // NUEVO: Referencia para mantener el stream local más actual
+    // Referencia para mantener el stream local más actual
     const myStreamRef = useRef(null);
     useEffect(() => {
         myStreamRef.current = myStream;
@@ -325,9 +325,11 @@ const useWebRTCLogic = (roomId) => {
                 // --- MANEJO DE LLAMADAS ENTRANTES ---
                 myPeerRef.current.on('call', (call) => {
                     const { userName: remoteUserName, isScreenShare } = call.metadata || {};
+                    // CORRECCIÓN: Definir callKey aquí
+                    const callKey = call.peer + (isScreenShare ? '_screen' : '');
                     console.log(`[PeerJS] Recibiendo llamada de ${call.peer} (nombre: ${remoteUserName}, pantalla: ${isScreenShare}).`);
 
-                    // CORRECCIÓN: Usar myStreamRef.current para acceder al stream más actual
+                    // Usar myStreamRef.current para acceder al stream más actual
                     if (!myStreamRef.current || !myStreamRef.current.active) {
                         console.error("No se puede responder a la llamada: stream local no disponible o inactivo (usando myStreamRef).");
                         toast.error("Tu cámara o micrófono no están activos. No se pudo conectar la videollamada.");
@@ -533,7 +535,7 @@ const useWebRTCLogic = (roomId) => {
             toast.info(`El tema ha cambiado a ${theme}.`);
         });
 
-    }, [currentUserNameRef, myScreenStream, roomId, savedAudioInputDeviceId, savedVideoInputDeviceId, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, connect]); // Se eliminó myStream de las dependencias de setupSocketAndPeer porque ahora usamos myStreamRef
+    }, [currentUserNameRef, myScreenStream, roomId, savedAudioInputDeviceId, savedVideoInputDeviceId, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, connect]);
 
 
     // Primer useEffect: Ahora solo para el cleanup global.
@@ -542,7 +544,7 @@ const useWebRTCLogic = (roomId) => {
             if (socketRef.current) socketRef.current.disconnect();
             if (myPeerRef.current) myPeerRef.current.destroy();
         };
-    }, []); // Empty dependency array, runs only on mount/unmount
+    }, []);
 
 
     const toggleMute = () => {
@@ -653,7 +655,7 @@ const useWebRTCLogic = (roomId) => {
         // 2. Setup Socket.IO y PeerJS
         setupSocketAndPeer(userName, stream); // Pasa el stream y el nombre de usuario a setupSocketAndPeer
 
-    }, [initializeStream, setupSocketAndPeer]); // Dependencias: initializeStream y setupSocketAndPeer
+    }, [initializeStream, setupSocketAndPeer]);
 
 
     return {
@@ -807,7 +809,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
 
     const emojis = appTheme === 'hot'
         ? [
-            '🌶️', '', '😈', '💋', '❤️‍�', '🔥', '🥰', '😏', '🤤', '🫦',
+            '🌶️', '', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '�', '🫦',
             '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
             '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
          ]
