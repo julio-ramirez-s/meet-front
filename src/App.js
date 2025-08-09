@@ -594,21 +594,20 @@ const useWebRTCLogic = (roomId) => {
         currentUserNameRef.current = userName;
         const stream = await initializeStream(audioDeviceId, videoDeviceId); 
         if (stream) {
-             // Ya no llamamos a initializeConnections aquí, el primer useEffect la maneja
-             // simplemente aseguramos que el nombre de usuario esté establecido y el stream obtenido.
-             // El useEffect que configura listeners dependerá de socketRef.current estar listo.
+             // La inicialización de Socket.IO y PeerJS se maneja en el primer useEffect
+             // Este 'connect' solo asegura que el stream y el nombre de usuario estén listos.
         } else {
             toast.error("No se pudo obtener el stream para iniciar la conexión.");
             setConnectionStatus('disconnected');
         }
-    }, [initializeStream]); // Depende solo de initializeStream, ya que no inicializa PeerJS/Socket.IO aquí directamente
+    }, [initializeStream]);
 
 
     return {
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, connectionStatus,
         initializeStream, connect, cleanup,
         toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, 
-        currentUserName: currentUserNameRef.current
+        currentUserNameRef // EXPOSED: return the ref object itself
     };
 };
 
@@ -649,7 +648,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 };
 
 const VideoGrid = () => {
-    const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput, connectionStatus } = useWebRTC();
+    const { myStream, myScreenStream, peers, currentUserNameRef, selectedAudioOutput, connectionStatus } = useWebRTC(); // GET REF
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
     useEffect(() => { 
         const handleResize = () => {
@@ -659,8 +658,8 @@ const VideoGrid = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
     const videoElements = [ 
-        myStream && { id: 'my-video', stream: myStream, userName: `${currentUserName} (Tú)`, isLocal: true, muted: true },
-        myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserName} (Tú)`, isLocal: true, isScreenShare: true, muted: true },
+        myStream && { id: 'my-video', stream: myStream, userName: `${currentUserNameRef.current} (Tú)`, isLocal: true, muted: true }, // USE REF.CURRENT
+        myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserNameRef.current} (Tú)`, isLocal: true, isScreenShare: true, muted: true }, // USE REF.CURRENT
         peers['screen-share'] && {
             id: 'remote-screen',
             stream: peers['screen-share'].stream,
@@ -822,7 +821,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
 };
 
 const ChatSidebar = ({ isOpen, onClose }) => { 
-    const { chatMessages, sendMessage, currentUserName, appTheme, connectionStatus } = useWebRTC(); 
+    const { chatMessages, sendMessage, currentUserNameRef, appTheme, connectionStatus } = useWebRTC(); // GET REF
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -856,7 +855,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
                     if (msg.type === 'system') {
                         return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
                     }
-                    const isMe = msg.user === currentUserName;
+                    const isMe = msg.user === currentUserNameRef.current; // USE REF.CURRENT
                     return (
                         <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
                             <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
@@ -1122,11 +1121,9 @@ export default function App() {
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         const finalUserName = authenticatedUserName || name; 
         setSelectedAudioOutput(audioOutputId);
-        // Primero, establece el currentUserName en webRTCLogic, que es una ref.
-        // Esto es crucial para que initializeConnections lo tenga disponible inmediatamente.
+        // Correctly set the currentUserName via the ref object
         webRTCLogic.currentUserNameRef.current = finalUserName; 
 
-        // Luego, inicia el stream y la conexión
         await webRTCLogic.connect(finalUserName, audioId, videoId); 
         setIsJoined(true);
     };
