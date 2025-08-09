@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon, Flame } from 'lucide-react'; // Se eliminan PartyPopper y Plus
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Sun, Moon, Flame, UserPlus, Lock } from 'lucide-react'; 
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -18,7 +18,7 @@ const useWebRTCLogic = (roomId) => {
     const [chatMessages, setChatMessages] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const [appTheme, setAppTheme] = useState('dark'); // Nuevo estado para el tema de la aplicación
+    const [appTheme, setAppTheme] = useState('dark'); 
 
     const [roomUsers, setRoomUsers] = useState({});
 
@@ -268,7 +268,6 @@ const useWebRTCLogic = (roomId) => {
             removeScreenShare(userId);
         });
 
-        // Nuevo listener para cambios de tema
         socketRef.current.on('theme-changed', (theme) => {
             console.log(`[Socket] Tema cambiado a: ${theme}`);
             setAppTheme(theme);
@@ -331,7 +330,6 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
-    // Nueva función para enviar el cambio de tema
     const sendThemeChange = (theme) => {
         if (socketRef.current) {
             socketRef.current.emit('change-theme', theme);
@@ -339,35 +337,30 @@ const useWebRTCLogic = (roomId) => {
     };
 
     const shareScreen = async () => {
-        // Si ya estoy compartiendo mi pantalla, la detengo
         if (myScreenStream) {
             console.log("[ScreenShare] Deteniendo compartición de pantalla.");
             myScreenStream.getTracks().forEach(track => track.stop());
-            setMyScreenStream(null); // Establecer a null inmediatamente
-            socketRef.current.emit('stop-screen-share'); // Notificar a los demás
+            setMyScreenStream(null); 
+            socketRef.current.emit('stop-screen-share'); 
 
-            // Limpiar conexiones PeerJS relacionadas con mi compartición de pantalla
             Object.keys(peerConnections.current).forEach(key => {
-                if (key.endsWith('_screen')) { // Estas son las llamadas que yo inicié para enviar mi pantalla
+                if (key.endsWith('_screen')) { 
                     peerConnections.current[key].close();
                     delete peerConnections.current[key];
                 }
             });
-            return; // Salir de la función después de detener
+            return; 
         }
 
-        // Si no estoy compartiendo, inicio la compartición
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
             setMyScreenStream(screenStream);
             console.log("Stream de pantalla inicializado.");
 
-            // Adjuntar listener 'onended' para detener automáticamente si el usuario cierra desde el navegador
             screenStream.getVideoTracks()[0].onended = () => {
                 console.log("[ScreenShare] Compartición de pantalla finalizada por controles del navegador.");
-                setMyScreenStream(null); // Actualizar estado
-                socketRef.current.emit('stop-screen-share'); // Notificar a los demás
-                // Limpiar también las conexiones PeerJS aquí
+                setMyScreenStream(null); 
+                socketRef.current.emit('stop-screen-share'); 
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
                         peerConnections.current[key].current.close();
@@ -378,12 +371,10 @@ const useWebRTCLogic = (roomId) => {
 
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
 
-            // Notificar a los peers existentes para que se conecten a mi stream de pantalla
             Object.keys(peerConnections.current).forEach(peerKey => {
-                // Solo conectar a peers que no sean mi propia conexión de pantalla compartida
                 if (!peerKey.endsWith('_screen')) {
                     const peerId = peerKey;
-                    if (peerId === myPeerRef.current?.id) return; // No llamarme a mí mismo
+                    if (peerId === myPeerRef.current?.id) return; 
                     connectToNewUser(peerId, peers[peerId]?.userName, screenStream, currentUserNameRef.current, true);
                 }
             });
@@ -395,9 +386,9 @@ const useWebRTCLogic = (roomId) => {
     };
 
     return {
-        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, // appTheme incluido
+        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, 
         initializeStream, connect, cleanup,
-        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, // sendThemeChange incluido
+        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, 
         currentUserName: currentUserNameRef.current
     };
 };
@@ -442,7 +433,6 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 const VideoGrid = () => {
     const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
-    // Estado para detectar si es una pantalla de escritorio (basado en el ancho)
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
 
     useEffect(() => {
@@ -476,7 +466,6 @@ const VideoGrid = () => {
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
-    // La clase de layout ahora se elige dinámicamente según si es desktop o móvil
     const secondaryGridLayoutClass = isDesktop ? styles.desktopLayout : styles.mobileLayout;
 
     return (
@@ -496,16 +485,15 @@ const VideoGrid = () => {
 };
 
 
-const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme ni appTheme directamente
+const Controls = ({ onToggleChat, onLeave }) => { 
     const { 
-        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, // sendThemeChange del contexto
-        isMuted, isVideoOff, myScreenStream, peers, appTheme // appTheme del contexto
+        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, 
+        isMuted, isVideoOff, myScreenStream, peers, appTheme 
     } = useWebRTC();
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
     
-    // Emojis condicionales
     const commonEmojis = appTheme === 'hot' 
     ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] 
     : ['👍', '😆', '❤️', '🎉', '🥺'];
@@ -519,7 +507,7 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
         : [
             '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
             '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '�', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
             '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
             '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
             '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
@@ -599,7 +587,6 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
                     </div>
                 )}
             </div>
-            {/* Botones para cambiar tema: ahora son 3 botones separados */}
             <div className={styles.themeControls}>
                 <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`}>
                     <Moon size={20} />
@@ -618,8 +605,8 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
     );
 };
 
-const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contexto
-    const { chatMessages, sendMessage, currentUserName, appTheme } = useWebRTC(); // appTheme del contexto
+const ChatSidebar = ({ isOpen, onClose }) => { 
+    const { chatMessages, sendMessage, currentUserName, appTheme } = useWebRTC(); 
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -635,7 +622,6 @@ const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contex
         }
     };
 
-    // Título del chat condicional
     const chatTitleText = appTheme === 'hot' ? 'Chat de Mundi-Hot' : 'Chat de Mundi-Link';
 
     return (
@@ -679,22 +665,22 @@ const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contex
     );
 };
 
-const CallRoom = ({ onLeave }) => { // Ya no se recibe cycleTheme ni appTheme como prop
+const CallRoom = ({ onLeave }) => { 
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const { appTheme } = useWebRTC(); // Obtener appTheme del contexto
+    const { appTheme } = useWebRTC(); 
     return (
-        <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> {/* Aplicar clase de tema */}
+        <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> 
             <main className={styles.mainContent}>
                 <VideoGrid />
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> {/* No se pasan cycleTheme ni appTheme */}
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> 
             </main>
-            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> {/* No se pasa appTheme */}
+            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> 
         </div>
     );
 };
 
-const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
-    const [userName, setUserName] = useState('');
+const Lobby = ({ onJoin, authenticatedUserName }) => { // Ahora recibe authenticatedUserName
+    const [userName, setUserName] = useState(authenticatedUserName || ''); // Usa el nombre de usuario autenticado
     const [videoDevices, setVideoDevices] = useState([]);
     const [audioDevices, setAudioDevices] = useState([]);
     const [audioOutputs, setAudioOutputs] = useState([]);
@@ -706,7 +692,8 @@ const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
     useEffect(() => {
         const getDevices = async () => {
             try {
-                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                // Pedir permisos primero para que los labels de los dispositivos no estén vacíos
+                await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); 
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const videoInputs = devices.filter(d => d.kind === 'videoinput');
                 const audioInputs = devices.filter(d => d.kind === 'audioinput');
@@ -737,11 +724,10 @@ const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
         }
     };
 
-    // El lobby siempre usará el tema oscuro por defecto
     const lobbyTitleText = 'Unirse a Mundi-Link'; 
 
     return (
-        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> {/* El lobby usa el tema oscuro por defecto */}
+        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> 
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
                     <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
@@ -754,6 +740,7 @@ const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
                                 onChange={(e) => setUserName(e.target.value)}
                                 placeholder="Ingresa tu nombre"
                                 className={styles.formInput}
+                                disabled={!!authenticatedUserName} // Deshabilitar si ya está autenticado
                             />
                         </div>
                         {isLoading ? (
@@ -800,21 +787,126 @@ const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
     );
 };
 
+// --- Nuevo componente para la pantalla de Login/Registro ---
+const AuthScreen = ({ onAuthSuccess }) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [accessCode, setAccessCode] = useState('');
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const SERVER_BASE_URL = "https://meet-clone-v0ov.onrender.com"; // Asegúrate de que esta URL sea correcta
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const endpoint = isRegistering ? `${SERVER_BASE_URL}/register` : `${SERVER_BASE_URL}/login`;
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password, accessCode }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                toast.success(data.message);
+                onAuthSuccess(username); // Pasa el nombre de usuario autenticado al componente padre
+            } else {
+                toast.error(data.message || 'Error en la autenticación.');
+            }
+        } catch (error) {
+            console.error('Error de red o del servidor:', error);
+            toast.error('No se pudo conectar con el servidor de autenticación.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> {/* Reutilizamos el estilo del lobby */}
+            <div className={styles.lobbyFormWrapper}>
+                <div className={styles.lobbyCard}>
+                    <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
+                    <h1 className={styles.lobbyTitle}>
+                        {isRegistering ? 'Registrarse en Mundi-Link' : 'Iniciar Sesión en Mundi-Link'}
+                    </h1>
+                    <form onSubmit={handleSubmit} className={styles.lobbyForm}>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="authUsername" className={styles.formLabel}>Nombre de usuario</label>
+                            <input
+                                id="authUsername" type="text" value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Tu nombre de usuario"
+                                className={styles.formInput}
+                                required
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="authPassword" className={styles.formLabel}>Contraseña</label>
+                            <input
+                                id="authPassword" type="password" value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Tu contraseña"
+                                className={styles.formInput}
+                                required
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label htmlFor="authAccessCode" className={styles.formLabel}>Código de Acceso</label>
+                            <input
+                                id="authAccessCode" type="password" value={accessCode}
+                                onChange={(e) => setAccessCode(e.target.value)}
+                                placeholder="Código de acceso"
+                                className={styles.formInput}
+                                required
+                            />
+                        </div>
+                        <button type="submit" disabled={loading || !username || !password || !accessCode} className={styles.joinButton}>
+                            {loading ? 'Cargando...' : isRegistering ? <><UserPlus size={20} className={styles.joinButtonIcon} /> Registrarse</> : <><LogIn size={20} className={styles.joinButtonIcon} /> Iniciar Sesión</>}
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={() => setIsRegistering(prev => !prev)} 
+                            className={styles.joinButton} 
+                            style={{ backgroundColor: 'transparent', color: 'var(--primary-color)', boxShadow: 'none' }}
+                            disabled={loading}
+                        >
+                            {isRegistering ? '¿Ya tienes una cuenta? Inicia Sesión' : '¿No tienes cuenta? Regístrate'}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
 export default function App() {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [authenticatedUserName, setAuthenticatedUserName] = useState(''); // Guarda el nombre de usuario autenticado
     const [isJoined, setIsJoined] = useState(false);
-    const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
-    // appTheme ahora se gestiona dentro de useWebRTCLogic
+    
     const webRTCLogic = useWebRTCLogic('main-room');
 
+    const handleAuthSuccess = (username) => {
+        setIsAuthenticated(true);
+        setAuthenticatedUserName(username);
+    };
+
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
-        setUserName(name);
+        // Asegúrate de usar el nombre de usuario autenticado, o el que se ingresó si no se autenticó
+        const finalUserName = authenticatedUserName || name; 
         setSelectedAudioOutput(audioOutputId);
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
-            webRTCLogic.connect(stream, name);
+            webRTCLogic.connect(stream, finalUserName);
             setIsJoined(true);
         }
     };
@@ -822,12 +914,10 @@ export default function App() {
     const handleLeave = () => {
         webRTCLogic.cleanup();
         setIsJoined(false);
-        setUserName('');
+        setIsAuthenticated(false); // Volver a la pantalla de autenticación al salir
+        setAuthenticatedUserName('');
         setSelectedAudioOutput('');
     };
-
-    // La función cycleTheme ya no es necesaria aquí, la lógica de cambio de tema está en useWebRTCLogic
-    // y se activa directamente desde los botones de Control a través de sendThemeChange.
 
     useEffect(() => {
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
@@ -836,12 +926,14 @@ export default function App() {
         };
     }, [webRTCLogic]);
 
-    if (!isJoined) {
-        return <Lobby onJoin={handleJoin} />; // Ya no se pasa appTheme al Lobby
+    if (!isAuthenticated) {
+        return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
+    } else if (!isJoined) {
+        return <Lobby onJoin={handleJoin} authenticatedUserName={authenticatedUserName} />;
     } else {
         return (
-            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}> {/* Se pasa todo webRTCLogic */}
-                <CallRoom onLeave={handleLeave} /> {/* Ya no se pasan cycleTheme ni appTheme */}
+            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}> 
+                <CallRoom onLeave={handleLeave} /> 
                 <ToastContainer />
             </WebRTCContext.Provider>
         );
