@@ -83,6 +83,7 @@ body {
     gap: 4px;
     z-index: 200;
     width: 90%;
+    max-width: 400px;
     justify-content: center;
 }
 
@@ -137,43 +138,7 @@ body {
     background-color: var(--surface-color); /* Usa la variable */
     align-items: stretch;
     justify-content: center;
-    position: relative; /* Necesario para el overlay de estado de conexión */
 }
-
-/* Overlay de estado de conexión */
-.connectionStatusOverlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Fondo semi-transparente oscuro */
-    color: white;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-size: 1.5rem;
-    font-weight: 600;
-    z-index: 50; /* Por encima de los videos pero debajo del chat/controles */
-    border-radius: 0.5rem; /* Hereda de videoGridContainer */
-    gap: 1rem;
-}
-
-.connectionStatusIcon {
-    animation: pulse 1.5s infinite ease-in-out; /* Animación para el icono */
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.1); opacity: 0.8; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-.connectionStatusText {
-    text-align: center;
-}
-
 
 /* Contenedor principal para el video más grande (pantalla compartida) */
 .mainVideo {
