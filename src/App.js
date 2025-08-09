@@ -325,7 +325,6 @@ const useWebRTCLogic = (roomId) => {
                 // --- MANEJO DE LLAMADAS ENTRANTES ---
                 myPeerRef.current.on('call', (call) => {
                     const { userName: remoteUserName, isScreenShare } = call.metadata || {};
-                    // CORRECCIÓN: Definir callKey aquí
                     const callKey = call.peer + (isScreenShare ? '_screen' : '');
                     console.log(`[PeerJS] Recibiendo llamada de ${call.peer} (nombre: ${remoteUserName}, pantalla: ${isScreenShare}).`);
 
@@ -518,10 +517,11 @@ const useWebRTCLogic = (roomId) => {
                 return;
             }
 
-            if (screenSharePeer.current !== userId) {
-                // Usar myStreamRef.current para la llamada de pantalla
-                connectToNewUser(userId, remoteUserName, myStreamRef.current, currentUserNameRef.current, true);
-            }
+            // CORRECCIÓN: Eliminar la llamada a connectToNewUser aquí.
+            // La transmisión de pantalla del usuario remoto llegará a través de una llamada PeerJS entrante.
+            // if (screenSharePeer.current !== userId) {
+            //     connectToNewUser(userId, remoteUserName, myStreamRef.current, currentUserNameRef.current, true);
+            // }
         });
 
         socketRef.current.on('user-stopped-screen-share', (userId) => {
@@ -602,6 +602,14 @@ const useWebRTCLogic = (roomId) => {
 
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            console.log("DEBUG: Stream obtenido de getDisplayMedia:", screenStream);
+            screenStream.getTracks().forEach(track => {
+                console.log(`DEBUG: Track ID: ${track.id}, Kind: ${track.kind}, Label: ${track.label}, Enabled: ${track.enabled}`);
+                if (track.kind === 'video') {
+                    console.log(`DEBUG: Video track settings:`, track.getSettings());
+                }
+            });
+
             setMyScreenStream(screenStream);
             console.log("Stream de pantalla inicializado.");
             screenStream.getVideoTracks().forEach((track, index) => {
@@ -809,14 +817,14 @@ const Controls = ({ onToggleChat, onLeave }) => {
 
     const emojis = appTheme === 'hot'
         ? [
-            '🌶️', '', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
+            '🌶️', '', '😈', '💋', '❤️‍�', '🔥', '🥰', '😏', '🤤', '🫦',
             '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
             '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
          ]
         : [
             '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
             '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🫢', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
             '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
             '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
             '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
@@ -930,360 +938,3 @@ const Controls = ({ onToggleChat, onLeave }) => {
         </footer>
     );
 };
-
-
-const ChatSidebar = ({ isOpen, onClose }) => {
-    // currentUserName se obtiene de la ref directamente aquí
-    const { chatMessages, sendMessage, currentUserNameRef, appTheme, connectionStatus } = useWebRTC();
-    const [message, setMessage] = useState('');
-    const messagesEndRef = useRef(null);
-
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [chatMessages]);
-
-    const handleSend = (e) => {
-        e.preventDefault();
-        if (message.trim()) {
-            sendMessage(message);
-            setMessage(''); // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
-        }
-    };
-
-    const chatTitleText = appTheme === 'hot' ? 'Chat de Mundi-Hot' : 'Chat de Mundi-Link';
-
-    // Deshabilitar el input y el botón de enviar si no hay conexión
-    const chatDisabled = connectionStatus !== 'connected';
-
-    return (
-        <aside className={`${styles.chatSidebar} ${isOpen ? styles.chatSidebarOpen : ''}`}>
-            <header className={styles.chatHeader}>
-                <h2 className={styles.chatTitle}>{chatTitleText}</h2>
-                <button onClick={onClose} className={styles.closeChatButton}>
-                    <X size={20} />
-                </button>
-            </header>
-            <div className={styles.chatMessages}>
-                {chatMessages.map((msg) => {
-                    if (msg.type === 'system') {
-                        return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
-                    }
-                    const isMe = msg.user === currentUserNameRef.current; // Usa la ref directamente
-                    return (
-                        <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
-                            <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
-                                {!isMe && <div className={styles.chatUserName}>{msg.user}</div>}
-                                <p className={styles.chatMessageText}>{msg.text}</p>
-                            </div>
-                        </div>
-                    );
-                })}
-                <div ref={messagesEndRef} />
-            </div>
-            <form onSubmit={handleSend} className={styles.chatForm}>
-                <input
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className={styles.chatInput}
-                    placeholder="Escribe un mensaje..."
-                    disabled={chatDisabled} // Deshabilitar si no hay conexión
-                />
-                <button type="submit" className={styles.chatSendButton} disabled={chatDisabled}>
-                    <Send size={18} />
-                </button>
-            </form>
-        </aside>
-    );
-};
-
-const CallRoom = ({ onLeave }) => {
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const { appTheme } = useWebRTC();
-    return (
-        <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}>
-            <main className={styles.mainContent}>
-                <VideoGrid />
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} />
-            </main>
-            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-        </div>
-    );
-};
-
-const Lobby = ({ onJoin, authenticatedUserName }) => {
-    const [userName, setUserName] = useState(authenticatedUserName || '');
-    const [videoDevices, setVideoDevices] = useState([]);
-    const [audioDevices, setAudioDevices] = useState([]);
-    const [audioOutputs, setAudioOutputs] = useState([]);
-    const [selectedVideo, setSelectedVideo] = useState('');
-    const [selectedAudio, setSelectedAudio] = useState('');
-    const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const getDevices = async () => {
-            try {
-                // Pedir permisos primero para que los labels de los dispositivos no estén vacíos
-                await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const videoInputs = devices.filter(d => d.kind === 'videoinput');
-                const audioInputs = devices.filter(d => d.kind === 'audioinput');
-                const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-
-                setVideoDevices(videoInputs);
-                setAudioDevices(audioInputs);
-                setAudioOutputs(audioOutputs);
-
-                if (videoInputs.length > 0) setSelectedVideo(videoInputs[0].deviceId);
-                if (audioInputs.length > 0) setSelectedAudio(audioInputs[0].deviceId);
-                if (audioOutputs.length > 0) setSelectedAudioOutput(audioOutputs[0].deviceId);
-
-            } catch (err) {
-                console.error("Error al enumerar dispositivos:", err);
-                toast.error("No se pudo acceder a la cámara o micrófono. Por favor, verifica los permisos en tu navegador.");
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        getDevices();
-    }, []);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (userName.trim()) {
-            onJoin(userName, selectedAudio, selectedVideo, selectedAudioOutput);
-        }
-    };
-
-    const lobbyTitleText = 'Unirse a Mundi-Link';
-
-    return (
-        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}>
-            <div className={styles.lobbyFormWrapper}>
-                <div className={styles.lobbyCard}>
-                    <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
-                    <h1 className={styles.lobbyTitle}>{lobbyTitleText}</h1>
-                    <form onSubmit={handleSubmit} className={styles.lobbyForm}>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="userName" className={styles.formLabel}>Tu nombre</label>
-                            <input
-                                id="userName" type="text" value={userName}
-                                onChange={(e) => setUserName(e.target.value)}
-                                placeholder="Ingresa tu nombre"
-                                className={styles.formInput}
-                                disabled={!!authenticatedUserName}
-                            />
-                        </div>
-                        {isLoading ? (
-                            <div className={styles.loadingMessage}>Cargando dispositivos...</div>
-                        ) : (
-                            <>
-                                {videoDevices.length > 0 && (
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="videoDevice" className={styles.formLabel}>Cámara</label>
-                                        <select id="videoDevice" value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)}
-                                            className={styles.formSelect}>
-                                            {videoDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-                                {audioDevices.length > 0 && (
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="audioDevice" className={styles.formLabel}>Micrófono</label>
-                                        <select id="audioDevice" value={selectedAudio} onChange={(e) => setSelectedAudio(e.target.value)}
-                                            className={styles.formSelect}>
-                                            {audioDevices.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-                                {audioOutputs.length > 0 && (
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="audioOutputDevice" className={styles.formLabel}>Salida de Audio</label>
-                                        <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudioOutput(e.target.value)}
-                                            className={styles.formSelect}>
-                                            {audioOutputs.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
-                                        </select>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                        <button type="submit" disabled={!userName.trim() || isLoading} className={styles.joinButton}>
-                            <LogIn className={styles.joinButtonIcon} size={20} />
-                            Unirse a la llamada
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const AuthScreen = ({ onAuthSuccess }) => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [accessCode, setAccessCode] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    const SERVER_BASE_URL = "https://meet-clone-v0ov.onrender.com";
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        const endpoint = isRegistering ? `${SERVER_BASE_URL}/register` : `${SERVER_BASE_URL}/login`;
-
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password, accessCode }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                toast.success(data.message);
-                onAuthSuccess(username);
-            } else {
-                toast.error(data.message || 'Error en la autenticación.');
-            }
-        } catch (error) {
-            console.error('Error de red o del servidor:', error);
-            toast.error('No se pudo conectar con el servidor de autenticación.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}>
-            <div className={styles.lobbyFormWrapper}>
-                <div className={styles.lobbyCard}>
-                    <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
-                    <h1 className={styles.lobbyTitle}>
-                        {isRegistering ? 'Registrarse en Mundi-Link' : 'Iniciar Sesión en Mundi-Link'}
-                    </h1>
-                    <form onSubmit={handleSubmit} className={styles.lobbyForm}>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="authUsername" className={styles.formLabel}>Nombre de usuario</label>
-                            <input
-                                id="authUsername" type="text" value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Tu nombre de usuario"
-                                className={styles.formInput}
-                                required
-                            />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="authPassword" className={styles.formLabel}>Contraseña</label>
-                            <input
-                                id="authPassword" type="password" value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Tu contraseña"
-                                className={styles.formInput}
-                                required
-                            />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label htmlFor="authAccessCode" className={styles.formLabel}>Código de Acceso</label>
-                            <input
-                                id="authAccessCode" type="password" value={accessCode}
-                                onChange={(e) => setAccessCode(e.target.value)}
-                                placeholder="Código de acceso"
-                                className={styles.formInput}
-                                required
-                            />
-                        </div>
-                        <button type="submit" disabled={loading || !username || !password || !accessCode} className={styles.joinButton}>
-                            {loading ? 'Cargando...' : isRegistering ? <><UserPlus size={20} className={styles.joinButtonIcon} /> Registrarse</> : <><LogIn size={20} className={styles.joinButtonIcon} /> Iniciar Sesión</>}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setIsRegistering(prev => !prev)}
-                            className={styles.joinButton}
-                            style={{ backgroundColor: 'transparent', color: 'var(--primary-color)', boxShadow: 'none' }}
-                            disabled={loading}
-                        >
-                            {isRegistering ? '¿Ya tienes una cuenta? Inicia Sesión' : '¿No tienes cuenta? Regístrate'}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
-export default function App() {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [authenticatedUserName, setAuthenticatedUserName] = useState('');
-    const [isJoined, setIsJoined] = useState(false);
-    const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
-
-    const webRTCLogic = useWebRTCLogic('main-room');
-
-    const handleAuthSuccess = (username) => {
-        setIsAuthenticated(true);
-        setAuthenticatedUserName(username);
-    };
-
-    const handleJoin = async (name, audioId, videoId, audioOutputId) => {
-        const finalUserName = authenticatedUserName || name;
-        setSelectedAudioOutput(audioOutputId);
-
-        // Asigna el nombre de usuario a la ref *antes* de llamar a connect
-        webRTCLogic.currentUserNameRef.current = finalUserName;
-
-        // Llama a la función connect principal en webRTCLogic, que ahora maneja
-        // la inicialización completa de stream, socket y PeerJS.
-        await webRTCLogic.connect(finalUserName, audioId, videoId);
-        setIsJoined(true);
-    };
-
-    const handleLeave = () => {
-        webRTCLogic.cleanup();
-        setIsJoined(false);
-        setIsAuthenticated(false);
-        setAuthenticatedUserName('');
-        setSelectedAudioOutput('');
-    };
-
-    useEffect(() => {
-        // Listener para el estado de la red global del navegador
-        const handleOnline = () => {
-            toast.success('¡Internet reconectado! Intentando restablecer la conexión.', { autoClose: 5000 });
-        };
-        const handleOffline = () => {
-            toast.error('¡Internet desconectado! La conexión de la llamada podría interrumpirse.', { autoClose: false });
-        };
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        // Limpieza de WebRTC al cerrar la ventana
-        window.addEventListener('beforeunload', webRTCLogic.cleanup);
-
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-            window.removeEventListener('beforeunload', webRTCLogic.cleanup);
-        };
-    }, [webRTCLogic]);
-
-    if (!isAuthenticated) {
-        return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
-    } else if (!isJoined) {
-        return <Lobby onJoin={handleJoin} authenticatedUserName={authenticatedUserName} />;
-    } else {
-        return (
-            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}>
-                <CallRoom onLeave={handleLeave} />
-                <ToastContainer />
-            </WebRTCContext.Provider>
-        );
-    }
-}
