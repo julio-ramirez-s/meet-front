@@ -37,6 +37,18 @@ const useWebRTCLogic = (roomId) => {
 
     const cleanupInProgress = useRef(false);
 
+    // NUEVO: Referencia para mantener el stream local más actual
+    const myStreamRef = useRef(null);
+    useEffect(() => {
+        myStreamRef.current = myStream;
+        if (myStream) {
+            console.log("myStreamRef actualizado. Stream:", myStream.id, "Activo:", myStream.active, "Video tracks:", myStream.getVideoTracks().length);
+        } else {
+            console.log("myStreamRef actualizado a null.");
+        }
+    }, [myStream]);
+
+
     const cleanup = useCallback(() => {
         if (cleanupInProgress.current) {
             console.log("Cleanup ya está en curso, ignorando llamada duplicada.");
@@ -96,7 +108,7 @@ const useWebRTCLogic = (roomId) => {
                 video: { deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
                 audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined }
             });
-            setMyStream(stream);
+            setMyStream(stream); // Esto actualizará myStreamRef.current en el siguiente render
             console.log("Stream local inicializado. Pistas de audio:", stream.getAudioTracks().length, "Pistas de video:", stream.getVideoTracks().length);
             // Log video track enabled state
             stream.getVideoTracks().forEach((track, index) => {
@@ -315,22 +327,15 @@ const useWebRTCLogic = (roomId) => {
                     const { userName: remoteUserName, isScreenShare } = call.metadata || {};
                     console.log(`[PeerJS] Recibiendo llamada de ${call.peer} (nombre: ${remoteUserName}, pantalla: ${isScreenShare}).`);
 
-                    // Ensure we have a local stream to answer the call
-                    if (!myStream || !myStream.active) {
-                        console.error("No se puede responder a la llamada: stream local no disponible o inactivo.");
+                    // CORRECCIÓN: Usar myStreamRef.current para acceder al stream más actual
+                    if (!myStreamRef.current || !myStreamRef.current.active) {
+                        console.error("No se puede responder a la llamada: stream local no disponible o inactivo (usando myStreamRef).");
                         toast.error("Tu cámara o micrófono no están activos. No se pudo conectar la videollamada.");
                         call.close();
                         return;
                     }
 
-                    const callKey = call.peer + (isScreenShare ? '_screen' : '');
-                    if (peerConnections.current[callKey]) {
-                        console.log(`[PeerJS] Ya existe una conexión con ${callKey} para la llamada entrante. Cerrando nueva llamada.`);
-                        call.close();
-                        return;
-                    }
-
-                    call.answer(myStream); // Answer the call with your stream
+                    call.answer(myStreamRef.current); // Responder la llamada con el stream más actual
 
                     call.on('stream', (remoteStream) => {
                         console.log(`[PeerJS] Stream recibido de llamada entrante de: ${call.peer}. Es pantalla: ${isScreenShare}`);
@@ -436,8 +441,9 @@ const useWebRTCLogic = (roomId) => {
 
             users.forEach(existingUser => {
                 if (myPeerRef.current && existingUser.userId !== myPeerRef.current.id) {
-                    if (initialStream && initialStream.active) {
-                        connectToNewUser(existingUser.userId, existingUser.userName, initialStream, currentUserNameRef.current);
+                    // Usar myStreamRef.current para la llamada saliente también
+                    if (myStreamRef.current && myStreamRef.current.active) {
+                        connectToNewUser(existingUser.userId, existingUser.userName, myStreamRef.current, currentUserNameRef.current);
                     } else {
                         console.warn("No hay stream local activo disponible para conectar a usuarios existentes.");
                     }
@@ -455,8 +461,9 @@ const useWebRTCLogic = (roomId) => {
                 [userId]: { stream: null, userName: remoteUserName, isScreenShare: false }
             }));
 
-            if (initialStream && initialStream.active) {
-                connectToNewUser(userId, remoteUserName, initialStream, currentUserNameRef.current);
+            // Usar myStreamRef.current para la llamada saliente
+            if (myStreamRef.current && myStreamRef.current.active) {
+                connectToNewUser(userId, remoteUserName, myStreamRef.current, currentUserNameRef.current);
             } else {
                 console.warn("No hay stream local activo disponible para conectar a usuarios que se unen.");
             }
@@ -510,7 +517,8 @@ const useWebRTCLogic = (roomId) => {
             }
 
             if (screenSharePeer.current !== userId) {
-                connectToNewUser(userId, remoteUserName, myStream, currentUserNameRef.current, true);
+                // Usar myStreamRef.current para la llamada de pantalla
+                connectToNewUser(userId, remoteUserName, myStreamRef.current, currentUserNameRef.current, true);
             }
         });
 
@@ -525,7 +533,8 @@ const useWebRTCLogic = (roomId) => {
             toast.info(`El tema ha cambiado a ${theme}.`);
         });
 
-    }, [currentUserNameRef, myScreenStream, myStream, roomId, savedAudioInputDeviceId, savedVideoInputDeviceId, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, connect]); // Dependencies added for setupSocketAndPeer
+    }, [currentUserNameRef, myScreenStream, roomId, savedAudioInputDeviceId, savedVideoInputDeviceId, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, connect]); // Se eliminó myStream de las dependencias de setupSocketAndPeer porque ahora usamos myStreamRef
+
 
     // Primer useEffect: Ahora solo para el cleanup global.
     useEffect(() => {
@@ -798,9 +807,9 @@ const Controls = ({ onToggleChat, onLeave }) => {
 
     const emojis = appTheme === 'hot'
         ? [
-            '🌶️', '', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦',
+            '🌶️', '', '😈', '💋', '❤️‍�', '🔥', '🥰', '😏', '🤤', '🫦',
             '👄', '👅', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦',
-            '🕺', '😉', '😜', '😘', '🤭', '�', '🤑', '💎', '👑', '🫣'
+            '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'
          ]
         : [
             '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
