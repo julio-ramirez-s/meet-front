@@ -1,53 +1,40 @@
 /* Base de la aplicación */
 :root {
     /* Tema Oscuro (valores por defecto) */
-    --primary-color: #3b82f6; /* Azul brillante, para botones y títulos */
-    --secondary-color: #1e3a8a; /* Azul más oscuro, para detalles */
-    --background-color: #0f172a; /* Fondo muy oscuro, casi negro */
-    --surface-color: #1e293b; /* Superficies, cards */
-    --text-color: #f8fafc; /* Texto claro */
-    --text-muted-color: #94a3b8; /* Texto secundario */
+    --primary-blue: #3b82f6; /* Azul brillante, para botones y títulos */
+    --secondary-blue: #1e3a8a; /* Azul más oscuro, para detalles */
+    --background-dark: #0f172a; /* Fondo muy oscuro, casi negro */
+    --surface-dark: #1e293b; /* Superficies, cards */
+    --text-light: #f8fafc; /* Texto claro */
+    --text-muted: #94a3b8; /* Texto secundario */
     --border-color: #334155; /* Bordes sutiles */
-    --red-alert-color: #ef4444; /* Rojo para alertas y salir */
-    --green-share-color: #22c55e; /* Verde para compartir pantalla */
+    --red-alert: #ef4444; /* Rojo para alertas y salir */
+    --green-share: #22c55e; /* Verde para compartir pantalla */
 }
 
 /* Tema Claro */
 .lightMode {
-    --primary-color: #007bff; /* Azul brillante, para botones y títulos */
-    --secondary-color: #0056b3; /* Azul más oscuro, para detalles */
-    --background-color: #f0f2f5; /* Fondo muy claro, casi blanco */
-    --surface-color: #ffffff; /* Superficies, cards */
-    --text-color: #212529; /* Texto oscuro */
-    --text-muted-color: #6c757d; /* Texto secundario oscuro */
+    --primary-blue: #007bff; /* Azul brillante, para botones y títulos */
+    --secondary-blue: #0056b3; /* Azul más oscuro, para detalles */
+    --background-dark: #f0f2f5; /* Fondo muy claro, casi blanco */
+    --surface-dark: #ffffff; /* Superficies, cards */
+    --text-light: #212529; /* Texto oscuro */
+    --text-muted: #6c757d; /* Texto secundario oscuro */
     --border-color: #ced4da; /* Bordes sutiles claros */
-    --red-alert-color: #dc3545; /* Rojo para alertas y salir */
-    --green-share-color: #28a745; /* Verde para compartir pantalla */
-}
-
-/* Tema Mundi-Hot */
-.hotMode {
-    --primary-color: #ff4500; /* Naranja rojizo vibrante */
-    --secondary-color: #cc3700; /* Naranja rojizo más oscuro */
-    --background-color: #2a0f0f; /* Fondo muy oscuro, casi negro rojizo */
-    --surface-color: #4a1c1c; /* Superficies en tono rojizo oscuro */
-    --text-color: #fce4ec; /* Texto claro rosado */
-    --text-muted-color: #ff8c00; /* Naranja oscuro para texto muted */
-    --border-color: #8b0000; /* Rojo oscuro para bordes */
-    --red-alert-color: #ff0000; /* Rojo puro para alertas */
-    --green-share-color: #ffea00; /* Amarillo brillante para compartir (contraste) */
+    --red-alert: #dc3545; /* Rojo para alertas y salir */
+    --green-share: #28a745; /* Verde para compartir pantalla */
 }
 
 
 body {
-    background-color: var(--background-color); /* Usa la variable */
+    background-color: var(--background-dark);
 }
 
 .mainContainer {
     display: flex;
     height: 100vh;
-    background-color: var(--background-color); /* Usa la variable */
-    color: var(--text-color); /* Usa la variable */
+    background-color: var(--background-dark); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     font-family: 'Inter', sans-serif;
     overflow: hidden;
 }
@@ -74,7 +61,7 @@ body {
     bottom: calc(4.75rem + 10px);
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     padding: 8px;
@@ -109,10 +96,10 @@ body {
 .commonEmojiButton, .plusButton {
     padding: 0.75rem;
     border-radius: 9999px;
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     transition: background-color 0.2s ease;
     border: none;
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -125,7 +112,7 @@ body {
 }
 
 .controlButtonActive {
-    background-color: var(--primary-color) !important; /* Usa la variable */
+    background-color: var(--primary-blue) !important; /* Usa la variable */
 }
 
 /* ---------------- Video Grid ---------------- */
@@ -135,7 +122,7 @@ body {
     gap: 1rem;
     padding: 1rem;
     overflow: auto;
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     align-items: stretch;
     justify-content: center;
 }
@@ -282,7 +269,7 @@ body {
 }
 /* ---------------- Controles ---------------- */
 .controlsFooter {
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     backdrop-filter: blur(8px);
     padding: 1rem;
     display: flex;
@@ -303,10 +290,10 @@ body {
 .controlButton {
     padding: 0.75rem;
     border-radius: 9999px;
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     transition: all 0.2s ease-in-out;
     border: none;
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -319,20 +306,20 @@ body {
 }
 
 .controlButtonActive {
-    background-color: var(--primary-color) !important; /* Usa la variable */
-    color: var(--text-color); /* Usa la variable */
+    background-color: var(--red-alert) !important; /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
 }
 
 .controlButtonScreenShare {
-    background-color: var(--green-share-color) !important; /* Usa la variable */
-    color: var(--text-color); /* Usa la variable */
+    background-color: var(--green-share) !important; /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
 }
 
 .leaveButton {
     padding: 0.75rem 1.25rem;
     border-radius: 9999px;
-    background-color: var(--red-alert-color); /* Usa la variable */
-    color: var(--text-color); /* Usa la variable */
+    background-color: var(--red-alert); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     font-weight: 600;
     font-size: 0.95rem;
     border: none;
@@ -352,7 +339,7 @@ body {
     height: 100%;
     width: 100%;
     max-width: 24rem;
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
@@ -375,7 +362,7 @@ body {
 .chatTitle {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--primary-color); /* Usa la variable */
+    color: var(--primary-blue); /* Usa la variable */
 }
 
 .closeChatButton {
@@ -383,7 +370,7 @@ body {
     border-radius: 9999px;
     border: none;
     background-color: transparent;
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     cursor: pointer;
 }
 .closeChatButton:hover {
@@ -402,7 +389,7 @@ body {
 .systemMessage {
     text-align: center;
     font-size: 0.8rem;
-    color: var(--text-muted-color); /* Usa la variable */
+    color: var(--text-muted); /* Usa la variable */
     font-style: italic;
 }
 
@@ -423,13 +410,13 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .chatMessageMe {
-    background-color: var(--primary-color); /* Usa la variable */
+    background-color: var(--primary-blue); /* Usa la variable */
 }
 
 .chatUserName {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--primary-color); /* Usa la variable */
+    color: var(--primary-blue); /* Usa la variable */
     margin-bottom: 0.2rem;
 }
 
@@ -448,22 +435,22 @@ body {
 .chatInput {
     flex-grow: 1;
     padding: 0.75rem;
-    background-color: var(--background-color); /* Usa la variable */
+    background-color: var(--background-dark); /* Usa la variable */
     border-radius: 9999px;
     border: 1px solid var(--border-color); /* Usa la variable */
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     outline: none;
     transition: border-color 0.2s ease;
 }
 .chatInput::placeholder {
-    color: var(--text-muted-color); /* Usa la variable */
+    color: var(--text-muted); /* Usa la variable */
 }
 .chatInput:focus {
-    border-color: var(--primary-color); /* Usa la variable */
+    border-color: var(--primary-blue); /* Usa la variable */
 }
 
 .chatSendButton {
-    background-color: var(--primary-color); /* Usa la variable */
+    background-color: var(--primary-blue); /* Usa la variable */
     padding: 0.75rem;
     border-radius: 9999px;
     color: #fff;
@@ -472,7 +459,7 @@ body {
     transition: background-color 0.3s ease;
 }
 .chatSendButton:hover {
-    background-color: var(--secondary-color); /* Usa la variable */
+    background-color: var(--secondary-blue); /* Usa la variable */
 }
 
 /* ---------------- Lobby ---------------- */
@@ -482,8 +469,8 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background-color: var(--background-color); /* Usa la variable */
-    color: var(--text-color); /* Usa la variable */
+    background-color: var(--background-dark); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     padding: 1rem;
 }
 
@@ -493,7 +480,7 @@ body {
 }
 
 .lobbyCard {
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-dark); /* Usa la variable */
     padding: 2.5rem;
     border-radius: 1.5rem;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
@@ -509,7 +496,7 @@ body {
 .lobbyTitle {
     font-size: 2.25rem;
     font-weight: 700;
-    color: var(--primary-color); /* Usa la variable */
+    color: var(--primary-blue); /* Usa la variable */
     margin-bottom: 2rem;
 }
 
@@ -528,7 +515,7 @@ body {
 .formLabel {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     margin-bottom: 0.5rem;
 }
 
@@ -536,22 +523,22 @@ body {
 .formSelect {
     width: 100%;
     padding: 0.9rem 0.2rem;
-    background-color: var(--background-color); /* Usa la variable */
+    background-color: var(--background-dark); /* Usa la variable */
     border: 1px solid var(--border-color); /* Usa la variable */
     border-radius: 0.75rem;
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-light); /* Usa la variable */
     outline: none;
     transition: all 0.2s ease-in-out;
 }
 .formInput:focus,
 .formSelect:focus {
-    border-color: var(--primary-color); /* Usa la variable */
+    border-color: var(--primary-blue); /* Usa la variable */
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
 }
 
 .loadingMessage {
     text-align: center;
-    color: var(--text-muted-color); /* Usa la variable */
+    color: var(--text-muted); /* Usa la variable */
 }
 
 .joinButton {
@@ -563,7 +550,7 @@ body {
     font-size: 1.15rem;
     font-weight: 600;
     border-radius: 0.75rem;
-    background-color: var(--primary-color); /* Usa la variable */
+    background-color: var(--primary-blue); /* Usa la variable */
     color: #fff;
     transition: background-color 0.3s ease;
     border: none;
@@ -571,7 +558,7 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 .joinButton:hover {
-    background-color: var(--secondary-color); /* Usa la variable */
+    background-color: var(--secondary-blue); /* Usa la variable */
 }
 .joinButton:disabled {
     background-color: #64748b; /* Color fijo */

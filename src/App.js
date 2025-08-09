@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper, Plus, Sun, Moon, Flame } from 'lucide-react'; // Importar Flame
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper, Plus, Sun, Moon } from 'lucide-react'; // Importar Sun y Moon
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -355,7 +355,7 @@ const useWebRTCLogic = (roomId) => {
                 // Limpiar también las conexiones PeerJS aquí
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
-                        peerConnections.current[key].current.close();
+                        peerConnections.current[key].close();
                         delete peerConnections.current[key];
                     }
                 });
@@ -462,6 +462,7 @@ const VideoGrid = () => {
     const sideContent = videoElements.filter(v => !v.isScreenShare);
 
     // La clase de layout ahora se elige dinámicamente según si es desktop o móvil
+    // Si es desktop, queremos una cuadrícula (desktopLayout). Si es móvil, queremos columna (mobileLayout).
     const secondaryGridLayoutClass = isDesktop ? styles.desktopLayout : styles.mobileLayout;
 
     return (
@@ -481,7 +482,7 @@ const VideoGrid = () => {
 };
 
 
-const Controls = ({ onToggleChat, onLeave, cycleTheme, appTheme }) => { // Recibir cycleTheme y appTheme
+const Controls = ({ onToggleChat, onLeave, toggleTheme, isLightMode }) => { // Recibir toggleTheme y isLightMode
     const { 
         toggleMute, toggleVideo, shareScreen, sendReaction,
         isMuted, isVideoOff, myScreenStream, peers
@@ -489,29 +490,17 @@ const Controls = ({ onToggleChat, onLeave, cycleTheme, appTheme }) => { // Recib
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
-    
-    // Emojis condicionales
-    const commonEmojis = appTheme === 'hot' 
-        ? ['🌶️', '🔥', '😈', '💯', '💥'] 
-        : ['👍', '😂', '🎉', '❤️', '👏'];
+    const commonEmojis = ['👍', '😂', '🎉', '❤️', '👏'];
 
-    const emojis = appTheme === 'hot'
-        ? [
-            '🌶️', '🔥', '😈', '💯', '💥', '🥵', '😎', '🤩', '🚀', '⚡', '💣', '💢', '✨', '🌟', '👑',
-            '❤️‍🔥', '💋', '😏', '🤤', '😈', '👹', '👺', '💀', '👻', '👽', '👾', '🤖', '🤡', '🤠', '🥳',
-            '🎉', '🎊', '🎁', '🎈', '✨', '💫', '🌟', '💥', '🔥', '⚡', '🌈', '🌠', '🌌', '🎆', '🎇',
-            '🎸', '🎤', '🥁', '🎷', '🎺', '🎻', '🎹', '🎶', '🎵', '🎼', '🎧', '🎙️', '📻', '📺', '🎬',
-            '💰', '💸', '💎', '👑', '💍', '🏆', '🏅', '🥇', '🥈', '🥉', '🎗️', '🎫', '🎟️', '🎪', '🎭'
-        ]
-        : [
-            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
-            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨',
-            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
-            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
-            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
-            '👀', '👄','🫦', '🫶', '💪'
-        ];
+    const emojis = [
+        '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+        '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
+        '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨',
+        '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
+        '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '?',
+        '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
+        '👀', '👄','🫦', '🫶', '💪'
+    ];
     
     
     const handleSendReaction = (emoji) => {
@@ -586,11 +575,9 @@ const Controls = ({ onToggleChat, onLeave, cycleTheme, appTheme }) => { // Recib
                     </div>
                 )}
             </div>
-            {/* Botón para cambiar tema */}
-            <button onClick={cycleTheme} className={styles.controlButton}>
-                {appTheme === 'dark' && <Sun size={20} />}
-                {appTheme === 'light' && <Moon size={20} />}
-                {appTheme === 'hot' && <Flame size={20} />}
+            {/* Nuevo botón para cambiar tema */}
+            <button onClick={toggleTheme} className={styles.controlButton}>
+                {isLightMode ? <Moon size={20} /> : <Sun size={20} />}
             </button>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
@@ -599,7 +586,7 @@ const Controls = ({ onToggleChat, onLeave, cycleTheme, appTheme }) => { // Recib
     );
 };
 
-const ChatSidebar = ({ isOpen, onClose, appTheme }) => { // Recibir appTheme
+const ChatSidebar = ({ isOpen, onClose }) => {
     const { chatMessages, sendMessage, currentUserName } = useWebRTC();
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
@@ -616,13 +603,10 @@ const ChatSidebar = ({ isOpen, onClose, appTheme }) => { // Recibir appTheme
         }
     };
 
-    // Título del chat condicional
-    const chatTitleText = appTheme === 'hot' ? 'Chat de Mundi-Hot' : 'Chat de Mundi-Link';
-
     return (
         <aside className={`${styles.chatSidebar} ${isOpen ? styles.chatSidebarOpen : ''}`}>
             <header className={styles.chatHeader}>
-                <h2 className={styles.chatTitle}>{chatTitleText}</h2>
+                <h2 className={styles.chatTitle}>Chat de Mundi-Link</h2>
                 <button onClick={onClose} className={styles.closeChatButton}>
                     <X size={20} />
                 </button>
@@ -660,20 +644,20 @@ const ChatSidebar = ({ isOpen, onClose, appTheme }) => { // Recibir appTheme
     );
 };
 
-const CallRoom = ({ onLeave, cycleTheme, appTheme }) => { // Recibir cycleTheme y appTheme
+const CallRoom = ({ onLeave, toggleTheme, isLightMode }) => { // Recibir toggleTheme y isLightMode
     const [isChatOpen, setIsChatOpen] = useState(false);
     return (
-        <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> {/* Aplicar clase de tema */}
+        <div className={`${styles.mainContainer} ${isLightMode ? styles.lightMode : ''}`}> {/* Aplicar clase lightMode */}
             <main className={styles.mainContent}>
                 <VideoGrid />
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} cycleTheme={cycleTheme} appTheme={appTheme} /> {/* Pasar props */}
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} toggleTheme={toggleTheme} isLightMode={isLightMode} /> {/* Pasar props */}
             </main>
-            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} appTheme={appTheme} /> {/* Pasar appTheme */}
+            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
         </div>
     );
 };
 
-const Lobby = ({ onJoin, appTheme }) => { // Recibir appTheme
+const Lobby = ({ onJoin }) => {
     const [userName, setUserName] = useState('');
     const [videoDevices, setVideoDevices] = useState([]);
     const [audioDevices, setAudioDevices] = useState([]);
@@ -717,15 +701,12 @@ const Lobby = ({ onJoin, appTheme }) => { // Recibir appTheme
         }
     };
 
-    // Título del lobby condicional
-    const lobbyTitleText = appTheme === 'hot' ? 'Unirse a Mundi-Hot' : 'Unirse a Mundi-Link';
-
     return (
-        <div className={`${styles.lobbyContainer} ${styles[appTheme + 'Mode']}`}> {/* Aplicar clase de tema */}
+        <div className={styles.lobbyContainer}>
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
                     <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
-                    <h1 className={styles.lobbyTitle}>{lobbyTitleText}</h1>
+                    <h1 className={styles.lobbyTitle}>Unirse a Mundi-Link</h1>
                     <form onSubmit={handleSubmit} className={styles.lobbyForm}>
                         <div className={styles.formGroup}>
                             <label htmlFor="userName" className={styles.formLabel}>Tu nombre</label>
@@ -786,7 +767,7 @@ export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
-    const [appTheme, setAppTheme] = useState('dark'); // Estado para el tema: 'dark', 'light', 'hot'
+    const [isLightMode, setIsLightMode] = useState(false); // Nuevo estado para el tema
     const webRTCLogic = useWebRTCLogic('main-room');
 
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
@@ -806,13 +787,8 @@ export default function App() {
         setSelectedAudioOutput('');
     };
 
-    // Función para ciclar entre los temas
-    const cycleTheme = () => {
-        setAppTheme(prevTheme => {
-            if (prevTheme === 'dark') return 'light';
-            if (prevTheme === 'light') return 'hot';
-            return 'dark'; // Vuelve a oscuro
-        });
+    const toggleTheme = () => { // Función para cambiar el tema
+        setIsLightMode(prevMode => !prevMode);
     };
 
     useEffect(() => {
@@ -823,11 +799,11 @@ export default function App() {
     }, [webRTCLogic]);
 
     if (!isJoined) {
-        return <Lobby onJoin={handleJoin} appTheme={appTheme} />; // Pasar appTheme al Lobby
+        return <Lobby onJoin={handleJoin} />;
     } else {
         return (
             <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}>
-                <CallRoom onLeave={handleLeave} cycleTheme={cycleTheme} appTheme={appTheme} /> {/* Pasar props */}
+                <CallRoom onLeave={handleLeave} toggleTheme={toggleTheme} isLightMode={isLightMode} /> {/* Pasar props */}
                 <ToastContainer />
             </WebRTCContext.Provider>
         );
