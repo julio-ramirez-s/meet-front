@@ -105,7 +105,8 @@ const useWebRTCLogic = (roomId) => {
             setMyStream(null); // Asegura que el stream sea null si hay un error
             return null;
         }
-    }, []);
+    }, []); // Dependencias vacías, ya que no depende de estados/props que cambien
+
     
     // Función para conectar a un nuevo usuario Peer
     const connectToNewUser = useCallback((peerId, remoteUserName, streamToOffer, localUserName, isScreenShare = false) => {
@@ -176,7 +177,7 @@ const useWebRTCLogic = (roomId) => {
         } catch (error) {
             console.error(`Error al iniciar llamada PeerJS a ${peerId}:`, error);
         }
-    }, [myStream, myScreenStream]); // Dependencias: Asegurarse de tener acceso a los streams para futuras llamadas
+    }, [myStream, myScreenStream, removePeer, removeScreenShare]); // Agregadas removePeer y removeScreenShare como dependencias
 
 
     // Función principal para inicializar todas las conexiones (Socket.IO y PeerJS)
@@ -251,12 +252,7 @@ const useWebRTCLogic = (roomId) => {
                     const { peer: peerId, metadata } = call;
                     console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
 
-                    // Importante: usar los streams más actualizados directamente del estado
-                    const currentMyStream = myStream; // Captura el valor actual del estado
-                    const currentMyScreenStream = myScreenStream; // Captura el valor actual del estado
-
-                    const streamToSend = metadata.isScreenShare ? currentMyScreenStream : currentMyStream;
-                    
+                    const streamToSend = metadata.isScreenShare ? myScreenStream : myStream; // Usa el estado actual de myStream/myScreenStream
                     if (streamToSend && streamToSend.active) { // Asegura que el stream esté activo al responder
                         call.answer(streamToSend);
                     } else {
@@ -373,6 +369,7 @@ const useWebRTCLogic = (roomId) => {
             // Re-establecer llamadas a usuarios existentes con el stream activo
             users.forEach(existingUser => {
                 if (myPeerRef.current && existingUser.userId !== myPeerRef.current.id) {
+                    // Aquí se usa activeStream, que se obtiene al inicio de initializeConnections
                     if (activeStream && activeStream.active) {
                         connectToNewUser(existingUser.userId, existingUser.userName, activeStream, userNameToUse);
                     } else {
@@ -462,7 +459,7 @@ const useWebRTCLogic = (roomId) => {
             toast.info(`El tema ha cambiado a ${theme}.`);
         });
 
-    }, [myStream, myScreenStream, savedAudioInputDeviceId, savedVideoInputDeviceId, connectToNewUser, cleanup, removePeer, removeScreenShare, initializeStream]); // Agregadas dependencias necesarias
+    }, [myStream, myScreenStream, savedAudioInputDeviceId, savedVideoInputDeviceId, initializeStream, connectToNewUser, removePeer, removeScreenShare]); // Agregadas/revisadas dependencias necesarias
 
     // Funciones de control remoto (mismo que antes)
     const removePeer = useCallback((peerId) => { 
@@ -688,15 +685,15 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const emojiPickerRef = useRef(null);
     
     const commonEmojis = appTheme === 'hot' 
-    ? ['❤️', '🥵', '😍'] // Simplificado para evitar problemas
-    : ['👍', '😆', '❤️']; // Simplificado para evitar problemas
+    ? ['❤️', '🥵', '😍'] 
+    : ['👍', '😆', '❤️']; 
 
     const emojis = appTheme === 'hot'   
         ? [
-            '🌶️', '🥵', '😈', '�', '🔥', '🥰', '😏' // Simplificado
+            '🌶️', '🥵', '😈', '💋', '🔥', '🥰', '😏' 
          ]
         : [
-            '👍', '👎', '👏', '🙌', '🤝', '🙏', '👋', '😃', '😄', '😁', '😂' // Simplificado
+            '👍', '👎', '👏', '🙌', '🤝', '🙏', '👋', '😃', '😄', '😁', '😂' 
         ];
     
     
@@ -1080,7 +1077,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
 };
 
 
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
+// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [authenticatedUserName, setAuthenticatedUserName] = useState(''); 
@@ -1099,7 +1096,8 @@ export default function App() {
         setSelectedAudioOutput(audioOutputId);
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
-            webRTCLogic.connect(stream, finalUserName); // Pasa el stream inicial y el nombre de usuario
+            // Asegúrate de que webRTCLogic.connect reciba los parámetros correctos
+            webRTCLogic.connect(finalUserName, audioId, videoId); // Pasa el nombre de usuario y los IDs de los dispositivos
             setIsJoined(true);
         }
     };
@@ -1116,17 +1114,6 @@ export default function App() {
         // Listener para el estado de la red global del navegador
         const handleOnline = () => {
             toast.success('¡Internet reconectado! Intentando restablecer la conexión.', { autoClose: 5000 });
-            // Si la aplicación ya estaba en una llamada, intenta reconectar PeerJS/Socket.IO
-            if (isJoined && webRTCLogic.connectionStatus !== 'connected') {
-                // webRTCLogic.connect() se encarga de re-inicializar Peer y Socket si ya están destruidos/conectados
-                // Sin embargo, para que funcione bien, el stream original debe estar disponible.
-                // Una forma más robusta sería guardar las device IDs y re-obtener el stream.
-                // Por simplicidad, asumimos que el stream original de la conexión se mantiene o se re-obtiene correctamente.
-                if (webRTCLogic.myStream) {
-                   // No es necesario llamar connect aquí, los listeners de PeerJS/Socket.IO ya lo manejan
-                   // initializeConnections lo haría si se detecta una desconexión Peer/Socket.
-                }
-            }
         };
         const handleOffline = () => {
             toast.error('¡Internet desconectado! La conexión de la llamada podría interrumpirse.', { autoClose: false });
@@ -1143,7 +1130,7 @@ export default function App() {
             window.removeEventListener('offline', handleOffline);
             window.removeEventListener('beforeunload', webRTCLogic.cleanup);
         };
-    }, [isJoined, webRTCLogic]); // webRTCLogic es una dependencia porque sus propiedades cambian, aunque el objeto en sí es el mismo
+    }, [webRTCLogic]); // La dependencia webRTCLogic se mantiene ya que su contenido (funciones memoizadas) es estable
 
     if (!isAuthenticated) {
         return <AuthScreen onAuthSuccess={handleAuthSuccess} />;
