@@ -3,7 +3,7 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import 'react-toastify/dist/React-toastify.css';
 import styles from './App.module.css';
 
 // --- CONTEXTO PARA WEBRTC ---
@@ -108,7 +108,7 @@ const useWebRTCLogic = (roomId) => {
     }, []); 
 
     
-    // Funciones removePeer y removeScreenShare movidas aquí para que connectToNewUser las capture.
+    // Funciones removePeer y removeScreenShare
     const removePeer = useCallback((peerId) => { 
         if (peerConnections.current[peerId]) {
             peerConnections.current[peerId].close();
@@ -141,7 +141,7 @@ const useWebRTCLogic = (roomId) => {
 
     // Función para conectar a un nuevo usuario Peer
     const connectToNewUser = useCallback((peerId, remoteUserName, streamToOffer, localUserName, isScreenShare = false) => {
-        if (!myPeerRef.current || !streamToOffer || !streamToOffer.active) { // Asegura que el stream a ofrecer esté activo
+        if (!myPeerRef.current || !streamToOffer || !streamToOffer.active) { 
             console.log("No se puede conectar a nuevo usuario: Peer o stream no disponibles/activos.");
             return;
         }
@@ -208,179 +208,187 @@ const useWebRTCLogic = (roomId) => {
         } catch (error) {
             console.error(`Error al iniciar llamada PeerJS a ${peerId}:`, error);
         }
-    }, [myStream, myScreenStream, removePeer, removeScreenShare]);
+    }, [removePeer, removeScreenShare]); // Dependencias: removePeer y removeScreenShare
 
-
-    // Función principal para inicializar todas las conexiones (Socket.IO y PeerJS)
-    const initializeConnections = useCallback(async (userNameToUse) => { // Eliminado initialStream como argumento
+    // --- PRIMER useEffect: Inicialización de Socket.IO y PeerJS ---
+    useEffect(() => {
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // URL del backend
 
-        // Limpiar conexiones existentes antes de re-inicializar
-        if (socketRef.current) {
-            socketRef.current.disconnect(); 
-            socketRef.current = null;
-        }
-        if (myPeerRef.current) {
-            myPeerRef.current.destroy(); 
-            myPeerRef.current = null;
-        }
-
-        setConnectionStatus('reconnecting'); // Indica que estamos en proceso de reconexión
-        
-        socketRef.current = io(SERVER_URL, {
-            // Configuración de reconexión para Socket.IO
-            reconnection: true,
-            reconnectionAttempts: Infinity, // Intentos infinitos de reconexión
-            reconnectionDelay: 1000, // Primer retraso de 1 segundo
-            reconnectionDelayMax: 5000, // Retraso máximo de 5 segundos
-            randomizationFactor: 0.5 // Aleatoriza el retraso
-        });
-
-        // Eventos de Socket.IO
-        socketRef.current.on('connect', () => {
-            console.log('✅ Socket.IO conectado.');
-            setConnectionStatus('connected');
-            toast.success('Conectado al servidor de chat.');
-
-            // Inicializar PeerJS solo después de que Socket.IO esté conectado
-            if (!myPeerRef.current || myPeerRef.current.destroyed) {
-                myPeerRef.current = new Peer(undefined, {
-                    host: new URL(SERVER_URL).hostname,
-                    port: new URL(SERVER_URL).port || 443,
-                    path: '/peerjs/myapp',
-                    secure: true,
-                    config: { // Configuración ICE para STUN/TURN (importante para conexiones NAT)
-                        'iceServers': [
-                            { urls: 'stun:stun.l.google.com:19302' },
-                            { urls: 'stun:stun1.l.google.com:19302' },
-                            // Puedes añadir servidores TURN si tienes uno
-                            // { urls: 'turn:YOUR_TURN_SERVER_IP:PORT', username: 'YOUR_USERNAME', credential: 'YOUR_PASSWORD' }
-                        ]
-                    }
-                });
-
-                myPeerRef.current.on('open', (peerId) => {
-                    console.log('Mi ID de Peer es: ' + peerId);
-                    currentUserNameRef.current = userNameToUse;
-                    socketRef.current.emit('join-room', currentRoomIdRef.current, peerId, userNameToUse);
-                    setConnectionStatus('connected'); // Confirma que PeerJS también está listo
-                });
-
-                myPeerRef.current.on('call', (call) => {
-                    const { peer: peerId, metadata } = call;
-                    console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
-
-                    const streamToSend = metadata.isScreenShare ? myScreenStream : myStream; // Usa el estado actual de myStream/myScreenStream
-                    if (streamToSend && streamToSend.active) { 
-                        call.answer(streamToSend);
-                    } else {
-                        console.warn(`[PeerJS] Respondiendo a la llamada de ${peerId} sin stream activo. Es pantalla: ${metadata.isScreenShare}`);
-                        call.answer(); 
-                    }
-
-                    call.on('stream', (remoteStream) => {
-                        console.log(`[PeerJS] Stream recibido de: ${peerId}. Nombre de metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
-
-                        if (metadata.isScreenShare) {
-                            setPeers(prevPeers => ({
-                                ...prevPeers,
-                                'screen-share': { stream: remoteStream, userName: metadata.userName || 'Usuario Desconocido', isScreenShare: true, peerId: peerId }
-                            }));
-                            screenSharePeer.current = peerId;
-                        } else {
-                            setPeers(prevPeers => ({
-                                ...prevPeers,
-                                [peerId]: { ...prevPeers[peerId], stream: remoteStream, userName: metadata.userName || 'Usuario Desconocido', isScreenShare: false }
-                            }));
-                        }
-                    });
-
-                    call.on('close', () => {
-                        console.log(`[PeerJS] Llamada cerrada con ${peerId}`);
-                        if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
-                    });
-
-                    call.on('error', (err) => {
-                        console.error(`[PeerJS] Error en llamada entrante de ${peerId}:`, err);
-                        toast.error(`Error de conexión con ${metadata.userName}.`);
-                        if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
-                    });
-
-                    const callKey = peerId + (metadata.isScreenShare ? '_screen' : ''); 
-                    peerConnections.current[callKey] = call;
-                });
-
-                myPeerRef.current.on('disconnected', () => {
-                    console.log('❌ PeerJS desconectado. Intentando re-inicializar...');
-                    setConnectionStatus('reconnecting');
-                    toast.warn('Conexión de video perdida. Intentando reconectar...');
-                    setTimeout(() => {
-                        if (currentUserNameRef.current && myStream) { // Usar myStream del estado
-                            console.log("Re-conectando PeerJS y Socket.IO...");
-                            initializeConnections(currentUserNameRef.current); // No pasar stream
-                        } else {
-                            console.warn("No hay suficientes datos para re-inicializar la conexión PeerJS automáticamente.");
-                            toast.error("No se pudo reconectar automáticamente. Intenta salir y volver a unirte.");
-                            setConnectionStatus('disconnected');
-                        }
-                    }, 3000); 
-                });
-
-                myPeerRef.current.on('error', (err) => {
-                    console.error('❌ Error de PeerJS:', err);
-                    setConnectionStatus('disconnected');
-                    toast.error(`Error en conexión PeerJS: ${err.type}.`);
-                    if (err.type === 'peer-unavailable' || err.type === 'server-error' || err.type === 'network') {
-                        console.log("Reintentando inicialización de PeerJS debido a error de servidor/red.");
-                        setTimeout(() => {
-                            if (currentUserNameRef.current && myStream) { // Usar myStream del estado
-                                initializeConnections(currentUserNameRef.current); // No pasar stream
-                            }
-                        }, 5000);
-                    }
-                });
+        // Función para (re)inicializar Socket.IO y PeerJS
+        const setupConnections = () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+                socketRef.current = null;
             }
-        });
+            if (myPeerRef.current) {
+                myPeerRef.current.destroy();
+                myPeerRef.current = null;
+            }
 
-        socketRef.current.on('disconnect', (reason) => {
-            console.log('❌ Socket.IO desconectado:', reason);
-            setConnectionStatus('disconnected');
-            toast.error(`Desconectado del servidor de chat: ${reason}. Intentando reconectar...`);
-            Object.values(peerConnections.current).forEach(call => { if (call && call.open) call.close(); });
-            peerConnections.current = {};
-            setPeers({});
-            screenSharePeer.current = null;
-            if (myPeerRef.current) { myPeerRef.current.destroy(); myPeerRef.current = null; }
-        });
-
-        socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-            console.log(`🔌 Intentando reconectar Socket.IO (intento ${attemptNumber})...`);
             setConnectionStatus('reconnecting');
-            toast.info(`Intentando reconectar (intento ${attemptNumber})...`);
-        });
 
-        socketRef.current.on('reconnect', (attemptNumber) => {
-            console.log(`✅ Socket.IO reconectado después de ${attemptNumber} intentos.`);
-            setConnectionStatus('connected');
-            toast.success('¡Reconectado al servidor!');
-            if (currentUserNameRef.current && myStream) { // Usar myStream del estado
-                 initializeConnections(currentUserNameRef.current); // No pasar stream
-            } else {
-                 console.warn("No se puede re-unir a la sala después de la reconexión: faltan datos.");
-            }
-        });
+            socketRef.current = io(SERVER_URL, {
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                randomizationFactor: 0.5
+            });
 
-        socketRef.current.on('connect_error', (error) => {
-            console.error('❌ Error de conexión de Socket.IO:', error);
-            setConnectionStatus('disconnected');
-            toast.error('Error de conexión al servidor de chat.');
-        });
-    }, [initializeStream, connectToNewUser, removePeer, removeScreenShare, myStream, myScreenStream]); // Dependencias para initializeConnections (myStream y myScreenStream añadidos)
+            socketRef.current.on('connect', () => {
+                console.log('✅ Socket.IO conectado.');
+                setConnectionStatus('connected');
+                toast.success('Conectado al servidor de chat.');
 
-    // Este useEffect ahora está en el nivel superior del hook useWebRTCLogic
+                if (!myPeerRef.current || myPeerRef.current.destroyed) {
+                    myPeerRef.current = new Peer(undefined, {
+                        host: new URL(SERVER_URL).hostname,
+                        port: new URL(SERVER_URL).port || 443,
+                        path: '/peerjs/myapp',
+                        secure: true,
+                        config: { 
+                            'iceServers': [
+                                { urls: 'stun:stun.l.google.com:19302' },
+                                { urls: 'stun:stun1.l.google.com:19302' },
+                            ]
+                        }
+                    });
+
+                    myPeerRef.current.on('open', (peerId) => {
+                        console.log('Mi ID de Peer es: ' + peerId);
+                        // Asegúrate de que currentUserNameRef.current ya esté establecido antes de emitir join-room
+                        socketRef.current.emit('join-room', currentRoomIdRef.current, peerId, currentUserNameRef.current);
+                        setConnectionStatus('connected');
+                    });
+
+                    myPeerRef.current.on('disconnected', () => {
+                        console.log('❌ PeerJS desconectado. Intentando re-inicializar...');
+                        setConnectionStatus('reconnecting');
+                        toast.warn('Conexión de video perdida. Intentando reconectar...');
+                        setTimeout(() => {
+                            if (currentUserNameRef.current) { // Se intenta re-conectar si hay nombre de usuario
+                                setupConnections(); // Llama a sí misma para re-inicializar
+                            } else {
+                                console.warn("No hay nombre de usuario para re-inicializar la conexión PeerJS automáticamente.");
+                                toast.error("No se pudo reconectar automáticamente. Intenta salir y volver a unirte.");
+                                setConnectionStatus('disconnected');
+                            }
+                        }, 3000); 
+                    });
+
+                    myPeerRef.current.on('error', (err) => {
+                        console.error('❌ Error de PeerJS:', err);
+                        setConnectionStatus('disconnected');
+                        toast.error(`Error en conexión PeerJS: ${err.type}.`);
+                        if (err.type === 'peer-unavailable' || err.type === 'server-error' || err.type === 'network') {
+                            console.log("Reintentando inicialización de PeerJS debido a error de servidor/red.");
+                            setTimeout(() => {
+                                if (currentUserNameRef.current) {
+                                    setupConnections();
+                                }
+                            }, 5000);
+                        }
+                    });
+                }
+            });
+
+            socketRef.current.on('disconnect', (reason) => {
+                console.log('❌ Socket.IO desconectado:', reason);
+                setConnectionStatus('disconnected');
+                toast.error(`Desconectado del servidor de chat: ${reason}. Intentando reconectar...`);
+                Object.values(peerConnections.current).forEach(call => { if (call && call.open) call.close(); });
+                peerConnections.current = {};
+                setPeers({});
+                screenSharePeer.current = null;
+                if (myPeerRef.current) { myPeerRef.current.destroy(); myPeerRef.current = null; }
+            });
+
+            socketRef.current.on('reconnect_attempt', (attemptNumber) => {
+                console.log(`🔌 Intentando reconectar Socket.IO (intento ${attemptNumber})...`);
+                setConnectionStatus('reconnecting');
+                toast.info(`Intentando reconectar (intento ${attemptNumber})...`);
+            });
+
+            socketRef.current.on('reconnect', (attemptNumber) => {
+                console.log(`✅ Socket.IO reconectado después de ${attemptNumber} intentos.`);
+                setConnectionStatus('connected');
+                toast.success('¡Reconectado al servidor!');
+                if (currentUserNameRef.current) {
+                     setupConnections(); // Re-inicializar todo el stack al reconectar Socket.IO
+                } else {
+                     console.warn("No se puede re-unir a la sala después de la reconexión: faltan datos.");
+                }
+            });
+
+            socketRef.current.on('connect_error', (error) => {
+                console.error('❌ Error de conexión de Socket.IO:', error);
+                setConnectionStatus('disconnected');
+                toast.error('Error de conexión al servidor de chat.');
+            });
+        };
+
+        setupConnections(); // Inicia la configuración al montar el componente
+
+        // Limpieza al desmontar el componente
+        return () => {
+            if (socketRef.current) socketRef.current.disconnect();
+            if (myPeerRef.current) myPeerRef.current.destroy();
+        };
+    }, [roomId, currentUserNameRef]); // Depende de roomId para re-inicializar si cambia la sala, y currentUserNameRef para su valor
+
+
+    // --- SEGUNDO useEffect: Listeners de Socket.IO y PeerJS ---
     useEffect(() => {
-        // Eventos de Socket.IO que dependen de PeerJS y Streams
-        if (!socketRef.current || !myPeerRef.current) return; 
+        if (!socketRef.current || !myPeerRef.current || !myStream) {
+            // No configurar listeners hasta que Socket.IO, PeerJS y myStream estén listos
+            return;
+        }
+
+        console.log("Configurando listeners de Socket.IO y PeerJS...");
+
+        myPeerRef.current.on('call', (call) => {
+            const { peer: peerId, metadata } = call;
+            console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
+
+            const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
+            if (streamToSend && streamToSend.active) { 
+                call.answer(streamToSend);
+            } else {
+                console.warn(`[PeerJS] Respondiendo a la llamada de ${peerId} sin stream activo. Es pantalla: ${metadata.isScreenShare}`);
+                call.answer(); 
+            }
+
+            call.on('stream', (remoteStream) => {
+                console.log(`[PeerJS] Stream recibido de: ${peerId}. Nombre de metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
+
+                if (metadata.isScreenShare) {
+                    setPeers(prevPeers => ({
+                        ...prevPeers,
+                        'screen-share': { stream: remoteStream, userName: metadata.userName || 'Usuario Desconocido', isScreenShare: true, peerId: peerId }
+                    }));
+                    screenSharePeer.current = peerId;
+                } else {
+                    setPeers(prevPeers => ({
+                        ...prevPeers,
+                        [peerId]: { ...prevPeers[peerId], stream: remoteStream, userName: metadata.userName || 'Usuario Desconocido', isScreenShare: false }
+                    }));
+                }
+            });
+
+            call.on('close', () => {
+                console.log(`[PeerJS] Llamada cerrada con ${peerId}`);
+                if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
+            });
+
+            call.on('error', (err) => {
+                console.error(`[PeerJS] Error en llamada entrante de ${peerId}:`, err);
+                toast.error(`Error de conexión con ${metadata.userName}.`);
+                if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
+            });
+
+            const callKey = peerId + (metadata.isScreenShare ? '_screen' : ''); 
+            peerConnections.current[callKey] = call;
+        });
 
         socketRef.current.on('room-users', ({ users }) => {
             console.log(`[Socket] Recibida lista de usuarios existentes:`, users);
@@ -477,8 +485,9 @@ const useWebRTCLogic = (roomId) => {
             toast.info(`El tema ha cambiado a ${theme}.`);
         });
 
-        // Cleanup function for this useEffect
+        // Función de limpieza para este useEffect
         return () => {
+            console.log("Desmontando listeners de Socket.IO y PeerJS...");
             if (socketRef.current) {
                 socketRef.current.off('room-users');
                 socketRef.current.off('user-joined');
@@ -489,9 +498,12 @@ const useWebRTCLogic = (roomId) => {
                 socketRef.current.off('user-stopped-screen-share');
                 socketRef.current.off('theme-changed');
             }
+            // Los listeners de PeerJS 'call', 'close', 'error' se manejan dentro de connectToNewUser y myPeerRef.current.on('call')
+            // No hay una forma directa de "desmontar" el on('call') de Peer sin destruir toda la instancia,
+            // pero el primer useEffect se encarga de destruir myPeerRef al desmontar el hook.
         };
 
-    }, [myStream, myScreenStream, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers]); 
+    }, [socketRef.current, myPeerRef.current, myStream, myScreenStream, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, currentUserNameRef]); 
 
 
     const toggleMute = () => { 
@@ -513,7 +525,7 @@ const useWebRTCLogic = (roomId) => {
     };
     const sendReaction = (emoji) => { 
         if (socketRef.current) {
-            socketRef.current.emit('reaction', emoji); // FIXED: changed from socket.current to socketRef.current
+            socketRef.current.emit('reaction', emoji); 
         }
     };
     const sendThemeChange = (theme) => { 
@@ -532,7 +544,7 @@ const useWebRTCLogic = (roomId) => {
             console.log("[ScreenShare] Deteniendo compartición de pantalla.");
             myScreenStream.getTracks().forEach(track => track.stop());
             setMyScreenStream(null); 
-            socketRef.current.emit('stop-screen-share', myPeerRef.current.id); // Pasa el userId
+            socketRef.current.emit('stop-screen-share', myPeerRef.current.id); 
             
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen') && peerConnections.current[key]) { 
@@ -578,18 +590,18 @@ const useWebRTCLogic = (roomId) => {
     };
 
     // Función que se llama desde el componente App para iniciar la conexión
-    const connect = useCallback(async (userName, audioDeviceId, videoId) => { 
+    const connect = useCallback(async (userName, audioDeviceId, videoDeviceId) => { 
         currentUserNameRef.current = userName;
-        // Llama a initializeStream aquí para asegurar que el stream se obtiene antes de initializeConnections
-        // FIXED: Renamed parameter 'videoId' to 'videoDeviceId' for clarity with initializeStream
-        const stream = await initializeStream(audioDeviceId, videoId); // This 'videoId' is the actual device ID
+        const stream = await initializeStream(audioDeviceId, videoDeviceId); 
         if (stream) {
-             initializeConnections(userName); 
+             // Ya no llamamos a initializeConnections aquí, el primer useEffect la maneja
+             // simplemente aseguramos que el nombre de usuario esté establecido y el stream obtenido.
+             // El useEffect que configura listeners dependerá de socketRef.current estar listo.
         } else {
             toast.error("No se pudo obtener el stream para iniciar la conexión.");
             setConnectionStatus('disconnected');
         }
-    }, [initializeConnections, initializeStream]);
+    }, [initializeStream]); // Depende solo de initializeStream, ya que no inicializa PeerJS/Socket.IO aquí directamente
 
 
     return {
@@ -697,6 +709,23 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
     
+    // Temas disponibles y su índice
+    const themes = ['dark', 'light', 'hot'];
+    const [currentThemeIndex, setCurrentThemeIndex] = useState(themes.indexOf(appTheme));
+
+    // Actualiza el índice del tema si appTheme cambia desde fuera (ej. otro usuario)
+    useEffect(() => {
+        setCurrentThemeIndex(themes.indexOf(appTheme));
+    }, [appTheme]);
+
+    const handleCycleTheme = () => {
+        const nextIndex = (currentThemeIndex + 1) % themes.length;
+        const nextTheme = themes[nextIndex];
+        sendThemeChange(nextTheme);
+        // setCurrentThemeIndex(nextIndex); // No es necesario, appTheme se actualizará vía socket y activará el useEffect de arriba
+    };
+
+    // Emojis extremadamente simplificados para depuración
     const commonEmojis = appTheme === 'hot' 
     ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] 
     : ['👍', '😆', '❤️', '🎉', '🥺'];
@@ -716,7 +745,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
             '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
             '👀', '👄','🫦', '🫶', '💪'
         ];
-    
+
     
     const handleSendReaction = (emoji) => {
         sendReaction(emoji);
@@ -796,17 +825,12 @@ const Controls = ({ onToggleChat, onLeave }) => {
                     </div>
                 )}
             </div>
-            <div className={styles.themeControls}>
-                <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
-                    <Moon size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
-                    <Sun size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
-                    <Flame size={20} />
-                </button>
-            </div>
+            {/* Botón único para cambiar tema */}
+            <button onClick={handleCycleTheme} className={`${styles.controlButton} ${styles.themeButton}`} disabled={controlsDisabled}>
+                {appTheme === 'dark' && <Moon size={20} />}
+                {appTheme === 'light' && <Sun size={20} />}
+                {appTheme === 'hot' && <Flame size={20} />}
+            </button>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
             </button>
@@ -1115,7 +1139,11 @@ export default function App() {
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         const finalUserName = authenticatedUserName || name; 
         setSelectedAudioOutput(audioOutputId);
-        // webRTCLogic.connect ahora se encarga de llamar a initializeStream internamente
+        // Primero, establece el currentUserName en webRTCLogic, que es una ref.
+        // Esto es crucial para que initializeConnections lo tenga disponible inmediatamente.
+        webRTCLogic.currentUserNameRef.current = finalUserName; 
+
+        // Luego, inicia el stream y la conexión
         await webRTCLogic.connect(finalUserName, audioId, videoId); 
         setIsJoined(true);
     };
