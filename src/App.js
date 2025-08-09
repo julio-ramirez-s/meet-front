@@ -803,7 +803,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
 
     // Emojis
     const commonEmojis = appTheme === 'hot'
-    ? ['❤️', '🥵', '😍', '💋', '❤️‍�']
+    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥']
     : ['👍', '😆', '❤️', '🎉', '🥺'];
 
 
@@ -816,7 +816,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
         : [
             '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
             '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+            '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🫢', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
             '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
             '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
             '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
@@ -850,6 +850,19 @@ const Controls = ({ onToggleChat, onLeave }) => {
 
     // Deshabilitar controles si no hay conexión
     const controlsDisabled = connectionStatus !== 'connected';
+
+    // Función para renderizar el icono de tema actual
+    const renderThemeIcon = () => {
+        switch (appTheme) {
+            case 'light':
+                return <Sun size={20} />;
+            case 'hot':
+                return <Flame size={20} />;
+            case 'dark':
+            default:
+                return <Moon size={20} />;
+        }
+    };
 
     return (
         <footer className={styles.controlsFooter}>
@@ -903,14 +916,12 @@ const Controls = ({ onToggleChat, onLeave }) => {
                 )}
             </div>
             <div className={styles.themeControls}>
-                <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
-                    <Moon size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
-                    <Sun size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`} disabled={controlsDisabled}>
-                    <Flame size={20} />
+                <button
+                    onClick={handleCycleTheme}
+                    className={styles.controlButton}
+                    disabled={controlsDisabled}
+                >
+                    {renderThemeIcon()}
                 </button>
             </div>
             <button onClick={onLeave} className={styles.leaveButton}>
@@ -919,6 +930,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
         </footer>
     );
 };
+
 
 const ChatSidebar = ({ isOpen, onClose }) => {
     // currentUserName se obtiene de la ref directamente aquí
