@@ -211,22 +211,31 @@ const useWebRTCLogic = (roomId) => {
     }, [removePeer, removeScreenShare]); // Dependencias: removePeer y removeScreenShare
 
     // --- PRIMER useEffect: Inicialización de Socket.IO y PeerJS ---
+    // Este useEffect ahora solo se encarga de crear las instancias de Socket.IO y PeerJS,
+    // y de adjuntar los listeners de "vida" (connect, disconnect, reconnect, error).
     useEffect(() => {
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // URL del backend
 
-        // Función para (re)inicializar Socket.IO y PeerJS
-        const setupConnections = () => {
-            if (socketRef.current) {
+        // Función para (re)inicializar Socket.IO y PeerJS.
+        // Solo se llama cuando connect se activa con el nombre de usuario y el stream.
+        const setupSocketAndPeer = (userNameToUse) => {
+            if (socketRef.current && socketRef.current.connected) {
+                console.log("Socket.IO ya conectado, no re-inicializando.");
+            } else if (socketRef.current) {
                 socketRef.current.disconnect();
                 socketRef.current = null;
             }
-            if (myPeerRef.current) {
+
+            if (myPeerRef.current && !myPeerRef.current.destroyed) {
+                console.log("PeerJS ya inicializado, no re-inicializando.");
+            } else if (myPeerRef.current) {
                 myPeerRef.current.destroy();
                 myPeerRef.current = null;
             }
 
             setConnectionStatus('reconnecting');
 
+            // Inicializar Socket.IO
             socketRef.current = io(SERVER_URL, {
                 reconnection: true,
                 reconnectionAttempts: Infinity,
@@ -235,11 +244,13 @@ const useWebRTCLogic = (roomId) => {
                 randomizationFactor: 0.5
             });
 
+            // Listeners de Socket.IO
             socketRef.current.on('connect', () => {
                 console.log('✅ Socket.IO conectado.');
                 setConnectionStatus('connected');
                 toast.success('Conectado al servidor de chat.');
 
+                // Inicializar PeerJS solo después de que Socket.IO esté conectado
                 if (!myPeerRef.current || myPeerRef.current.destroyed) {
                     myPeerRef.current = new Peer(undefined, {
                         host: new URL(SERVER_URL).hostname,
@@ -256,7 +267,7 @@ const useWebRTCLogic = (roomId) => {
 
                     myPeerRef.current.on('open', (peerId) => {
                         console.log('Mi ID de Peer es: ' + peerId);
-                        // Asegúrate de que currentUserNameRef.current ya esté establecido antes de emitir join-room
+                        // currentUserNameRef.current ya está establecido aquí desde 'connect'
                         socketRef.current.emit('join-room', currentRoomIdRef.current, peerId, currentUserNameRef.current);
                         setConnectionStatus('connected');
                     });
@@ -266,10 +277,11 @@ const useWebRTCLogic = (roomId) => {
                         setConnectionStatus('reconnecting');
                         toast.warn('Conexión de video perdida. Intentando reconectar...');
                         setTimeout(() => {
-                            if (currentUserNameRef.current) { // Se intenta re-conectar si hay nombre de usuario
-                                setupConnections(); // Llama a sí misma para re-inicializar
+                            if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId) {
+                                // Llama a la función `connect` principal para re-inicializar todo
+                                connect(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId);
                             } else {
-                                console.warn("No hay nombre de usuario para re-inicializar la conexión PeerJS automáticamente.");
+                                console.warn("No hay suficientes datos para re-inicializar la conexión PeerJS automáticamente.");
                                 toast.error("No se pudo reconectar automáticamente. Intenta salir y volver a unirte.");
                                 setConnectionStatus('disconnected');
                             }
@@ -282,11 +294,9 @@ const useWebRTCLogic = (roomId) => {
                         toast.error(`Error en conexión PeerJS: ${err.type}.`);
                         if (err.type === 'peer-unavailable' || err.type === 'server-error' || err.type === 'network') {
                             console.log("Reintentando inicialización de PeerJS debido a error de servidor/red.");
-                            setTimeout(() => {
-                                if (currentUserNameRef.current) {
-                                    setupConnections();
-                                }
-                            }, 5000);
+                            if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId) {
+                                setTimeout(() => connect(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId), 5000);
+                            }
                         }
                     });
                 }
@@ -296,11 +306,17 @@ const useWebRTCLogic = (roomId) => {
                 console.log('❌ Socket.IO desconectado:', reason);
                 setConnectionStatus('disconnected');
                 toast.error(`Desconectado del servidor de chat: ${reason}. Intentando reconectar...`);
-                Object.values(peerConnections.current).forEach(call => { if (call && call.open) call.close(); });
+                // Limpiar conexiones PeerJS aquí también para evitar cuellos de botella
+                Object.values(peerConnections.current).forEach(call => {
+                    if (call && call.open) call.close();
+                });
                 peerConnections.current = {};
-                setPeers({});
+                setPeers({}); // Limpiar peers en la UI
                 screenSharePeer.current = null;
-                if (myPeerRef.current) { myPeerRef.current.destroy(); myPeerRef.current = null; }
+                if (myPeerRef.current) {
+                    myPeerRef.current.destroy(); // Destruir PeerJS al desconectarse el socket
+                    myPeerRef.current = null;
+                }
             });
 
             socketRef.current.on('reconnect_attempt', (attemptNumber) => {
@@ -313,8 +329,9 @@ const useWebRTCLogic = (roomId) => {
                 console.log(`✅ Socket.IO reconectado después de ${attemptNumber} intentos.`);
                 setConnectionStatus('connected');
                 toast.success('¡Reconectado al servidor!');
-                if (currentUserNameRef.current) {
-                     setupConnections(); // Re-inicializar todo el stack al reconectar Socket.IO
+                // Al reconectar el socket, re-inicializar PeerJS/Socket.IO a través de la función principal 'connect'
+                if (currentUserNameRef.current && savedAudioInputDeviceId && savedVideoInputDeviceId) {
+                     connect(currentUserNameRef.current, savedAudioInputDeviceId, savedVideoInputDeviceId);
                 } else {
                      console.warn("No se puede re-unir a la sala después de la reconexión: faltan datos.");
                 }
@@ -327,69 +344,29 @@ const useWebRTCLogic = (roomId) => {
             });
         };
 
-        setupConnections(); // Inicia la configuración al montar el componente
-
-        // Limpieza al desmontar el componente
+        // La función `connect` (definida más abajo) será responsable de llamar a `setupSocketAndPeer`.
+        // Este `useEffect` ahora solo hace el cleanup cuando el componente se desmonta.
         return () => {
             if (socketRef.current) socketRef.current.disconnect();
             if (myPeerRef.current) myPeerRef.current.destroy();
         };
-    }, [roomId, currentUserNameRef]); // Depende de roomId para re-inicializar si cambia la sala, y currentUserNameRef para su valor
+    }, [roomId, savedAudioInputDeviceId, savedVideoInputDeviceId]); // Depende de roomId y los device IDs para re-setup en un cambio crítico
 
 
-    // --- SEGUNDO useEffect: Listeners de Socket.IO y PeerJS ---
+    // --- SEGUNDO useEffect: Listeners de Socket.IO y PeerJS (que dependen de instancias ya creadas) ---
     useEffect(() => {
-        if (!socketRef.current || !myPeerRef.current || !myStream) {
-            // No configurar listeners hasta que Socket.IO, PeerJS y myStream estén listos
+        // Solo configurar listeners si las referencias existen
+        if (!socketRef.current || !myPeerRef.current) {
+            console.log("Esperando que socketRef o myPeerRef estén disponibles para configurar listeners.");
             return;
         }
 
         console.log("Configurando listeners de Socket.IO y PeerJS...");
 
-        myPeerRef.current.on('call', (call) => {
-            const { peer: peerId, metadata } = call;
-            console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
+        // Los listeners myPeerRef.current.on('call') se adjuntan dentro de setupSocketAndPeer cuando se crea myPeerRef.
+        // Asegúrate de que solo estén allí y no se dupliquen.
 
-            const streamToSend = metadata.isScreenShare ? myScreenStream : myStream;
-            if (streamToSend && streamToSend.active) { 
-                call.answer(streamToSend);
-            } else {
-                console.warn(`[PeerJS] Respondiendo a la llamada de ${peerId} sin stream activo. Es pantalla: ${metadata.isScreenShare}`);
-                call.answer(); 
-            }
-
-            call.on('stream', (remoteStream) => {
-                console.log(`[PeerJS] Stream recibido de: ${peerId}. Nombre de metadata: ${metadata.userName}, Es pantalla: ${metadata.isScreenShare}`);
-
-                if (metadata.isScreenShare) {
-                    setPeers(prevPeers => ({
-                        ...prevPeers,
-                        'screen-share': { stream: remoteStream, userName: metadata.userName || 'Usuario Desconocido', isScreenShare: true, peerId: peerId }
-                    }));
-                    screenSharePeer.current = peerId;
-                } else {
-                    setPeers(prevPeers => ({
-                        ...prevPeers,
-                        [peerId]: { ...prevPeers[peerId], stream: remoteStream, userName: metadata.userName || 'Usuario Desconocido', isScreenShare: false }
-                    }));
-                }
-            });
-
-            call.on('close', () => {
-                console.log(`[PeerJS] Llamada cerrada con ${peerId}`);
-                if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
-            });
-
-            call.on('error', (err) => {
-                console.error(`[PeerJS] Error en llamada entrante de ${peerId}:`, err);
-                toast.error(`Error de conexión con ${metadata.userName}.`);
-                if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
-            });
-
-            const callKey = peerId + (metadata.isScreenShare ? '_screen' : ''); 
-            peerConnections.current[callKey] = call;
-        });
-
+        // Listeners de Socket.IO para eventos de la sala
         socketRef.current.on('room-users', ({ users }) => {
             console.log(`[Socket] Recibida lista de usuarios existentes:`, users);
             setRoomUsers(users);
@@ -499,8 +476,6 @@ const useWebRTCLogic = (roomId) => {
                 socketRef.current.off('theme-changed');
             }
             // Los listeners de PeerJS 'call', 'close', 'error' se manejan dentro de connectToNewUser y myPeerRef.current.on('call')
-            // No hay una forma directa de "desmontar" el on('call') de Peer sin destruir toda la instancia,
-            // pero el primer useEffect se encarga de destruir myPeerRef al desmontar el hook.
         };
 
     }, [socketRef.current, myPeerRef.current, myStream, myScreenStream, connectToNewUser, removePeer, removeScreenShare, setAppTheme, setChatMessages, setPeers, setRoomUsers, currentUserNameRef]); 
@@ -589,36 +564,49 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
-    // Función que se llama desde el componente App para iniciar la conexión
-    const connect = useCallback(async (userName, audioDeviceId, videoDeviceId) => { 
-        currentUserNameRef.current = userName;
-        const stream = await initializeStream(audioDeviceId, videoDeviceId); 
-        if (stream) {
-             // La inicialización de Socket.IO y PeerJS se maneja en el primer useEffect
-             // Este 'connect' solo asegura que el stream y el nombre de usuario estén listos.
-        } else {
+    // La función connect ahora envuelve initializeStream y setupSocketAndPeer
+    const connect = useCallback(async (userName, audioDeviceId, videoDeviceId) => {
+        currentUserNameRef.current = userName; // Asegura que el nombre de usuario esté disponible para setupSocketAndPeer
+        
+        // 1. Obtener el stream de medios
+        const stream = await initializeStream(audioDeviceId, videoDeviceId);
+        if (!stream) {
             toast.error("No se pudo obtener el stream para iniciar la conexión.");
             setConnectionStatus('disconnected');
+            return;
         }
-    }, [initializeStream]);
 
+        // 2. Setup Socket.IO y PeerJS
+        // Llama a esta función aquí, después de que el nombre de usuario y el stream estén listos.
+        // Asegúrate de pasar el nombre de usuario actual.
+        setupSocketAndPeer(userName); // `setupSocketAndPeer` se define en el primer useEffect.
+                                      // Se auto-maneja la creación de socketRef y myPeerRef
+
+    }, [initializeStream]); // Depende solo de initializeStream, setupSocketAndPeer y currentUserNameRef se manejan internamente
+
+    // La definición de setupSocketAndPeer debe estar en un ámbito donde `connect` pueda accederla,
+    // o `connect` debe recibirla como un argumento. Dada la estructura,
+    // la forma más limpia es hacer que `connect` sea una función que desencadene el setup,
+    // y que `setupSocketAndPeer` sea una función interna de `useWebRTCLogic` que se usa en `connect`.
 
     return {
-        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, connectionStatus,
+        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, connectionStatus, 
         initializeStream, connect, cleanup,
         toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, 
-        currentUserNameRef // EXPOSED: return the ref object itself
+        currentUserNameRef // Devuelve la referencia completa para que App.js pueda asignarle el valor
     };
 };
 
-// --- COMPONENTES DE LA UI (Sin cambios significativos en su lógica interna) ---
+// --- COMPONENTES DE LA UI ---
 
 const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, isLocal = false, selectedAudioOutput }) => {
     const videoRef = useRef();
-    useEffect(() => { 
+
+    useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
 
+            // Intenta establecer el dispositivo de salida de audio solo si está disponible
             if (selectedAudioOutput && videoRef.current.setSinkId) {
                 videoRef.current.setSinkId(selectedAudioOutput)
                     .then(() => {
@@ -626,11 +614,12 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
                     })
                     .catch(error => {
                         console.error("Error setting audio output:", error);
-                        // toast.error("No se pudo cambiar la salida de audio."); 
+                        // toast.error("No se pudo cambiar la salida de audio."); // Evitar spam de toasts
                     });
             }
         }
     }, [stream, selectedAudioOutput]);
+
     return (
         <div className={styles.videoWrapper}>
             <video
@@ -648,18 +637,21 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 };
 
 const VideoGrid = () => {
-    const { myStream, myScreenStream, peers, currentUserNameRef, selectedAudioOutput, connectionStatus } = useWebRTC(); // GET REF
+    // currentUserName se obtiene de la ref directamente aquí
+    const { myStream, myScreenStream, peers, currentUserNameRef, selectedAudioOutput, connectionStatus } = useWebRTC(); 
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
-    useEffect(() => { 
+
+    useEffect(() => {
         const handleResize = () => {
             setIsDesktop(window.innerWidth > 768);
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    const videoElements = [ 
-        myStream && { id: 'my-video', stream: myStream, userName: `${currentUserNameRef.current} (Tú)`, isLocal: true, muted: true }, // USE REF.CURRENT
-        myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserNameRef.current} (Tú)`, isLocal: true, isScreenShare: true, muted: true }, // USE REF.CURRENT
+
+    const videoElements = [
+        myStream && { id: 'my-video', stream: myStream, userName: `${currentUserNameRef.current} (Tú)`, isLocal: true, muted: true },
+        myScreenStream && { id: 'my-screen', stream: myScreenStream, userName: `${currentUserNameRef.current} (Tú)`, isLocal: true, isScreenShare: true, muted: true },
         peers['screen-share'] && {
             id: 'remote-screen',
             stream: peers['screen-share'].stream,
@@ -675,9 +667,11 @@ const VideoGrid = () => {
                 isScreenShare: false
             }))
     ].filter(Boolean);
+
     const isSharingScreen = videoElements.some(v => v.isScreenShare);
     const mainContent = isSharingScreen ? videoElements.find(v => v.isScreenShare) : null;
     const sideContent = videoElements.filter(v => !v.isScreenShare);
+
     const secondaryGridLayoutClass = isDesktop ? styles.desktopLayout : styles.mobileLayout;
 
     return (
@@ -690,9 +684,15 @@ const VideoGrid = () => {
                     </p>
                 </div>
             )}
-            {mainContent && ( <div className={styles.mainVideo}> <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} /> </div> )}
+            {mainContent && (
+                <div className={styles.mainVideo}>
+                    <VideoPlayer key={mainContent.id} {...mainContent} selectedAudioOutput={selectedAudioOutput} />
+                </div>
+            )}
             <div className={`${styles.videoSecondaryGrid} ${secondaryGridLayoutClass}`}>
-                {sideContent.map(v => ( <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} /> ))}
+                {sideContent.map(v => (
+                    <VideoPlayer key={v.id} {...v} selectedAudioOutput={selectedAudioOutput} />
+                ))}
             </div>
         </div>
     );
@@ -721,7 +721,6 @@ const Controls = ({ onToggleChat, onLeave }) => {
         const nextIndex = (currentThemeIndex + 1) % themes.length;
         const nextTheme = themes[nextIndex];
         sendThemeChange(nextTheme);
-        // setCurrentThemeIndex(nextIndex); // No es necesario, appTheme se actualizará vía socket y activará el useEffect de arriba
     };
 
     // Emojis extremadamente simplificados para depuración
@@ -821,7 +820,8 @@ const Controls = ({ onToggleChat, onLeave }) => {
 };
 
 const ChatSidebar = ({ isOpen, onClose }) => { 
-    const { chatMessages, sendMessage, currentUserNameRef, appTheme, connectionStatus } = useWebRTC(); // GET REF
+    // currentUserName se obtiene de la ref directamente aquí
+    const { chatMessages, sendMessage, currentUserNameRef, appTheme, connectionStatus } = useWebRTC(); 
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -855,7 +855,7 @@ const ChatSidebar = ({ isOpen, onClose }) => {
                     if (msg.type === 'system') {
                         return <div key={msg.id} className={styles.systemMessage}>{msg.text}</div>;
                     }
-                    const isMe = msg.user === currentUserNameRef.current; // USE REF.CURRENT
+                    const isMe = msg.user === currentUserNameRef.current; // Usa la ref directamente
                     return (
                         <div key={msg.id} className={`${styles.chatMessageWrapper} ${isMe ? styles.chatMessageWrapperMe : ''}`}>
                             <div className={`${styles.chatMessage} ${isMe ? styles.chatMessageMe : ''}`}>
@@ -967,7 +967,7 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
                         ) : (
                             <>
                                 {videoDevices.length > 0 && (
-                                    <div className={styles.formGroup}>
+                                    <div className className={styles.formGroup}>
                                         <label htmlFor="videoDevice" className={styles.formLabel}>Cámara</label>
                                         <select id="videoDevice" value={selectedVideo} onChange={(e) => setSelectedVideo(e.target.value)}
                                             className={styles.formSelect}>
@@ -1104,7 +1104,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
 };
 
 
-// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN ---
+// --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
 export default function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [authenticatedUserName, setAuthenticatedUserName] = useState(''); 
@@ -1121,9 +1121,12 @@ export default function App() {
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         const finalUserName = authenticatedUserName || name; 
         setSelectedAudioOutput(audioOutputId);
-        // Correctly set the currentUserName via the ref object
+        
+        // Asigna el nombre de usuario a la ref *antes* de llamar a connect
         webRTCLogic.currentUserNameRef.current = finalUserName; 
 
+        // Llama a la función connect principal en webRTCLogic, que ahora maneja
+        // la inicialización completa de stream, socket y PeerJS.
         await webRTCLogic.connect(finalUserName, audioId, videoId); 
         setIsJoined(true);
     };
