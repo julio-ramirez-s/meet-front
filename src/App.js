@@ -106,7 +106,7 @@ const useWebRTCLogic = (roomId) => {
             return null;
         }
     }, []);
-
+    
     // Función para conectar a un nuevo usuario Peer
     const connectToNewUser = useCallback((peerId, remoteUserName, streamToOffer, localUserName, isScreenShare = false) => {
         if (!myPeerRef.current || !streamToOffer || !streamToOffer.active) { // Asegura que el stream a ofrecer esté activo
@@ -287,6 +287,7 @@ const useWebRTCLogic = (roomId) => {
                         if (metadata.isScreenShare) { removeScreenShare(peerId); } else { removePeer(peerId); }
                     });
 
+                    const callKey = peerId + (metadata.isScreenShare ? '_screen' : ''); // Definir callKey aquí
                     peerConnections.current[callKey] = call;
                 });
 
@@ -530,7 +531,7 @@ const useWebRTCLogic = (roomId) => {
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen') && peerConnections.current[key]) { 
                     peerConnections.current[key].close();
-                    delete peerConnections.current[key];
+                    delete peerConnections.current[key]; // Corrected line
                 }
             });
             return; 
@@ -677,7 +678,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
     const commonEmojis = appTheme === 'hot' ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] : ['👍', '😆', '❤️', '🎉', '🥺'];
-    const emojis = appTheme === 'hot' ? ['🌶️', '🥵', '😈', '💋', '❤️‍🔥', '🔥', '🥰', '😏', '🤤', '🫦', '👄', '?', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦', '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'] : ['👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️', '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '�', '😑', '😶', '😏', '😒', '😬', '😮‍💨', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱', '💔', '💕', '💞', '💗', '💖', '💘', '🎉', '👀', '👄','🫦', '🫶', '💪'];
+    const emojis = appTheme === 'hot' ? ['🌶️', '🥵', '😈', '💋', '❤️‍🔥', '�', '🥰', '😏', '🤤', '🫦', '👄', '?', '🍑', '🍆', '🍒', '💄', '👠', '👙', '🩲', '💦', '🕺', '😉', '😜', '😘', '🤭', '🙈', '🤑', '💎', '👑', '🫣'] : ['👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️', '🥲', '😋', '😛', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '?', '😑', '😶', '😏', '😒', '😬', '😮‍💨', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱', '💔', '💕', '💞', '💗', '💖', '💘', '🎉', '👀', '👄','🫦', '🫶', '💪'];
     
     const handleSendReaction = (emoji) => { sendReaction(emoji); setIsEmojiPickerOpen(false); };
     const handleToggleEmojiPicker = () => { setIsEmojiPickerOpen(prev => !prev); };
