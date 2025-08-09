@@ -517,7 +517,7 @@ const useWebRTCLogic = (roomId) => {
                 return;
             }
 
-            // Esta línea fue la que causó el problema.
+            // Esta línea fue la que causó el problema de la cámara en pantalla compartida.
             // La transmisión de pantalla del usuario remoto llegará a través de una llamada PeerJS entrante
             // (myPeerRef.current.on('call')) con el metadato isScreenShare: true.
             // No necesitamos iniciar una nueva llamada aquí.
@@ -572,7 +572,8 @@ const useWebRTCLogic = (roomId) => {
     };
     const sendReaction = (emoji) => {
         if (socketRef.current) {
-            socket.current.emit('reaction', emoji);
+            // CORRECCIÓN: Usar socketRef.current para acceder a la instancia de socket.io
+            socketRef.current.emit('reaction', emoji);
         }
     };
     const sendThemeChange = (theme) => {
