@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon, Flame } from 'lucide-react'; // Se eliminan PartyPopper y Plus
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, PartyPopper, Plus, Sun, Moon, Flame } from 'lucide-react'; // Importar Flame
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -18,8 +18,7 @@ const useWebRTCLogic = (roomId) => {
     const [chatMessages, setChatMessages] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const [appTheme, setAppTheme] = useState('dark'); // Nuevo estado para el tema de la aplicación
-
+    
     const [roomUsers, setRoomUsers] = useState({});
 
     const socketRef = useRef(null);
@@ -267,13 +266,6 @@ const useWebRTCLogic = (roomId) => {
             console.log(`[Socket] Usuario ${userId} ha dejado de compartir pantalla.`);
             removeScreenShare(userId);
         });
-
-        // Nuevo listener para cambios de tema
-        socketRef.current.on('theme-changed', (theme) => {
-            console.log(`[Socket] Tema cambiado a: ${theme}`);
-            setAppTheme(theme);
-            toast.info(`El tema ha cambiado a ${theme}.`);
-        });
     };
 
     const removePeer = (peerId) => {
@@ -328,13 +320,6 @@ const useWebRTCLogic = (roomId) => {
     const sendReaction = (emoji) => {
         if (socketRef.current) {
             socketRef.current.emit('reaction', emoji);
-        }
-    };
-
-    // Nueva función para enviar el cambio de tema
-    const sendThemeChange = (theme) => {
-        if (socketRef.current) {
-            socketRef.current.emit('change-theme', theme);
         }
     };
 
@@ -395,9 +380,9 @@ const useWebRTCLogic = (roomId) => {
     };
 
     return {
-        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, // appTheme incluido
+        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff,
         initializeStream, connect, cleanup,
-        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, // sendThemeChange incluido
+        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction,
         currentUserName: currentUserNameRef.current
     };
 };
@@ -496,10 +481,10 @@ const VideoGrid = () => {
 };
 
 
-const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme ni appTheme directamente
+const Controls = ({ onToggleChat, onLeave, cycleTheme, appTheme }) => { // Recibir cycleTheme y appTheme
     const { 
-        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, // sendThemeChange del contexto
-        isMuted, isVideoOff, myScreenStream, peers, appTheme // appTheme del contexto
+        toggleMute, toggleVideo, shareScreen, sendReaction,
+        isMuted, isVideoOff, myScreenStream, peers
     } = useWebRTC();
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -599,18 +584,12 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
                     </div>
                 )}
             </div>
-            {/* Botones para cambiar tema: ahora son 3 botones separados */}
-            <div className={styles.themeControls}>
-                <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`}>
-                    <Moon size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`}>
-                    <Sun size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`}>
-                    <Flame size={20} />
-                </button>
-            </div>
+            {/* Botón para cambiar tema */}
+            <button onClick={cycleTheme} className={styles.controlButton}>
+                {appTheme === 'dark' && <Sun size={20} />}
+                {appTheme === 'light' && <Moon size={20} />}
+                {appTheme === 'hot' && <Flame size={20} />}
+            </button>
             <button onClick={onLeave} className={styles.leaveButton}>
                 Salir
             </button>
@@ -618,8 +597,8 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
     );
 };
 
-const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contexto
-    const { chatMessages, sendMessage, currentUserName, appTheme } = useWebRTC(); // appTheme del contexto
+const ChatSidebar = ({ isOpen, onClose, appTheme }) => { // Recibir appTheme
+    const { chatMessages, sendMessage, currentUserName } = useWebRTC();
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -679,21 +658,20 @@ const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contex
     );
 };
 
-const CallRoom = ({ onLeave }) => { // Ya no se recibe cycleTheme ni appTheme como prop
+const CallRoom = ({ onLeave, cycleTheme, appTheme }) => { // Recibir cycleTheme y appTheme
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const { appTheme } = useWebRTC(); // Obtener appTheme del contexto
     return (
         <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> {/* Aplicar clase de tema */}
             <main className={styles.mainContent}>
                 <VideoGrid />
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> {/* No se pasan cycleTheme ni appTheme */}
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} cycleTheme={cycleTheme} appTheme={appTheme} /> {/* Pasar props */}
             </main>
-            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> {/* No se pasa appTheme */}
+            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} appTheme={appTheme} /> {/* Pasar appTheme */}
         </div>
     );
 };
 
-const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
+const Lobby = ({ onJoin, appTheme }) => { // Recibir appTheme
     const [userName, setUserName] = useState('');
     const [videoDevices, setVideoDevices] = useState([]);
     const [audioDevices, setAudioDevices] = useState([]);
@@ -737,11 +715,11 @@ const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
         }
     };
 
-    // El lobby siempre usará el tema oscuro por defecto
-    const lobbyTitleText = 'Unirse a Mundi-Link'; 
+    // Título del lobby condicional
+    const lobbyTitleText = appTheme === 'hot' ? 'Unirse a Mundi-Hot' : 'Unirse a Mundi-Link';
 
     return (
-        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> {/* El lobby usa el tema oscuro por defecto */}
+        <div className={`${styles.lobbyContainer} ${styles[appTheme + 'Mode']}`}> {/* Aplicar clase de tema */}
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
                     <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
@@ -806,7 +784,7 @@ export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
-    // appTheme ahora se gestiona dentro de useWebRTCLogic
+    const [appTheme, setAppTheme] = useState('dark'); // Estado para el tema: 'dark', 'light', 'hot'
     const webRTCLogic = useWebRTCLogic('main-room');
 
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
@@ -826,8 +804,14 @@ export default function App() {
         setSelectedAudioOutput('');
     };
 
-    // La función cycleTheme ya no es necesaria aquí, la lógica de cambio de tema está en useWebRTCLogic
-    // y se activa directamente desde los botones de Control a través de sendThemeChange.
+    // Función para ciclar entre los temas
+    const cycleTheme = () => {
+        setAppTheme(prevTheme => {
+            if (prevTheme === 'dark') return 'light';
+            if (prevTheme === 'light') return 'hot';
+            return 'dark'; // Vuelve a oscuro
+        });
+    };
 
     useEffect(() => {
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
@@ -837,11 +821,11 @@ export default function App() {
     }, [webRTCLogic]);
 
     if (!isJoined) {
-        return <Lobby onJoin={handleJoin} />; // Ya no se pasa appTheme al Lobby
+        return <Lobby onJoin={handleJoin} appTheme={appTheme} />; // Pasar appTheme al Lobby
     } else {
         return (
-            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}> {/* Se pasa todo webRTCLogic */}
-                <CallRoom onLeave={handleLeave} /> {/* Ya no se pasan cycleTheme ni appTheme */}
+            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}>
+                <CallRoom onLeave={handleLeave} cycleTheme={cycleTheme} appTheme={appTheme} /> {/* Pasar props */}
                 <ToastContainer />
             </WebRTCContext.Provider>
         );
