@@ -29,7 +29,7 @@ const useWebRTCLogic = (roomId) => {
 
     const socketRef = useRef(null);
     const myPeerRef = useRef(null);
-    const peerConnections = useRef({});
+    const peerConnections = useRef({}); // Stores PeerJS Call objects
 
     const currentUserNameRef = useRef('');
     const screenSharePeer = useRef(null);
@@ -212,7 +212,7 @@ const useWebRTCLogic = (roomId) => {
 
 
     // Función principal para inicializar todas las conexiones (Socket.IO y PeerJS)
-    const initializeConnections = useCallback(async (userNameToUse, initialStream) => { // Aceptar initialStream como argumento
+    const initializeConnections = useCallback(async (userNameToUse) => { // Eliminado initialStream como argumento
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; // URL del backend
 
         // Limpiar conexiones existentes antes de re-inicializar
@@ -270,8 +270,7 @@ const useWebRTCLogic = (roomId) => {
                     const { peer: peerId, metadata } = call;
                     console.log(`[PeerJS] Llamada entrante de ${peerId}. Metadata recibida:`, metadata);
 
-                    // Usar initialStream o myScreenStream para responder la llamada
-                    const streamToSend = metadata.isScreenShare ? myScreenStream : initialStream; 
+                    const streamToSend = metadata.isScreenShare ? myScreenStream : myStream; // Usa el estado actual de myStream/myScreenStream
                     if (streamToSend && streamToSend.active) { 
                         call.answer(streamToSend);
                     } else {
@@ -316,9 +315,9 @@ const useWebRTCLogic = (roomId) => {
                     setConnectionStatus('reconnecting');
                     toast.warn('Conexión de video perdida. Intentando reconectar...');
                     setTimeout(() => {
-                        if (currentUserNameRef.current && initialStream) { // Usar initialStream
+                        if (currentUserNameRef.current && myStream) { // Usar myStream del estado
                             console.log("Re-conectando PeerJS y Socket.IO...");
-                            initializeConnections(currentUserNameRef.current, initialStream); // Pasar initialStream
+                            initializeConnections(currentUserNameRef.current); // No pasar stream
                         } else {
                             console.warn("No hay suficientes datos para re-inicializar la conexión PeerJS automáticamente.");
                             toast.error("No se pudo reconectar automáticamente. Intenta salir y volver a unirte.");
@@ -334,8 +333,8 @@ const useWebRTCLogic = (roomId) => {
                     if (err.type === 'peer-unavailable' || err.type === 'server-error' || err.type === 'network') {
                         console.log("Reintentando inicialización de PeerJS debido a error de servidor/red.");
                         setTimeout(() => {
-                            if (currentUserNameRef.current && initialStream) { // Usar initialStream
-                                initializeConnections(currentUserNameRef.current, initialStream); // Pasar initialStream
+                            if (currentUserNameRef.current && myStream) { // Usar myStream del estado
+                                initializeConnections(currentUserNameRef.current); // No pasar stream
                             }
                         }, 5000);
                     }
@@ -364,8 +363,8 @@ const useWebRTCLogic = (roomId) => {
             console.log(`✅ Socket.IO reconectado después de ${attemptNumber} intentos.`);
             setConnectionStatus('connected');
             toast.success('¡Reconectado al servidor!');
-            if (currentUserNameRef.current && initialStream) { // Usar initialStream
-                 initializeConnections(currentUserNameRef.current, initialStream); // Pasar initialStream
+            if (currentUserNameRef.current && myStream) { // Usar myStream del estado
+                 initializeConnections(currentUserNameRef.current); // No pasar stream
             } else {
                  console.warn("No se puede re-unir a la sala después de la reconexión: faltan datos.");
             }
@@ -376,7 +375,7 @@ const useWebRTCLogic = (roomId) => {
             setConnectionStatus('disconnected');
             toast.error('Error de conexión al servidor de chat.');
         });
-    }, [initializeStream, connectToNewUser, removePeer, removeScreenShare, myScreenStream]); // Dependencias para initializeConnections
+    }, [initializeStream, connectToNewUser, removePeer, removeScreenShare, myStream, myScreenStream]); // Dependencias para initializeConnections (myStream y myScreenStream añadidos)
 
     // Este useEffect ahora está en el nivel superior del hook useWebRTCLogic
     useEffect(() => {
@@ -389,7 +388,7 @@ const useWebRTCLogic = (roomId) => {
             
             users.forEach(existingUser => {
                 if (myPeerRef.current && existingUser.userId !== myPeerRef.current.id) {
-                    if (myStream && myStream.active) { // Usar myStream del estado
+                    if (myStream && myStream.active) { 
                         connectToNewUser(existingUser.userId, existingUser.userName, myStream, currentUserNameRef.current);
                     } else {
                         console.warn("No hay stream local activo disponible para conectar a usuarios existentes.");
@@ -514,7 +513,7 @@ const useWebRTCLogic = (roomId) => {
     };
     const sendReaction = (emoji) => { 
         if (socketRef.current) {
-            socketRef.current.emit('reaction', emoji);
+            socket.current.emit('reaction', emoji); // Changed to socket.current
         }
     };
     const sendThemeChange = (theme) => { 
@@ -533,8 +532,8 @@ const useWebRTCLogic = (roomId) => {
             console.log("[ScreenShare] Deteniendo compartición de pantalla.");
             myScreenStream.getTracks().forEach(track => track.stop());
             setMyScreenStream(null); 
-            socketRef.current.emit('stop-screen-share'); 
-
+            socketRef.current.emit('stop-screen-share', myPeerRef.current.id); // Pasa el userId
+            
             Object.keys(peerConnections.current).forEach(key => {
                 if (key.endsWith('_screen') && peerConnections.current[key]) { 
                     peerConnections.current[key].close();
@@ -553,7 +552,7 @@ const useWebRTCLogic = (roomId) => {
                 console.log("[ScreenShare] Compartición de pantalla finalizada por controles del navegador.");
                 setMyScreenStream(null); 
                 if (socketRef.current) { 
-                    socketRef.current.emit('stop-screen-share'); 
+                    socketRef.current.emit('stop-screen-share', myPeerRef.current.id); // Pasa el userId
                 }
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen') && peerConnections.current[key]) {
@@ -565,6 +564,7 @@ const useWebRTCLogic = (roomId) => {
 
             socketRef.current.emit('start-screen-share', myPeerRef.current.id, currentUserNameRef.current);
 
+            // Reconnect existing peers with the screen stream
             Object.values(roomUsers).forEach(user => { 
                 if (user.userId && user.userId !== myPeerRef.current.id) {
                     connectToNewUser(user.userId, user.userName, screenStream, currentUserNameRef.current, true);
@@ -578,10 +578,17 @@ const useWebRTCLogic = (roomId) => {
     };
 
     // Función que se llama desde el componente App para iniciar la conexión
-    const connect = useCallback(async (initialStream, userName) => { // Aceptar stream como argumento
+    const connect = useCallback(async (userName, audioDeviceId, videoDeviceId) => { // Aceptar stream como argumento
         currentUserNameRef.current = userName;
-        initializeConnections(userName, initialStream); // Pasar el stream aquí
-    }, [initializeConnections]);
+        // Llama a initializeStream aquí para asegurar que el stream se obtiene antes de initializeConnections
+        const stream = await initializeStream(audioDeviceId, videoId);
+        if (stream) {
+             initializeConnections(userName); // Ya no pasamos el stream aquí directamente, se usa del estado myStream
+        } else {
+            toast.error("No se pudo obtener el stream para iniciar la conexión.");
+            setConnectionStatus('disconnected');
+        }
+    }, [initializeConnections, initializeStream]);
 
 
     return {
@@ -973,7 +980,7 @@ const Lobby = ({ onJoin, authenticatedUserName }) => {
                                 {audioOutputs.length > 0 && (
                                     <div className={styles.formGroup}>
                                         <label htmlFor="audioOutputDevice" className={styles.formLabel}>Salida de Audio</label>
-                                        <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudioOutput(e.target.value)}
+                                        <select id="audioOutputDevice" value={selectedAudioOutput} onChange={(e) => setSelectedAudio(e.target.value)} // Corregido: debería ser setSelectedAudioOutput
                                             className={styles.formSelect}>
                                             {audioOutputs.map(d => <option key={d.deviceId} value={d.deviceId}>{d.label}</option>)}
                                         </select>
@@ -1107,11 +1114,9 @@ export default function App() {
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         const finalUserName = authenticatedUserName || name; 
         setSelectedAudioOutput(audioOutputId);
-        const stream = await webRTCLogic.initializeStream(audioId, videoId);
-        if (stream) {
-            webRTCLogic.connect(stream, finalUserName); // Pasa el stream y el nombre de usuario
-            setIsJoined(true);
-        }
+        // webRTCLogic.connect ahora se encarga de llamar a initializeStream internamente
+        await webRTCLogic.connect(finalUserName, audioId, videoId); 
+        setIsJoined(true);
     };
 
     const handleLeave = () => {
