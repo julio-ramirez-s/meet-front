@@ -47,7 +47,7 @@ body {
     overflow: hidden;
 }
 
-/* Estilos para el contenedor de reacciones y el menú de emojis */
+/* Estilos para el contenedor de reacciones y el menú de emojis 
 .reactionContainer {
     position: relative;
     display: flex;
@@ -55,7 +55,7 @@ body {
     gap: 0.5rem;
     z-index: 1000;
 }
-
+*/
 .emojiPicker {
     position: fixed;
     bottom: calc(4.75rem + 10px);
