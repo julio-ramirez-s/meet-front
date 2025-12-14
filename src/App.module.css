@@ -1,544 +1,131 @@
-/* Base de la aplicación */
+/* ----------------------------------------------------------------
+   Variables CSS y Tema (Dark/Light)
+   ---------------------------------------------------------------- */
+
 :root {
-    /* Tema Oscuro (valores por defecto) */
-    --primary-blue: #3b82f6; /* Azul brillante, para botones y títulos */
-    --secondary-blue: #1e3a8a; /* Azul más oscuro, para detalles */
-    --background-dark: #0f172a; /* Fondo muy oscuro, casi negro */
-    --surface-dark: #1e293b; /* Superficies, cards */
-    --text-light: #f8fafc; /* Texto claro */
-    --text-muted: #94a3b8; /* Texto secundario */
-    --border-color: #334155; /* Bordes sutiles */
-    --red-alert: #ef4444; /* Rojo para alertas y salir */
-    --green-share: #22c55e; /* Verde para compartir pantalla */
+    /* Tema Oscuro (por defecto) */
+    --primary-blue: #3b82f6; /* Azul vibrante para acentos y botones primarios */
+    --primary-hover: #2563eb;
+    --background-dark: #0d1117; /* Fondo ultra oscuro */
+    --surface-dark: #161b22; /* Superficies de cards y controles */
+    --surface-elevated: #21262d; /* Chat sidebar, elementos destacados */
+    --text-light: #f0f6fc; /* Texto principal claro */
+    --text-muted: #8b949e; /* Texto secundario, descripciones */
+    --border-color: #30363d; /* Bordes sutiles */
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --red-alert: #f85149; /* Rojo para salir */
+    --green-share: #3fb950; /* Verde para compartir pantalla */
+    --border-radius: 12px;
 }
 
 /* Tema Claro */
 .lightMode {
-    --primary-blue: #007bff; /* Azul brillante, para botones y títulos */
-    --secondary-blue: #0056b3; /* Azul más oscuro, para detalles */
-    --background-dark: #f0f2f5; /* Fondo muy claro, casi blanco */
-    --surface-dark: #ffffff; /* Superficies, cards */
-    --text-light: #212529; /* Texto oscuro */
-    --text-muted: #6c757d; /* Texto secundario oscuro */
-    --border-color: #ced4da; /* Bordes sutiles claros */
-    --red-alert: #dc3545; /* Rojo para alertas y salir */
-    --green-share: #28a745; /* Verde para compartir pantalla */
+    --primary-blue: #007bff;
+    --primary-hover: #0056b3;
+    --background-dark: #ffffff; /* Fondo blanco limpio */
+    --surface-dark: #f6f8fa; /* Superficies de cards y controles */
+    --surface-elevated: #e1e4e8; /* Chat sidebar */
+    --text-light: #24292e;
+    --text-muted: #6a737d;
+    --border-color: #d1d5da;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --red-alert: #dc3545;
+    --green-share: #28a745;
 }
 
-
-body {
+/* Aplicación General */
+.app {
+    min-height: 100vh;
     background-color: var(--background-dark);
-}
-
-.mainContainer {
-    display: flex;
-    height: 100vh;
-    background-color: var(--background-dark); /* Usa la variable */
-    color: var(--text-light); /* Usa la variable */
     font-family: 'Inter', sans-serif;
-    overflow: hidden;
-}
-
-.mainContent {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Estilos para el contenedor de reacciones y el menú de emojis */
-.reactionContainer {
-    position: relative;
-    display: none;
-    align-items: center;
-    gap: 0.5rem;
-    z-index: 1000;
-}
-
-.emojiPicker {
-    position: fixed;
-    bottom: calc(4.75rem + 10px);
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--surface-dark); /* Usa la variable */
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    padding: 8px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    z-index: 200;
-    width: 90%;
-    max-width: 400px;
-    justify-content: center;
-}
-
-.emojiButton {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 24px;
-    padding: 4px;
-    border-radius: 8px;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.emojiButton:hover {
-    background-color: var(--border-color); /* Usa la variable */
-    transform: scale(1.1);
-}
-
-.emojiButton:active {
-    transform: scale(0.95);
-}
-
-.commonEmojiButton, .plusButton {
-    padding: 0.75rem;
-    border-radius: 9999px;
-    background-color: var(--surface-dark); /* Usa la variable */
-    transition: background-color 0.2s ease;
-    border: none;
-    color: var(--text-light); /* Usa la variable */
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-.commonEmojiButton:hover, .plusButton:hover {
-    background-color: var(--border-color); /* Usa la variable */
-}
-
-.controlButtonActive {
-    background-color: var(--primary-blue) !important; /* Usa la variable */
-}
-
-/* ---------------- Video Grid ---------------- */
-.videoGridContainer {
-    flex-grow: 1;
-    display: flex;
-    gap: 1rem;
-    padding: 1rem;
-    overflow: auto;
-    background-color: var(--surface-dark); /* Usa la variable */
-    align-items: stretch;
-    justify-content: center;
-}
-
-/* Contenedor principal para el video más grande (pantalla compartida) */
-.mainVideo {
-    flex-grow: 1;
+    color: var(--text-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
     display: flex;
     justify-content: center;
     align-items: center;
-    max-height: 100%;
 }
 
-.mainVideo .videoWrapper {
-    height: 100%;
-    width: 100%;
-    max-width: 100%;
-}
+/* ----------------------------------------------------------------
+   Lobby (Pantalla de Unión)
+   ---------------------------------------------------------------- */
 
-/* Contenedor para los videos secundarios (cámaras) */
-.videoSecondaryGrid {
-    display: flex; /* Por defecto a flex */
-    gap: 1rem;
-    flex-shrink: 0;
-    align-items: center; /* Centrar elementos */
-    justify-content: center; /* Centrar elementos */
-}
-
-/* Diseño para escritorio (PC): min-width: 769px */
-@media (min-width: 769px) { 
-    .videoGridContainer {
-        flex-direction: row; /* Contenido principal y videos secundarios lado a lado */
-    }
-
-    /* Cuando se comparte pantalla en escritorio, videos secundarios en columna a la derecha */
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
-        flex-direction: column;
-        width: 25%; /* Ancho fijo para la barra lateral */
-        max-width: 300px;
-        overflow-y: auto;
-    }
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-    }
-
-    /* Cuando NO se comparte pantalla en escritorio, todos los videos en una cuadrícula */
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
-        flex-direction: row; /* Organizar en una fila */
-        flex-wrap: wrap; /* Permitir que se envuelvan para crear cuadrícula */
-        width: 100%; /* Ocupar todo el ancho disponible */
-        justify-content: center; /* Centrar elementos en la cuadrícula */
-    }
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-        flex-shrink: 0;
-        width: calc(33.33% - 0.67rem); /* 3 columnas por defecto en escritorio */
-        max-width: 400px; /* Tamaño máximo para video individual en cuadrícula */
-        aspect-ratio: 16 / 9;
-    }
-    /* Ajustar para más columnas en pantallas más grandes de escritorio */
-    @media (min-width: 1024px) {
-        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-            width: calc(25% - 0.75rem); /* 4 columnas */
-        }
-    }
-    @media (min-width: 1440px) {
-        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-            width: calc(20% - 0.8rem); /* 5 columnas */
-        }
-    }
-}
-
-/* Diseño para móvil (celulares): max-width: 768px */
-@media (max-width: 768px) { 
-    .videoGridContainer {
-        flex-direction: column; /* Contenido principal encima de los videos secundarios */
-    }
-
-    /* Cuando se comparte pantalla en móvil, videos secundarios en fila (scroll horizontal) */
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
-        flex-direction: row;
-        width: 100%;
-        overflow-x: auto;
-        min-height: 20%;
-    }
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
-        flex-shrink: 0;
-        width: 200px; /* Ancho fijo para scroll horizontal */
-        height: auto;
-        aspect-ratio: 16 / 9;
-    }
-
-    /* Cuando NO se comparte pantalla en móvil, todos los videos en una columna */
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
-        flex-direction: column; /* Todos los videos en una sola columna */
-        width: 100%;
-        overflow-y: auto;
-    }
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-    }
-}
-
-
-/* Contenedor del video */
-.videoWrapper {
-    align-items: center;
-    aspect-ratio: 16 / 9;
-    background-color: #000000;
-    border: 2px solid var(--border-color); /* Usa la variable */
-    border-radius: .5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    display: flex;
-    justify-content: center;
-    position: relative;
-    transition: transform .3s ease-in-out;
-    width: 100%;
-}
-
-.videoElement {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    max-width: 100%;
-    max-height: 100%;
-}
-
-.localVideo {
-    transform: scaleX(-1);
-}
-
-.userNameLabel {
-    position: absolute;
-    bottom: 0.5rem;
-    left: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    z-index: 10;
-}
-/* ---------------- Controles ---------------- */
-.controlsFooter {
-    background-color: var(--surface-dark); /* Usa la variable */
-    backdrop-filter: blur(8px);
-    padding: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    z-index: 100;
-    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2); /* Sombra para el footer */
-}
-
-@media (min-width: 640px) {
-    .controlsFooter {
-        gap: 1.5rem;
-    }
-}
-
-.controlButton {
-    padding: 0.75rem;
-    border-radius: 9999px;
-    background-color: var(--surface-dark); /* Usa la variable */
-    transition: all 0.2s ease-in-out;
-    border: none;
-    color: var(--text-light); /* Usa la variable */
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-.controlButton:hover {
-    background-color: var(--border-color); /* Usa la variable */
-}
-
-.controlButtonActive {
-    background-color: var(--red-alert) !important; /* Usa la variable */
-    color: var(--text-light); /* Usa la variable */
-}
-
-.controlButtonScreenShare {
-    background-color: var(--green-share) !important; /* Usa la variable */
-    color: var(--text-light); /* Usa la variable */
-}
-
-.leaveButton {
-    padding: 0.75rem 1.25rem;
-    border-radius: 9999px;
-    background-color: var(--red-alert); /* Usa la variable */
-    color: var(--text-light); /* Usa la variable */
-    font-weight: 600;
-    font-size: 0.95rem;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-.leaveButton:hover {
-    background-color: #b91c1c; /* Color fijo para hover de botón de salir */
-}
-
-/* ---------------- Sidebar de Chat ---------------- */
-.chatSidebar {
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100%;
-    width: 100%;
-    max-width: 24rem;
-    background-color: var(--surface-dark); /* Usa la variable */
-    display: flex;
-    flex-direction: column;
-    transform: translateX(100%);
-    transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 300;
-    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.3);
-}
-.chatSidebarOpen {
-    transform: translateX(0);
-}
-
-.chatHeader {
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--border-color); /* Usa la variable */
-}
-
-.chatTitle {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--primary-blue); /* Usa la variable */
-}
-
-.closeChatButton {
-    padding: 0.5rem;
-    border-radius: 9999px;
-    border: none;
-    background-color: transparent;
-    color: var(--text-light); /* Usa la variable */
-    cursor: pointer;
-}
-.closeChatButton:hover {
-    background-color: var(--border-color); /* Usa la variable */
-}
-
-.chatMessages {
-    flex-grow: 1;
-    padding: 1rem;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.systemMessage {
-    text-align: center;
-    font-size: 0.8rem;
-    color: var(--text-muted); /* Usa la variable */
-    font-style: italic;
-}
-
-.chatMessageWrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-.chatMessageWrapperMe {
-    align-items: flex-end;
-}
-
-.chatMessage {
-    padding: 0.6rem 0.9rem;
-    border-radius: 1rem;
-    max-width: 85%;
-    background-color: var(--border-color); /* Usa la variable */
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-.chatMessageMe {
-    background-color: var(--primary-blue); /* Usa la variable */
-}
-
-.chatUserName {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--primary-blue); /* Usa la variable */
-    margin-bottom: 0.2rem;
-}
-
-.chatMessageText {
-    font-size: 0.9rem;
-    word-break: break-word;
-}
-
-.chatForm {
-    padding: 1rem;
-    border-top: 1px solid var(--border-color); /* Usa la variable */
-    display: flex;
-    gap: 0.5rem;
-}
-
-.chatInput {
-    flex-grow: 1;
-    padding: 0.75rem;
-    background-color: var(--background-dark); /* Usa la variable */
-    border-radius: 9999px;
-    border: 1px solid var(--border-color); /* Usa la variable */
-    color: var(--text-light); /* Usa la variable */
-    outline: none;
-    transition: border-color 0.2s ease;
-}
-.chatInput::placeholder {
-    color: var(--text-muted); /* Usa la variable */
-}
-.chatInput:focus {
-    border-color: var(--primary-blue); /* Usa la variable */
-}
-
-.chatSendButton {
-    background-color: var(--primary-blue); /* Usa la variable */
-    padding: 0.75rem;
-    border-radius: 9999px;
-    color: #fff;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-.chatSendButton:hover {
-    background-color: var(--secondary-blue); /* Usa la variable */
-}
-
-/* ---------------- Lobby ---------------- */
 .lobbyContainer {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background-color: var(--background-dark); /* Usa la variable */
-    color: var(--text-light); /* Usa la variable */
-    padding: 1rem;
-}
-
-.lobbyFormWrapper {
+    padding: 2rem;
     width: 100%;
-    max-width: 32rem;
+    background-color: var(--background-dark);
 }
 
 .lobbyCard {
-    background-color: var(--surface-dark); /* Usa la variable */
-    padding: 2.5rem;
-    border-radius: 1.5rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    border: 1px solid var(--border-color); /* Usa la variable */
+    background-color: var(--surface-dark);
+    padding: 3rem;
+    border-radius: var(--border-radius);
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 10px 30px var(--shadow-color);
+    border: 1px solid var(--border-color);
     text-align: center;
 }
 
-.lobbyLogo {
-    height: 96px;
-    margin-bottom: 1rem;
+.lobbyHeader {
+    margin-bottom: 2.5rem;
 }
 
 .lobbyTitle {
-    font-size: 2.25rem;
+    font-size: 2.5rem;
     font-weight: 700;
-    color: var(--primary-blue); /* Usa la variable */
-    margin-bottom: 2rem;
+    color: var(--primary-blue);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.5px;
 }
 
-.lobbyForm {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+.lobbySubtitle {
+    color: var(--text-muted);
+    font-size: 1rem;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
     text-align: left;
+    margin-bottom: 1.25rem;
 }
 
 .formLabel {
     font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-light); /* Usa la variable */
+    font-weight: 500;
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
 }
 
 .formInput,
 .formSelect {
     width: 100%;
-    padding: 0.9rem 0.2rem;
-    background-color: var(--background-dark); /* Usa la variable */
-    border: 1px solid var(--border-color); /* Usa la variable */
-    border-radius: 0.75rem;
-    color: var(--text-light); /* Usa la variable */
+    padding: 0.8rem 1rem;
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-light);
     outline: none;
     transition: all 0.2s ease-in-out;
 }
+
 .formInput:focus,
 .formSelect:focus {
-    border-color: var(--primary-blue); /* Usa la variable */
+    border-color: var(--primary-blue);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+    background-color: var(--surface-dark);
 }
 
-.loadingMessage {
-    text-align: center;
-    color: var(--text-muted); /* Usa la variable */
+/* El color del texto en el select debe ser visible en lightMode */
+.lightMode .formInput,
+.lightMode .formSelect {
+    background-color: white;
+    color: var(--text-light);
 }
 
 .joinButton {
@@ -549,23 +136,392 @@ body {
     padding: 1rem;
     font-size: 1.15rem;
     font-weight: 600;
-    border-radius: 0.75rem;
-    background-color: var(--primary-blue); /* Usa la variable */
-    color: #fff;
-    transition: background-color 0.3s ease;
+    background-color: var(--primary-blue);
+    color: white;
     border: none;
+    border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-.joinButton:hover {
-    background-color: var(--secondary-blue); /* Usa la variable */
-}
-.joinButton:disabled {
-    background-color: #64748b; /* Color fijo */
-    cursor: not-allowed;
-    box-shadow: none;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    margin-top: 1rem;
 }
 
-.joinButtonIcon {
-    margin-right: 0.75rem;
+.joinButton:hover {
+    background-color: var(--primary-hover);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+}
+
+.joinButton:disabled {
+    background-color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+.loadingMessage {
+    text-align: center;
+    color: var(--text-muted);
+    margin-top: 1.5rem;
+}
+
+/* ----------------------------------------------------------------
+   Sala de Llamadas (CallRoom)
+   ---------------------------------------------------------------- */
+
+.callRoomContainer {
+    display: grid;
+    grid-template-areas: "videos";
+    grid-template-rows: 1fr;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: var(--background-dark);
+}
+
+/* Modificación para incluir Chat */
+.callRoomContainer.withChat {
+    grid-template-areas: "videos chat";
+    grid-template-columns: 1fr 350px; /* Video ocupa más, Chat 350px */
+}
+
+@media (max-width: 1024px) {
+    .callRoomContainer.withChat {
+        grid-template-columns: 1fr;
+        grid-template-areas: "videos"; /* Ocultamos el chat por defecto en móvil */
+    }
+}
+
+
+/* ----------------------------------------------------------------
+   Video Grid
+   ---------------------------------------------------------------- */
+
+.videoGrid {
+    grid-area: videos;
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+    align-content: center;
+    justify-content: center;
+    /* Las propiedades de grid se ajustan dinámicamente en JS para mejor look */
+    /* Por defecto, un layout flexible */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    max-height: calc(100vh - 100px); /* Deja espacio para la barra de control */
+    overflow-y: auto;
+}
+
+.videoTileContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 16 / 9; /* Mantiene la proporción de video */
+    min-height: 200px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: var(--surface-dark);
+    box-shadow: 0 4px 15px var(--shadow-color);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.videoTileContainer:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--shadow-color);
+}
+
+.userVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Reflejo para auto-vista */
+}
+
+.placeholder {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.placeholder svg {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.videoOverlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0));
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+}
+
+.userName {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.statusIcon {
+    margin-left: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+/* ----------------------------------------------------------------
+   Barra de Control (ControlBar)
+   ---------------------------------------------------------------- */
+
+.controlBar {
+    position: fixed; /* Fijo en la parte inferior */
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem;
+    background-color: var(--surface-dark);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    z-index: 100;
+    box-shadow: 0 -4px 15px var(--shadow-color);
+}
+
+.controlButton {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    background-color: var(--surface-elevated);
+    color: var(--text-light);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px var(--shadow-color);
+}
+
+.controlButton:hover {
+    background-color: var(--border-color);
+    transform: translateY(-1px);
+}
+
+/* Estilos específicos para botones de acción */
+.buttonActive {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.buttonActive:hover {
+    background-color: var(--primary-hover);
+}
+
+.buttonShare {
+    background-color: var(--green-share);
+    color: white;
+}
+.buttonShare:hover {
+    background-color: #2e8b3b;
+}
+
+.buttonLeave {
+    background-color: var(--red-alert);
+    color: white;
+    margin-left: 2rem;
+}
+.buttonLeave:hover {
+    background-color: #c9302c;
+}
+
+/* Botón de Tema */
+.themeToggle {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    background-color: var(--surface-dark);
+    color: var(--text-light);
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.themeToggle:hover {
+    background-color: var(--border-color);
+    transform: rotate(15deg);
+}
+
+/* ----------------------------------------------------------------
+   Chat Sidebar
+   ---------------------------------------------------------------- */
+
+.chatSidebar {
+    grid-area: chat;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--surface-elevated);
+    border-left: 1px solid var(--border-color);
+    padding: 1rem;
+    height: 100vh;
+    box-shadow: -5px 0 15px var(--shadow-color);
+    z-index: 50;
+}
+
+.chatHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.chatTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+
+.chatMessages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 0.5rem; /* Espacio para la barra de scroll */
+}
+
+/* Estilo de la barra de scroll (opcional pero profesional) */
+.chatMessages::-webkit-scrollbar {
+    width: 8px;
+}
+.chatMessages::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+.chatMessages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+
+.messageContainer {
+    display: flex;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+}
+
+.messageContainer.myMessage {
+    justify-content: flex-end;
+}
+
+.messageBubble {
+    max-width: 80%;
+    padding: 0.75rem 1rem;
+    border-radius: var(--border-radius);
+    line-height: 1.4;
+    font-size: 0.95rem;
+}
+
+.messageBubble.myMessage {
+    background-color: var(--primary-blue);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.messageBubble.otherMessage {
+    background-color: var(--surface-dark);
+    color: var(--text-light);
+    border: 1px solid var(--border-color);
+    border-bottom-left-radius: 4px;
+}
+
+.messageSender {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.chatInputForm {
+    display: flex;
+    margin-top: 1rem;
+}
+
+.chatInput {
+    flex-grow: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px 0 0 8px;
+    background-color: var(--surface-dark);
+    color: var(--text-light);
+    outline: none;
+    font-size: 1rem;
+}
+
+.chatInput:focus {
+    border-color: var(--primary-blue);
+}
+
+.sendButton {
+    padding: 0 1rem;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.sendButton:hover {
+    background-color: var(--primary-hover);
+}
+
+/* ----------------------------------------------------------------
+   Responsiveness
+   ---------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+    .controlBar {
+        gap: 1rem;
+        padding: 0.75rem;
+    }
+
+    .controlButton {
+        width: 48px;
+        height: 48px;
+    }
+
+    .buttonLeave {
+        margin-left: 1rem;
+    }
+
+    .callRoomContainer.withChat {
+        grid-template-columns: 1fr;
+    }
+
+    .chatSidebar {
+        /* En móvil, el chat debería ser un modal o un toggle completo */
+        position: fixed;
+        width: 100vw;
+        height: 100vh;
+        top: 0;
+        right: 0;
+        z-index: 150;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .chatSidebar.open {
+        transform: translateX(0);
+    }
 }
