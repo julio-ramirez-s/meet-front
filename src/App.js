@@ -1077,7 +1077,9 @@ const Lobby = ({ onJoin }) => {
 
 
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
+
 export default function App() {
+    
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
