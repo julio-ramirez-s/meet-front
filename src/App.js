@@ -12,74 +12,22 @@ const useWebRTC = () => useContext(WebRTCContext);
 
 // --- HOOK PERSONALIZADO PARA LA LÓGICA DE WEBRTC ---
 const useWebRTCLogic = (roomId) => {
-  // ... (otros estados)
-  const [myScreenStream, setMyScreenStream] = useState(null); // AÑADIDO: Estado de la pantalla compartida
-  // ... (otros estados y refs)
+    const [myStream, setMyStream] = useState(null);
+    const [myScreenStream, setMyScreenStream] = useState(null);
+    const [peers, setPeers] = useState({});
+    const [chatMessages, setChatMessages] = useState([]);
+    const [isMuted, setIsMuted] = useState(false);
+    const [isVideoOff, setIsVideoOff] = useState(false);
+    const [appTheme, setAppTheme] = useState('dark'); 
 
-  // AÑADIDO: Efecto para escuchar eventos del socket para compartir pantalla
-  useEffect(() => {
-    if (!socketRef.current) return;
-    
-    socketRef.current.on('screen-shared', ({ userId, isSharing }) => {
-      setPeers(p => {
-        if (p[userId]) {
-          // Actualiza el estado de compartir pantalla del peer
-          return { ...p, [userId]: { ...p[userId], isSharingScreen: isSharing } };
-        }
-        return p;
-      });
-      if (isSharing) {
-        toast.info(`${p[userId]?.userName || 'Un usuario'} ha empezado a compartir su pantalla.`);
-      }
-    });
+    const [roomUsers, setRoomUsers] = useState({});
 
-    return () => {
-      socketRef.current?.off('screen-shared');
-    };
-  }, []);
+    const socketRef = useRef(null);
+    const myPeerRef = useRef(null);
+    const peerConnections = useRef({});
 
-  // ... (initializeStream y connect)
-
-  // AÑADIDO: Lógica para compartir pantalla
-  const toggleScreenShare = async () => {
-    if (myScreenStream) {
-      // Detener de compartir
-      myScreenStream.getTracks().forEach(track => track.stop());
-      setMyScreenStream(null);
-      // Notificar a todos que he dejado de compartir
-      socketRef.current.emit('screen-shared', false);
-
-      // Reemplazar la pista de video principal si es necesario (si tienes una camara de respaldo)
-      const videoTrack = myStream?.getVideoTracks()[0];
-      const sender = Object.values(connections.current).find(conn => conn.sender.track.kind === 'video')?.sender;
-      if (sender && videoTrack) {
-        sender.replaceTrack(videoTrack);
-      }
-      return;
-    }
-
-    // Iniciar a compartir
-    try {
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-      setMyScreenStream(screen);
-      socketRef.current.emit('screen-shared', true); // Notificar a todos
-
-      // Reemplazar la pista de video en las conexiones de PeerJS
-      const screenTrack = screen.getVideoTracks()[0];
-      const sender = Object.values(connections.current).find(conn => conn.sender.track.kind === 'video')?.sender;
-      if (sender) {
-        sender.replaceTrack(screenTrack);
-      }
-      
-      // Manejar cuando se detiene la captura de pantalla a través del botón del navegador
-      screenTrack.onended = () => {
-        toggleScreenShare(); // Llama a la función para limpiar el estado
-      };
-
-    } catch (err) {
-      toast.error('No se pudo compartir la pantalla.');
-    }
-  };
+    const currentUserNameRef = useRef('');
+    const screenSharePeer = useRef(null);
 
     const cleanup = () => {
         console.log("Limpiando conexiones...");
@@ -499,9 +447,7 @@ const useWebRTCLogic = (roomId) => {
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, 
         initializeStream, connect, cleanup,
         toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, 
-        currentUserName: currentUserNameRef.current, // ... (otros retornos)
-        toggleScreenShare, // EXPORTAR: Función para compartir pantalla
-        setAppTheme, // Mantenemos el nombre para coherencia
+        currentUserName: currentUserNameRef.current
     };
 };
 
@@ -594,47 +540,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
 };
 
 const VideoGrid = () => {
-  const { myStream, peers, currentUserName, myScreenStream } = useWebRTC();
-
-  // Se extrae la pantalla compartida principal si existe
-  const mainVideoPeer = Object.entries(peers).find(([, p]) => p.isSharingScreen);
-  const mainVideoStream = myScreenStream || (mainVideoPeer ? mainVideoPeer[1].stream : null);
-  const mainVideoUserName = myScreenStream ? `${currentUserName} (Tú, Pantalla)` : (mainVideoPeer ? `${mainVideoPeer[1].userName} (Pantalla)` : null);
-
-  // Filtra los videos secundarios (cámaras de los peers + mi cámara)
-  const secondaryVideos = [
-    // Mi cámara, siempre visible si hay main video (pantalla)
-    ...(myStream && mainVideoStream ? [{ stream: myStream, userName: `${currentUserName} (Tú)`, muted: true, isLocal: true }] : []),
-    // Cámaras de los otros usuarios que no están compartiendo pantalla
-    ...Object.entries(peers)
-      .filter(([, p]) => !p.isSharingScreen)
-      .map(([id, p]) => ({ stream: p.stream, userName: p.userName, key: id })),
-  ];
-
-  // Si no hay nadie compartiendo pantalla, mi cámara se considera video secundario
-  if (!mainVideoStream && myStream) {
-    secondaryVideos.push({ stream: myStream, userName: `${currentUserName} (Tú)`, muted: true, isLocal: true });
-  }
-
-  return (
-    // Agregamos la clase 'mainVideoPresent' si hay pantalla compartida
-    <div className={`${styles.videoGridContainer} ${mainVideoStream ? styles.mainVideoPresent : ''}`}>
-      
-      {/* Contenedor del video principal (pantalla compartida) */}
-      {mainVideoStream && (
-        <div className={styles.mainVideo}>
-          <VideoPlayer stream={mainVideoStream} userName={mainVideoUserName} muted={!!myScreenStream} />
-        </div>
-      )}
-
-      {/* Contenedor de los videos secundarios (cámaras) */}
-      <div className={styles.videoSecondaryGrid}>
-        {secondaryVideos.map((p) => (
-          <VideoPlayer key={p.key || p.userName} stream={p.stream} userName={p.userName} muted={p.muted} isLocal={p.isLocal} />
-        ))}
-      </div>
-    </div>
-  );
+    const { myStream, myScreenStream, peers, currentUserName, selectedAudioOutput } = useWebRTC();
 
     // Estado para detectar si es una pantalla de escritorio (basado en el ancho)
     const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
@@ -710,81 +616,13 @@ const VideoGrid = () => {
     );
 };
 
-const MobileMenu = ({ onToggleChat }) => (
-  <div className={styles.mobileMenu}>
-    <button onClick={onToggleChat} className={styles.controlButton}>
-      <MessageSquare /> Chat
-    </button>
-    <button className={styles.controlButton}>
-      <Plus /> Reacciones
-    </button>
-    {/* Añadir más botones si es necesario */}
-  </div>
-);
-const Controls = ({ onToggleChat, onLeave }) => {
-  const { 
-    toggleMute, toggleVideo, toggleScreenShare, sendThemeChange, 
-    isMuted, isVideoOff, myScreenStream, appTheme 
-  } = useWebRTC();
-  
-  // Utilizar el media query definido en CSS para determinar el modo móvil
-  const isMobile = window.innerWidth <= 768; // 768px es el breakpoint de CSS
-  const [openMobileMenu, setOpenMobileMenu] = useState(false);
 
-  return (
-    <footer className={styles.controlsFooter}>
-      {/* Grupo de Controles principales */}
-      <div className={styles.mainControlsGroup}>
-        <button onClick={toggleMute} className={`${styles.controlButton} ${!isMuted ? styles.controlButtonActive : ''}`}>
-          {isMuted ? <MicOff /> : <Mic />}
-        </button>
-        <button onClick={toggleVideo} className={`${styles.controlButton} ${!isVideoOff ? styles.controlButtonActive : ''}`}>
-          {isVideoOff ? <VideoOff /> : <Video />}
-        </button>
-      </div>
-      
-      {/* Controles de Acción (Compartir, Chat, Reacciones, Tema) */}
-      <div className={styles.actionControlsGroup}>
-        <button 
-          onClick={toggleScreenShare} 
-          className={`${styles.controlButton} ${myScreenStream ? styles.controlButtonScreenShare : ''}`}
-        >
-          <ScreenShare />
-        </button>
-        
-        {/* En móvil, el Chat se mueve al menú flotante */}
-        {!isMobile && (
-          <button onClick={onToggleChat} className={styles.controlButton}>
-            <MessageSquare />
-          </button>
-        )}
-        
-        {/* Botón de tema (Visible en todas partes) */}
-        <button 
-          onClick={() => sendThemeChange(appTheme === 'dark' ? 'light' : 'dark')}
-          className={styles.controlButton}
-        >
-          {appTheme === 'dark' ? <Sun /> : <Moon />}
-        </button>
-
-        {/* Menú flotante para móvil */}
-        {isMobile && (
-          <button onClick={() => setOpenMobileMenu(!openMobileMenu)} className={styles.controlButton}>
-            <MoreVertical />
-          </button>
-        )}
-      </div>
-
-      <button onClick={onLeave} className={styles.leaveButton}>
-        Salir
-      </button>
-
-      {/* Menú Móvil Flotante */}
-      {openMobileMenu && isMobile && (
-        <MobileMenu onToggleChat={() => { onToggleChat(); setOpenMobileMenu(false); }} />
-      )}
-    </footer>
-  );
+const Controls = ({ onToggleChat, onLeave }) => { 
+    const { 
+        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, 
+        isMuted, isVideoOff, myScreenStream, peers, appTheme 
+    } = useWebRTC();
+    
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
     
@@ -1077,9 +915,7 @@ const Lobby = ({ onJoin }) => {
 
 
 // --- COMPONENTE PRINCIPAL DE LA APLICACIÓN CORREGIDO ---
-
 export default function App() {
-    
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
