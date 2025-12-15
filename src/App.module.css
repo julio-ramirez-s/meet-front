@@ -1,6 +1,6 @@
 /* --------------------------------------------------------------------------------
 CSS NATIVO MINIMALISTA PARA MÁXIMA VELOCIDAD Y COMPATIBILIDAD
-Objetivo: Layout de Foco en Pantalla Compartida
+Objetivo: Reducir el tamaño del archivo y la carga de la GPU.
 -------------------------------------------------------------------------------- */
 
 /* VARIABLES DE COLOR */
@@ -13,7 +13,6 @@ Objetivo: Layout de Foco en Pantalla Compartida
   --text-muted-color: #94a3b8;
   --danger-color: #ef4444;
   --success-color: #22c55e;
-  --share-color: #f97316;
 }
 
 /* Tema Claro */
@@ -25,7 +24,6 @@ Objetivo: Layout de Foco en Pantalla Compartida
   --text-muted-color: #6c757d;
   --danger-color: #dc3545;
   --success-color: #28a745;
-  --share-color: #ff8c00;
 }
 
 /* RESET / BASE */
@@ -49,7 +47,9 @@ body,
   height: 100%;
 }
 
-/* NOTIFICACIONES */
+/* --------------------------------------------------------------------------------
+NOTIFICACIÓN SIMPLE
+-------------------------------------------------------------------------------- */
 .notificationBox {
   position: fixed;
   top: 10px;
@@ -82,7 +82,6 @@ LOBBY / LOGIN
   border-radius: 10px;
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .lobbyTitle {
@@ -129,6 +128,12 @@ LOBBY / LOGIN
   outline: none;
 }
 
+.formInput:focus,
+.formSelect:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
+}
+
 .joinButton {
   padding: 12px;
   background-color: var(--primary-color);
@@ -136,7 +141,6 @@ LOBBY / LOGIN
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -167,68 +171,44 @@ APLICACIÓN PRINCIPAL
 }
 
 /* --------------------------------------------------------------------------------
-LAYOUT FOCO EN PANTALLA
+GALERÍA DE VIDEO
 -------------------------------------------------------------------------------- */
-.screenFocusLayout {
+.videoGallery {
   flex-grow: 1;
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 10px;
   padding: 10px;
   background-color: var(--background-color);
-  overflow: hidden;
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr auto;
-}
-
-@media (min-width: 768px) {
-  .screenFocusLayout {
-    grid-template-columns: 3fr 1fr;
-    grid-template-rows: 1fr;
-  }
-
-  .cameraFeedsArea {
-    flex-direction: column;
-    overflow-y: auto;
-  }
-}
-
-/* STREAM PRINCIPAL */
-.mainStreamArea {
-  display: flex;
-  justify-content: center;
+  overflow-y: auto;
   align-items: center;
+}
+
+.videoContainer {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  background-color: var(--surface-color);
+  border-radius: 8px;
   overflow: hidden;
 }
 
-.mainScreenVideoContainer {
-  width: 100%;
-  height: 100%;
+.screenShareVideo {
+  grid-column: 1 / -1;
+  padding-bottom: 50%;
 }
 
-.mainScreenVideoContainer .videoElement {
-  object-fit: contain;
-}
-
-/* CAMARAS PEQUEÑAS */
-.cameraFeedsArea {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-}
-
-.smallCameraVideoContainer {
-  width: 150px;
-  min-width: 150px;
-  padding-bottom: 112.5%;
-  position: relative;
-}
-
-.smallCameraVideoContainer .videoElement {
+.videoElement {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.screenShareVideo .videoElement {
+  object-fit: contain;
+  transform: none;
 }
 
 .localVideo .videoElement {
@@ -248,6 +228,11 @@ BARRA DE CONTROLES
   justify-content: center;
   align-items: center;
   z-index: 500;
+}
+
+.controlButtonsGroup {
+  display: flex;
+  gap: 10px;
 }
 
 .controlButton {
@@ -276,16 +261,25 @@ CHAT
   width: 300px;
 }
 
+/* --------------------------------------------------------------------------------
+RESPONSIVE
+-------------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+  .videoGallery {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .videoContainer {
+    height: 200px;
+    padding-bottom: 0;
+  }
+
   .chatPanelOpen {
     width: 100%;
     position: fixed;
     inset: 0;
     z-index: 600;
-  }
-
-  .controlLabel {
-    display: none;
   }
 
   .controlButton {
