@@ -3,8 +3,16 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import 'react-toastify/dist/Toastify.css';
 import styles from './App.module.css';
+
+// --- CONSTANTES DE SERVIDOR (CORREGIDAS) ---
+// Usamos la URL del servidor remoto para Socket.io y PeerJS
+const SOCKET_SERVER_URL = 'https://meet-clone-v0ov.onrender.com';
+const PEER_HOST = 'meet-clone-v0ov.onrender.com';
+const PEER_PORT = 443; // Puerto HTTPS estándar
+const PEER_PATH = '/peerjs/mundi-link';
+
 
 // --- CONTEXTO PARA WEBRTC ---
 const WebRTCContext = createContext();
@@ -27,9 +35,8 @@ const useWebRTCLogic = (roomId) => {
     const peerConnections = useRef({});
 
     const currentUserNameRef = useRef('');
-    // CORRECCIÓN: Declarar currentRoomIdRef usando useRef (Arregla el error 'currentRoomIdRef is not defined')
     const currentRoomIdRef = useRef(roomId); 
-    currentRoomIdRef.current = roomId;
+    currentRoomIdRef.current = roomId; // Aseguramos que se actualice si el ID de sala cambia
 
     const toggleTheme = () => {
         setAppTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
@@ -69,11 +76,8 @@ const useWebRTCLogic = (roomId) => {
             Object.values(peerConnections.current).forEach(conn => {
                 conn.getSenders().forEach(sender => {
                     if (sender.track.kind === 'video') {
-                        // Buscar el sender de la pista de video principal para reemplazarla
-                        // Esto asume que la primera pista de video es la de la cámara o la que se quiere reemplazar
-                        if (myStream.getVideoTracks().includes(sender.track)) {
-                            sender.replaceTrack(videoTrack);
-                        }
+                        // Reemplazar la pista de video principal con la de la pantalla
+                        sender.replaceTrack(videoTrack);
                     }
                 });
             });
@@ -97,10 +101,8 @@ const useWebRTCLogic = (roomId) => {
                 Object.values(peerConnections.current).forEach(conn => {
                     conn.getSenders().forEach(sender => {
                         if (sender.track.kind === 'video') {
-                            // Buscar el sender de la pista de video principal para reemplazarla
-                            if (!myScreenStream.getVideoTracks().includes(sender.track)) {
-                                sender.replaceTrack(cameraTrack);
-                            }
+                            // Reemplazar la pista de pantalla con la de la cámara
+                            sender.replaceTrack(cameraTrack);
                         }
                     });
                 });
@@ -112,7 +114,7 @@ const useWebRTCLogic = (roomId) => {
 
 
     const toggleMute = () => {
-        if (myStream) {
+        if (myStream && myPeerRef.current?.id && socketRef.current) {
             const audioTrack = myStream.getAudioTracks()[0];
             if (audioTrack) {
                 audioTrack.enabled = !isMuted;
@@ -123,7 +125,7 @@ const useWebRTCLogic = (roomId) => {
     };
 
     const toggleVideo = () => {
-        if (myStream) {
+        if (myStream && myPeerRef.current?.id && socketRef.current) {
             const videoTrack = myStream.getVideoTracks()[0];
             if (videoTrack) {
                 videoTrack.enabled = !isVideoOff;
@@ -149,19 +151,22 @@ const useWebRTCLogic = (roomId) => {
 
     const connect = (stream, name) => {
         currentUserNameRef.current = name;
-        currentRoomIdRef.current = roomId;
-
-        socketRef.current = io(process.env.SOCKET_SERVER_URL || 'http://localhost:3001');
+        
+        // CORRECCIÓN 1: Usar la URL del servidor remoto
+        socketRef.current = io(SOCKET_SERVER_URL);
 
         myPeerRef.current = new Peer(undefined, {
-            host: process.env.PEER_HOST || '/',
-            port: process.env.PEER_PORT || 3002,
-            path: process.env.PEER_PATH || '/peerjs/mundi-link'
+            // CORRECCIÓN 1: Usar la configuración del servidor remoto
+            host: PEER_HOST,
+            port: PEER_PORT,
+            path: PEER_PATH,
+            secure: true // Asegurar conexión segura si el servidor es HTTPS
         });
 
         myPeerRef.current.on('open', (id) => {
             console.log('Mi ID de Peer es:', id);
-            socketRef.current.emit('join-room', roomId, id, name);
+            // Usar currentRoomIdRef.current para obtener el ID de sala
+            socketRef.current.emit('join-room', currentRoomIdRef.current, id, name);
         });
 
         myPeerRef.current.on('error', (err) => {
@@ -237,7 +242,6 @@ const useWebRTCLogic = (roomId) => {
 
             // Cerrar la conexión P2P
             if (peerConnections.current[userId]) {
-                // peerConnections.current[userId].close(); // No es necesario si se usa call.close()
                 delete peerConnections.current[userId];
             }
 
@@ -274,6 +278,7 @@ const useWebRTCLogic = (roomId) => {
         });
 
         socketRef.current.on('room-users', (users) => {
+            // Se reciben todos los usuarios de la sala, incluyendo yo mismo
             setRoomUsers(users);
         });
     };
@@ -288,10 +293,6 @@ const useWebRTCLogic = (roomId) => {
             setMyScreenStream(null);
         }
 
-        Object.keys(peerConnections.current).forEach(peerId => {
-            // Nota: Aquí no se hace call.close(), sino que se espera el 'user-disconnected' del socket
-            // Para mantener la consistencia con la implementación original, se deja así.
-        });
         peerConnections.current = {};
         setPeers({});
 
@@ -310,7 +311,7 @@ const useWebRTCLogic = (roomId) => {
         setRoomUsers({});
     };
 
-    // Exportar el estado y las funciones que se usarán en los componentes
+    // Devolver myPeerRef para que el componente principal pueda leer el ID
     return {
         myStream,
         myScreenStream,
@@ -320,6 +321,8 @@ const useWebRTCLogic = (roomId) => {
         isVideoOff,
         appTheme,
         roomUsers,
+        socketRef, // Exportar socketRef y myPeerRef para uso en MainInterface (solo lectura)
+        myPeerRef,
         connect,
         setRoomUsers,
         toggleMute,
@@ -360,7 +363,7 @@ const VideoRef = ({ stream, name, isLocal, isMuted, isVideoOff, isScreenShare, u
 
 
     return (
-        <div className={`${videoClass} ${appTheme === 'dark' ? styles.darkTheme : styles.lightTheme}`}>
+        <div className={`${videoClass} ${appTheme === 'dark' ? styles.darkTheme : styles.lightMode}`}>
             {/* El video real */}
             <video
                 ref={videoRef}
@@ -369,6 +372,7 @@ const VideoRef = ({ stream, name, isLocal, isMuted, isVideoOff, isScreenShare, u
                 muted={isLocal} // Silencia solo el video local para evitar eco
                 className={styles.videoElement}
                 style={{ display: displayVideoOff ? 'none' : 'block' }} // Ocultar el elemento de video si está apagado
+                id={isLocal ? 'local-video' : `remote-video-${userId}`} // Añadir ID para posible uso de salida de audio
             />
 
             {/* Overlay para cuando la cámara está apagada o es solo audio */}
@@ -409,7 +413,6 @@ const ControlBar = () => {
         toggleMute,
         toggleVideo,
         startScreenShare,
-        cleanup,
         toggleTheme,
         appTheme,
     } = useWebRTC();
@@ -552,8 +555,13 @@ const Chat = () => {
 
 // Grid de Video
 const VideoGrid = () => {
-    const { myStream, peers, roomUsers, myScreenStream } = useWebRTC();
+    const { myStream, peers, roomUsers, myScreenStream, myPeerRef, isMuted, isVideoOff, connect } = useWebRTC();
     const { userName } = useMainInterfaceContext();
+    
+    // Obtener mi ID de Peer si está disponible
+    const myPeerId = myPeerRef.current?.id;
+
+    // Crear la lista de usuarios remotos
     const peersArray = Object.entries(peers).map(([userId, peer]) => ({
         userId,
         stream: peer.stream,
@@ -562,15 +570,16 @@ const VideoGrid = () => {
         isVideoOff: roomUsers[userId]?.isVideoOff,
     }));
 
-    // El video local
-    const localUser = {
-        userId: 'local',
+    // El video local (solo si tenemos un stream, y si PeerJS se ha inicializado para obtener el ID)
+    const localUser = (myStream && myPeerId) ? {
+        userId: myPeerId,
         stream: myStream,
         name: userName,
-        isMuted: roomUsers['local']?.isMuted || false, // El estado local ya está en isMuted/isVideoOff
-        isVideoOff: roomUsers['local']?.isVideoOff || false,
+        // Leer el estado local directamente del hook
+        isMuted: isMuted,
+        isVideoOff: isVideoOff,
         isLocal: true,
-    };
+    } : null;
 
     // La pantalla compartida
     const screenShareStream = myScreenStream ? {
@@ -579,14 +588,15 @@ const VideoGrid = () => {
         name: `${userName} (Pantalla)`,
         isLocal: true,
         isScreenShare: true,
-        isVideoOff: false, // La pantalla compartida siempre está "encendida"
+        isVideoOff: false, 
     } : null;
 
-    // Priorizar pantalla compartida, luego los remotos, luego el local
+    // Construir la lista de videos a mostrar
     const displayVideos = [
         ...(screenShareStream ? [screenShareStream] : []),
         ...peersArray,
-        ...(myScreenStream ? [] : [localUser]), // Mostrar local solo si no está compartiendo pantalla (o manejarlo como un pequeño PIP)
+        ...(localUser && !myScreenStream ? [localUser] : []), // Mostrar local solo si no está compartiendo pantalla
+        // Si hay pantalla compartida, el stream local se ve como la pantalla.
     ];
 
     // Si solo hay un video (pantalla compartida o un solo usuario), usar una clase de diseño diferente
@@ -607,8 +617,18 @@ const VideoGrid = () => {
                     {...video}
                 />
             ))}
-            {/* Si no hay videos, mostrar un mensaje (aunque siempre debería haber al menos el local) */}
-            {displayVideos.length === 0 && (
+            {/* Mostrar el video local en una esquina cuando se comparte la pantalla */}
+            {screenShareStream && localUser && (
+                 <div className={styles.pipContainer}>
+                    <VideoRef
+                        key={localUser.userId}
+                        {...localUser}
+                    />
+                 </div>
+            )}
+            
+            {/* Si no hay videos, mostrar un mensaje (solo si no hay un stream local inicializado) */}
+            {displayVideos.length === 0 && !myStream && (
                 <div className={styles.noVideos}>
                     Esperando conexiones...
                 </div>
@@ -632,6 +652,7 @@ const Lobby = ({ onJoin }) => {
     const getDevices = async () => {
         try {
             // Se necesita solicitar permisos antes de enumerar los nombres de los dispositivos
+            // Solo solicitar audio/video para cargar la lista. El stream real se inicializa en handleJoin.
             await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
             const devices = await navigator.mediaDevices.enumerateDevices();
             const audios = devices.filter(d => d.kind === 'audioinput');
@@ -649,7 +670,7 @@ const Lobby = ({ onJoin }) => {
             setIsLoading(false);
         } catch (error) {
             console.error("Error al obtener dispositivos:", error);
-            toast.error("Error al acceder a dispositivos. Asegúrate de dar permisos.");
+            // No mostrar error si simplemente no hay permisos, solo no cargar dispositivos
             setIsLoading(false);
         }
     };
@@ -704,6 +725,7 @@ const Lobby = ({ onJoin }) => {
                                     {audioDevices.map(device => (
                                         <option key={device.deviceId} value={device.deviceId}>{device.label || `Micrófono ${device.deviceId}`}</option>
                                     ))}
+                                    {audioDevices.length === 0 && <option value="">No hay dispositivos de audio disponibles</option>}
                                 </select>
                             </div>
 
@@ -718,6 +740,7 @@ const Lobby = ({ onJoin }) => {
                                     {videoDevices.map(device => (
                                         <option key={device.deviceId} value={device.deviceId}>{device.label || `Cámara ${device.deviceId}`}</option>
                                     ))}
+                                    {videoDevices.length === 0 && <option value="">No hay dispositivos de video disponibles</option>}
                                 </select>
                             </div>
 
@@ -732,6 +755,7 @@ const Lobby = ({ onJoin }) => {
                                     {audioOutputDevices.map(device => (
                                         <option key={device.deviceId} value={device.deviceId}>{device.label || `Altavoz ${device.deviceId}`}</option>
                                     ))}
+                                    {audioOutputDevices.length === 0 && <option value="">No hay dispositivos de salida de audio disponibles</option>}
                                 </select>
                             </div>
                         </>
@@ -754,36 +778,28 @@ const useMainInterfaceContext = () => useContext(MainInterfaceContext);
 const MainInterface = ({ handleLeave, userName, selectedAudioOutput }) => {
     const webRTCLogic = useWebRTC();
     const [isChatOpen, setIsChatOpen] = useState(false);
-    // NUEVO: Estado para controlar la apertura del menú de controles en móvil
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     useEffect(() => {
-        // Asignar el dispositivo de salida de audio al video local del usuario
-        if (webRTCLogic.myStream && selectedAudioOutput) {
-            const videoElement = document.getElementById('local-video');
-            // Nota: Aquí se necesita una forma de obtener la referencia del video local.
-            // La solución más simple es buscar el elemento DOM o refactorizar VideoRef para exponer la ref.
-            // Para mantener la modificación en MainInterface, se confía en que el navegador asignará la salida.
-            // Si fuera una app real, VideoRef debería manejar esto con un prop o ref.
-        }
-    }, [selectedAudioOutput, webRTCLogic.myStream]);
+        // CORRECCIÓN 2: Ya no es necesario manejar el estado local en roomUsers
+        // El estado de mute/video se maneja con isMuted / isVideoOff y se envía
+        // por el socket para que los demás lo sepan, y el local se lee de su propio estado.
 
-
-    // Añadir el userId local a roomUsers para que el estado de mute/video se refleje
-    useEffect(() => {
-        if (webRTCLogic.myStream) {
-            // webRTCLogic.setRoomUsers es ahora accesible gracias a la corrección en useWebRTCLogic
-            webRTCLogic.setRoomUsers(prev => ({
-                ...prev,
-                // Usamos 'local' como ID temporal hasta que PeerJS/Socket asignen uno real
-                [webRTCLogic.myPeerRef.current?.id || 'local']: {
-                    name: userName,
-                    isMuted: webRTCLogic.isMuted,
-                    isVideoOff: webRTCLogic.isVideoOff,
+        // Configurar la salida de audio para videos remotos
+        // Es necesario iterar sobre todos los videos remotos que tengan un stream
+        const remoteVideoElements = document.querySelectorAll('[id^="remote-video-"]');
+        if (selectedAudioOutput) {
+            remoteVideoElements.forEach(video => {
+                // @ts-ignore
+                if (video.setSinkId) {
+                     // @ts-ignore
+                    video.setSinkId(selectedAudioOutput)
+                        .catch(error => console.error("Error al establecer sinkId:", error));
                 }
-            }));
+            });
         }
-    }, [webRTCLogic.isMuted, webRTCLogic.isVideoOff, webRTCLogic.myStream, userName, webRTCLogic.setRoomUsers]);
+
+    }, [selectedAudioOutput]);
 
 
     return (
@@ -805,15 +821,16 @@ export default function App() {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
     const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
-    // appTheme ahora se gestiona dentro de useWebRTCLogic
-    const webRTCLogic = useWebRTCLogic('main-room');
+
+    // CORRECCIÓN 2: Pasamos un ID único por si el usuario abre varias pestañas
+    const room = 'main-room';
+    const webRTCLogic = useWebRTCLogic(room);
 
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         setUserName(name);
         setSelectedAudioOutput(audioOutputId);
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
-            // Esta línea ahora funciona correctamente porque 'connect' se devuelve desde el hook.
             webRTCLogic.connect(stream, name); 
             setIsJoined(true);
         }
