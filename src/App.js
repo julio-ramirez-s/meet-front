@@ -1,5 +1,5 @@
-// Archivo App.js con mejoras de diseño y responsividad,
-// manteniendo la funcionalidad y los nombres de las propiedades originales.
+// Archivo App.js con la URL del servidor remoto configurada.
+// Se mantiene la funcionalidad original y se aplica el diseño responsivo.
 
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { Mic, MicOff, Video, VideoOff, MessageSquare, Send, X, LogIn, Plus, MoreVertical, Loader, Sun, Moon } from 'lucide-react';
@@ -15,7 +15,7 @@ const useWebRTC = () => useContext(WebRTCContext);
 
 /* ================= HOOK PRINCIPAL ================= */
 const useWebRTCLogic = (roomId) => {
-  // Configuración inicial (Ajusta tu URL real)
+  // Configuración de la URL del servidor en Render (CORRECCIÓN IMPORTANTE)
   const API_URL = "https://meet-clone-v0ov.onrender.com"; 
   const socketRef = useRef();
   const peerRef = useRef();
@@ -28,11 +28,11 @@ const useWebRTCLogic = (roomId) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [currentUserName, setCurrentUserName] = useState('');
-  // Se mantiene un estado para el tema para aplicar los estilos visuales
   const [appTheme, setAppTheme] = useState('dark'); 
 
   // Inicializa la conexión con Socket.io
   useEffect(() => {
+    // CORRECCIÓN: Usar la URL completa para la conexión de Socket.io
     socketRef.current = io(API_URL);
 
     // Escuchar eventos de chat
@@ -53,7 +53,7 @@ const useWebRTCLogic = (roomId) => {
       setMyStream(stream);
       return stream;
     } catch (err) {
-      toast.error('No se pudo acceder a la cámara o al micrófono.');
+      toast.error('No se pudo acceder a la cámara o al micrófono. Asegúrate de dar permisos.');
       console.error('Error al obtener stream local:', err);
       return null;
     }
@@ -62,10 +62,15 @@ const useWebRTCLogic = (roomId) => {
   // Maneja la conexión con PeerJS
   const connect = (stream, name) => {
     setCurrentUserName(name);
+    
+    // CORRECCIÓN: Usar la configuración de PeerJS que apunte a la instancia de Render
+    const url = new URL(API_URL);
+
     peerRef.current = new Peer(undefined, {
-      host: 'localhost',
-      port: 3000,
-      path: '/peerjs'
+      host: url.hostname,
+      port: url.port === '' ? (url.protocol === 'https:' ? 443 : 80) : parseInt(url.port),
+      path: '/peerjs', // Asegúrate de que esta ruta coincida con la configuración de tu servidor
+      secure: url.protocol === 'https:', // Usar 'secure: true' si la URL es HTTPS
     });
 
     peerRef.current.on('open', (id) => {
@@ -199,7 +204,7 @@ const useWebRTCLogic = (roomId) => {
     sendChatMessage,
     toggleMute,
     toggleVideo,
-    sendThemeChange: setAppTheme, // Mantiene el nombre de la función que actualiza el tema
+    sendThemeChange: setAppTheme, 
     cleanup
   };
 };
@@ -237,7 +242,7 @@ const VideoPlayer = ({ stream, userName, muted, isLocal = false }) => {
       
       <div className={styles.userNameTag}>{userName}</div>
       
-      {muted && <div className={styles.muteIcon}><MicOff size={16} /></div>}
+      {(muted || (isLocal && stream?.getAudioTracks()[0]?.enabled === false)) && <div className={styles.muteIcon}><MicOff size={16} /></div>}
     </div>
   );
 };
@@ -249,7 +254,7 @@ const VideoGrid = () => {
   // Creamos una lista combinada de mi stream y los streams de los peers
   const allVideos = [
     // Mi stream (muted)
-    ...(myStream ? [{ stream: myStream, userName: `${currentUserName} (Tú)`, muted: true, isLocal: true }] : []),
+    ...(myStream ? [{ stream: myStream, userName: `${currentUserName} (Tú)`, muted: true, isLocal: true, key: 'local-user' }] : []),
     // Streams de los otros usuarios
     ...Object.entries(peers).map(([id, p]) => ({ stream: p.stream, userName: p.userName, key: id, muted: false })),
   ];
@@ -259,7 +264,7 @@ const VideoGrid = () => {
       {/* videoSecondaryGrid ahora contiene todos los videos y maneja la cuadrícula */}
       <div className={styles.videoSecondaryGrid}>
         {allVideos.map((p) => (
-          <VideoPlayer key={p.key || p.userName} stream={p.stream} userName={p.userName} muted={p.muted} isLocal={p.isLocal} />
+          <VideoPlayer key={p.key} stream={p.stream} userName={p.userName} muted={p.muted} isLocal={p.isLocal} />
         ))}
       </div>
     </div>
@@ -356,7 +361,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  // Placeholder para Compartir Pantalla (se mantiene el ícono para el diseño)
+  // Placeholder para Compartir Pantalla 
   const ScreenShareButton = () => (
     <button className={styles.controlButton} title="Compartir Pantalla">
       {/* Icono de Pantalla Compartida */}
