@@ -1,1 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
 
+/* * Reset CSS básico y configuración global de la fuente
+ * Basic CSS reset and global font setup 
+ */
+
+/* 1. Resetear el modelo de caja a border-box para facilitar el diseño */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* 2. Configuración global de la fuente y cuerpo */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  /* Establecer la fuente Inter como la principal */
+  font-family: 'Inter', sans-serif;
+  /* Suavizado de fuente para mejor visualización */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 3. Asegurar que el div raíz de React o la aplicación ocupe toda la altura */
+#root,
+.App {
+  height: 100%;
+}
+
+/* 4. Eliminar el margin por defecto de elementos comunes */
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+/* 5. Asegurar que las imágenes sean responsivas */
+img,
+picture {
+  max-width: 100%;
+  display: block;
+}
+
+/* 6. Restablecer estilos de botón y enlace */
+button,
+a {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* 7. Eliminar el contorno de foco por defecto en elementos que no lo necesitan */
+:focus:not(:focus-visible) {
+    outline: none;
+}
