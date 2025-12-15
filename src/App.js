@@ -9,6 +9,7 @@ import styles from './App.module.css';
 // --- CONSTANTES DE SERVIDOR (CORREGIDAS) ---
 // Usamos la URL del servidor remoto para Socket.io y PeerJS
 const SOCKET_SERVER_URL = 'https://meet-clone-v0ov.onrender.com';
+const SERVER_URL = SOCKET_SERVER_URL
 const PEER_HOST = new URL(SERVER_URL).hostname;
 const PEER_PORT = new URL(SERVER_URL).port || 443;
 const PEER_PATH = '/peerjs/myapp';
