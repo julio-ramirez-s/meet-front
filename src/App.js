@@ -5,6 +5,12 @@ import Peer from 'peerjs';
 // Eliminadas las dependencias de Toastify
 import styles from './App.module.css';
 
+// =========================================================================================
+// !!! IMPORTANTE: Reemplaza esta URL con la dirección REAL de tu servidor Socket.IO/PeerJS !!!
+// Si tu backend está en https://api.mi-app.com, usa esa URL.
+const SIGNALING_SERVER_URL = 'https://meet-clone-v0ov.onrender.com'; 
+// =========================================================================================
+
 // --- CONTEXTO PARA WEBRTC ---
 const WebRTCContext = createContext();
 const useWebRTC = () => useContext(WebRTCContext);
@@ -52,15 +58,19 @@ const useWebRTCLogic = (roomId) => {
     const connect = (stream, userName) => {
         if (socketRef.current || myPeerRef.current) return;
 
-        // Inicialización de Socket.IO
-        socketRef.current = io(process.env.REACT_APP_SOCKET_SERVER || '/');
+        // Modificación clave: Usar la URL explícita del servidor de señalización.
+        socketRef.current = io(SIGNALING_SERVER_URL, {
+            // Optimización: Forzar un transporte preferido para iniciar más rápido
+            transports: ['websocket', 'polling']
+        });
 
         socketRef.current.on('connect', () => {
             // Inicialización de PeerJS
             myPeerRef.current = new Peer(undefined, {
-                host: process.env.REACT_APP_PEER_HOST || '/',
-                port: process.env.REACT_APP_PEER_PORT || (window.location.protocol === 'https:' ? 443 : 9000),
-                path: '/peerjs',
+                // Modificación clave: PeerJS DEBE usar el mismo host y puerto que Socket.IO
+                host: new URL(SIGNALING_SERVER_URL).hostname,
+                port: new URL(SIGNALING_SERVER_URL).port || (new URL(SIGNALING_SERVER_URL).protocol === 'https:' ? 443 : 80),
+                path: '/peerjs', // Asegúrate de que tu servidor PeerJS esté configurado con esta ruta
                 // Optimización: Servidores STUN para NAT traversal más rápido
                 config: {
                     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -98,6 +108,12 @@ const useWebRTCLogic = (roomId) => {
                 console.error("PeerJS Error:", err);
                 showLocalNotification(`Error de PeerJS: ${err.type}`);
             });
+        });
+        
+        // Manejo de errores de conexión de Socket.IO
+        socketRef.current.on('connect_error', (err) => {
+            console.error("Socket.IO Connection Error:", err.message);
+            showLocalNotification(`Error de conexión al servidor de señalización: ${err.message}`);
         });
 
         // --- Manejo de mensajes de Socket.IO ---
