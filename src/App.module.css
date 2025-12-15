@@ -25,6 +25,7 @@
     --green-share-color: #28a745; /* Verde para compartir pantalla */
 }
 
+
 body {
     background-color: var(--background-color); /* Usa la variable */
 }
@@ -195,7 +196,7 @@ body {
 }
 
 /* Diseño para móvil (celulares): max-width: 768px */
-@media (max-width: 500px) { 
+@media (max-width: 768px) { 
     .videoGridContainer {
         flex-direction: column; /* Contenido principal encima de los videos secundarios */
     }

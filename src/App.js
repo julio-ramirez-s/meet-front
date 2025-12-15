@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon, Flame } from 'lucide-react'; // Se eliminan PartyPopper y Plus
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon } from 'lucide-react'; // Flame ha sido eliminado
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -333,7 +333,7 @@ const useWebRTCLogic = (roomId) => {
 
     // Nueva función para enviar el cambio de tema
     const sendThemeChange = (theme) => {
-        if (socketRef.current) {
+        if (socketRef.current && (theme === 'dark' || theme === 'light')) { // Solo permitir 'dark' o 'light'
             socketRef.current.emit('change-theme', theme);
         }
     };
@@ -505,24 +505,18 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
     
-    // Emojis condicionales
-    const commonEmojis = appTheme === 'hot' 
-    ? ['❤️', '🥵', '😍', '💋', '❤️‍🔥'] 
-    : ['👍', '😆', '❤️', '🎉', '🥺'];
+    // Emojis (Ahora no son condicionales, ya que se eliminó 'hot')
+    const commonEmojis = ['👍', '😆', '❤️', '🎉', '🥺'];
 
-    const emojis = appTheme === 'hot'   
-        ? [
- 
-         ]
-        : [
-            '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
-            '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-            '🥲', '😋', '�', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
-            '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
-            '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
-            '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
-            '👀', '👄','🫦', '🫶', '💪'
-        ];
+    const emojis = [
+        '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
+        '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
+        '🥲', '😋', '', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+        '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
+        '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
+        '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
+        '👀', '👄', '🫶', '💪'
+    ];
     
     
     const handleSendReaction = (emoji) => {
@@ -597,16 +591,13 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
                     </div>
                 )}
             </div>
-            {/* Botones para cambiar tema: ahora son 3 botones separados */}
+            {/* Botones para cambiar tema: ahora solo dark y light */}
             <div className={styles.themeControls}>
                 <button onClick={() => sendThemeChange('dark')} className={`${styles.controlButton} ${appTheme === 'dark' ? styles.controlButtonActive : ''}`}>
                     <Moon size={20} />
                 </button>
                 <button onClick={() => sendThemeChange('light')} className={`${styles.controlButton} ${appTheme === 'light' ? styles.controlButtonActive : ''}`}>
                     <Sun size={20} />
-                </button>
-                <button onClick={() => sendThemeChange('hot')} className={`${styles.controlButton} ${appTheme === 'hot' ? styles.controlButtonActive : ''}`}>
-                    <Flame size={20} />
                 </button>
             </div>
             <button onClick={onLeave} className={styles.leaveButton}>
@@ -617,7 +608,7 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
 };
 
 const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contexto
-    const { chatMessages, sendMessage, currentUserName, appTheme } = useWebRTC(); // appTheme del contexto
+    const { chatMessages, sendMessage, currentUserName } = useWebRTC(); // Ya no se usa appTheme para el título
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -633,8 +624,8 @@ const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contex
         }
     };
 
-    // Título del chat condicional
-    const chatTitleText = appTheme === 'hot' ? 'Chat de Mundi-Hot' : 'Chat de Mundi-Link';
+    // Título del chat fijo
+    const chatTitleText = 'Chat de Mundi-Link';
 
     return (
         <aside className={`${styles.chatSidebar} ${isOpen ? styles.chatSidebarOpen : ''}`}>
