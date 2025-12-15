@@ -27,6 +27,8 @@ const useWebRTCLogic = (roomId) => {
     const peerConnections = useRef({});
 
     const currentUserNameRef = useRef('');
+    // CORRECCIÓN: Declarar currentRoomIdRef usando useRef (Arregla el error 'currentRoomIdRef is not defined')
+    const currentRoomIdRef = useRef(roomId); 
     currentRoomIdRef.current = roomId;
 
     const toggleTheme = () => {
@@ -318,9 +320,8 @@ const useWebRTCLogic = (roomId) => {
         isVideoOff,
         appTheme,
         roomUsers,
-        // CORRECCIÓN: Asegurar que 'connect' y 'setRoomUsers' se devuelvan
         connect,
-        setRoomUsers, // Necesario para que MainInterface actualice el estado local
+        setRoomUsers,
         toggleMute,
         toggleVideo,
         startScreenShare,
