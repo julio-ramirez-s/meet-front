@@ -27,7 +27,7 @@ const useWebRTCLogic = (roomId) => {
     const peerConnections = useRef({});
 
     const currentUserNameRef = useRef('');
-    const currentRoomIdRef = useRef('');
+    currentRoomIdRef.current = roomId;
 
     const toggleTheme = () => {
         setAppTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
@@ -318,6 +318,9 @@ const useWebRTCLogic = (roomId) => {
         isVideoOff,
         appTheme,
         roomUsers,
+        // CORRECCIÓN: Asegurar que 'connect' y 'setRoomUsers' se devuelvan
+        connect,
+        setRoomUsers, // Necesario para que MainInterface actualice el estado local
         toggleMute,
         toggleVideo,
         startScreenShare,
@@ -768,6 +771,7 @@ const MainInterface = ({ handleLeave, userName, selectedAudioOutput }) => {
     // Añadir el userId local a roomUsers para que el estado de mute/video se refleje
     useEffect(() => {
         if (webRTCLogic.myStream) {
+            // webRTCLogic.setRoomUsers es ahora accesible gracias a la corrección en useWebRTCLogic
             webRTCLogic.setRoomUsers(prev => ({
                 ...prev,
                 // Usamos 'local' como ID temporal hasta que PeerJS/Socket asignen uno real
@@ -778,7 +782,7 @@ const MainInterface = ({ handleLeave, userName, selectedAudioOutput }) => {
                 }
             }));
         }
-    }, [webRTCLogic.isMuted, webRTCLogic.isVideoOff, webRTCLogic.myStream, userName]);
+    }, [webRTCLogic.isMuted, webRTCLogic.isVideoOff, webRTCLogic.myStream, userName, webRTCLogic.setRoomUsers]);
 
 
     return (
@@ -808,7 +812,8 @@ export default function App() {
         setSelectedAudioOutput(audioOutputId);
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
-            webRTCLogic.connect(stream, name);
+            // Esta línea ahora funciona correctamente porque 'connect' se devuelve desde el hook.
+            webRTCLogic.connect(stream, name); 
             setIsJoined(true);
         }
     };
