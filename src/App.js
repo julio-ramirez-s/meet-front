@@ -69,7 +69,7 @@ const useWebRTCLogic = (roomId) => {
     peerRef.current = new Peer(undefined, {
       host: url.hostname,
       port: url.port === '' ? (url.protocol === 'https:' ? 443 : 80) : parseInt(url.port),
-      path: '/peerjs', // Asegúrate de que esta ruta coincida con la configuración de tu servidor
+      path: '/', // CORRECCIÓN CLAVE: Se cambia '/peerjs' a '/' para evitar la duplicación de ruta que causa el 404.
       secure: url.protocol === 'https:', // Usar 'secure: true' si la URL es HTTPS
     });
 
