@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, createContext, useContext, useCallb
 import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Sun, Moon, Settings, Users } from 'lucide-react'; 
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
-// Usamos solo un console.log para errores en lugar de la librería toast, para ahorrar peso
-// import { ToastContainer, toast } from 'react-toastify'; 
 import styles from './App.module.css';
 
 // --- CONTEXTO Y HOOKS ---
@@ -18,6 +16,7 @@ const showSimpleNotification = (message) => {
     if (notificationBox) {
         notificationBox.textContent = message;
         notificationBox.style.opacity = '1';
+        // Usar setTimeout para manejar el desvanecimiento después de un tiempo
         setTimeout(() => {
             notificationBox.style.opacity = '0';
         }, 3000);
@@ -58,6 +57,7 @@ const useWebRTCLogic = (roomId) => {
             const audioTrack = stream.getAudioTracks()[0];
             const videoTrack = stream.getVideoTracks()[0];
 
+            // Establecer el estado inicial basado en si los tracks están disponibles
             setIsMuted(audioTrack ? !audioTrack.enabled : false);
             setIsVideoOff(videoTrack ? !videoTrack.enabled : false);
 
@@ -77,7 +77,6 @@ const useWebRTCLogic = (roomId) => {
         const call = myPeerRef.current.call(userId, stream);
         
         call.on('stream', (userVideoStream) => {
-            console.log('Stream recibido (outbound):', userId);
             setPeers(prevPeers => ({
                 ...prevPeers,
                 [userId]: { stream: userVideoStream, call: call }
@@ -99,6 +98,8 @@ const useWebRTCLogic = (roomId) => {
     const connect = useCallback((stream, userName) => {
         currentUserNameRef.current = userName;
 
+        // URL para el servidor PeerJS y Socket.IO
+        // Asegúrate de reemplazar con tu URL de Render si la usas en producción
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; 
         const API_HOST = new URL(SERVER_URL).hostname;
 
@@ -147,6 +148,7 @@ const useWebRTCLogic = (roomId) => {
             setRoomUsers(users);
             
             if (stream) {
+                // Conectar a todos los usuarios existentes en la sala
                 Object.entries(users).forEach(([id, user]) => {
                     if (id !== currentPeerIdRef.current) {
                         connectToNewUser(id, user.name, stream);
@@ -227,6 +229,7 @@ const useWebRTCLogic = (roomId) => {
             Object.values(peerConnections.current).forEach(call => {
                 const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                 if (sender) {
+                    // Reemplazar la pista de pantalla por la de la cámara
                     sender.replaceTrack(videoTrack);
                 }
             });
@@ -243,10 +246,12 @@ const useWebRTCLogic = (roomId) => {
                 Object.values(peerConnections.current).forEach(call => {
                     const sender = call.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
+                        // Reemplazar la pista de la cámara por la de la pantalla
                         sender.replaceTrack(screenVideoTrack);
                     }
                 });
 
+                // Detener automáticamente al cerrar la ventana de compartición
                 screenVideoTrack.onended = () => toggleScreenShare();
                 
                 showSimpleNotification("Compartiendo mi pantalla.");
@@ -257,7 +262,7 @@ const useWebRTCLogic = (roomId) => {
                 showSimpleNotification("No se pudo iniciar la compartición de pantalla.");
             }
         }
-    }, [myStream, myScreenStream, toggleScreenShare]);
+    }, [myStream, myScreenStream]); // Se elimina toggleScreenShare de dependencias para evitar warnings
 
     const sendChatMessage = useCallback((message) => {
         if (socketRef.current && message.trim()) {
@@ -286,8 +291,11 @@ const useWebRTCLogic = (roomId) => {
         if (myPeerRef.current) {
             myPeerRef.current.destroy();
         }
+        // Cerrar todas las conexiones P2P
         Object.values(peerConnections.current).forEach(call => call.close());
         peerConnections.current = {};
+        
+        // Resetear estados
         setMyStream(null);
         setMyScreenStream(null);
         setPeers({});
@@ -295,7 +303,7 @@ const useWebRTCLogic = (roomId) => {
         setChatMessages([]);
     }, [myStream, myScreenStream]);
 
-    // Crear un objeto de contexto estable
+    // Crear un objeto de contexto estable usando useMemo
     const contextValue = useMemo(() => ({
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme,
         roomUsers, initializeStream, connect, toggleMute, toggleVideo, toggleScreenShare,
@@ -312,9 +320,11 @@ const useWebRTCLogic = (roomId) => {
 
 // --- COMPONENTES DE UI ---
 
-// React.memo para evitar re-renderizados innecesarios en la galería
-const VideoComponent = React.memo(({ stream, muted, name, isLocal, isMuted, isVideoOff, isScreen }) => {
+// Declaración de la función del componente VideoComponent
+function VideoComponentContent({ stream, muted, name, isLocal, isMuted, isVideoOff, isScreen }) {
     const videoRef = useRef(null);
+    
+    // Configura el srcObject cuando el stream cambia
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
@@ -354,7 +364,9 @@ const VideoComponent = React.memo(({ stream, muted, name, isLocal, isMuted, isVi
             {isScreen && <div className={styles.screenShareLabel}>Pantalla Compartida</div>}
         </div>
     );
-});
+}
+// React.memo aplicado a la función, no a una definición inline.
+const VideoComponent = React.memo(VideoComponentContent);
 
 
 const VideoGallery = () => {
@@ -363,7 +375,7 @@ const VideoGallery = () => {
         isMuted, isVideoOff, currentUserName 
     } = useWebRTC();
     
-    // Objeto useMemo para crear la lista de streams una sola vez por cambio de estado
+    // Lógica para generar la lista de streams (estable y optimizada)
     const uniqueStreams = useMemo(() => {
         const streams = [];
         const localStatus = roomUsers[currentUserId] || { isMuted, isVideoOff, isSharingScreen: !!myScreenStream };
@@ -412,7 +424,7 @@ const VideoGallery = () => {
             }
         });
         
-        // Ordenar: primero la pantalla compartida (sea local o remota)
+        // Ordenar: primero la pantalla compartida (sea local o remota), luego mi propio video.
         streams.sort((a, b) => {
             if (a.isScreen && !b.isScreen) return -1;
             if (!a.isScreen && b.isScreen) return 1;
@@ -453,13 +465,18 @@ const ControlPanel = ({ onLeave, isControlsOpen, setIsControlsOpen, isChatOpen, 
     } = useWebRTC();
 
     const isSharingScreen = !!myScreenStream;
+    const activeUsersCount = useMemo(() => Object.keys(roomUsers).length, [roomUsers]);
 
     return (
         <div className={styles.controlsBar}>
             
             {/* Botón Flotante principal */}
             <button 
-                onClick={() => setIsControlsOpen(prev => !prev)} 
+                onClick={() => setIsControlsOpen(prev => {
+                    // Si se va a abrir el panel, cerramos el chat para ahorrar espacio en móvil
+                    if (!prev) setIsChatOpen(false); 
+                    return !prev;
+                })} 
                 className={`${styles.mainFloatingButton} ${styles.controlButton} ${styles.primaryControl}`}
                 aria-label="Toggle panel de control"
             >
@@ -502,12 +519,16 @@ const ControlPanel = ({ onLeave, isControlsOpen, setIsControlsOpen, isChatOpen, 
 
                         {/* Botón Abrir Chat */}
                         <button 
-                            onClick={() => setIsChatOpen(prev => !prev)} 
+                            onClick={() => setIsChatOpen(prev => {
+                                // Si se va a abrir el chat, cerramos el panel de control
+                                if (!prev) setIsControlsOpen(false); 
+                                return !prev;
+                            })} 
                             className={`${styles.controlButton} ${isChatOpen ? styles.primaryControl : styles.secondaryControl}`}
                             aria-label={isChatOpen ? "Cerrar chat" : "Abrir chat"}
                         >
                             <MessageSquare size={24} />
-                            <span className={styles.controlLabel}>Chat ({Object.keys(roomUsers).length})</span>
+                            <span className={styles.controlLabel}>Chat ({activeUsersCount})</span>
                         </button>
                         
                         {/* Botón Cambiar Tema */}
@@ -552,11 +573,12 @@ const ChatPanel = ({ isChatOpen, setIsChatOpen }) => {
 
     useEffect(() => {
         if (isChatOpen) {
+            // Desplazamiento suave para el chat
             chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [chatMessages, isChatOpen]);
 
-    const activeUsersCount = Object.keys(roomUsers).length;
+    const activeUsersCount = useMemo(() => Object.keys(roomUsers).length, [roomUsers]);
 
     return (
         <div className={`${styles.chatPanel} ${isChatOpen ? styles.chatPanelOpen : ''}`}>
@@ -624,35 +646,35 @@ const Lobby = ({ onJoin }) => {
     useEffect(() => {
         const getDevices = async () => {
             try {
-                // Pre-solicitar permisos
+                // Pre-solicitar permisos (es necesario para que enumerate los nombres)
                 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 const deviceList = await navigator.mediaDevices.enumerateDevices();
 
-                setDevices({ 
-                    audioIn: deviceList.filter(d => d.kind === 'audioinput'), 
-                    videoIn: deviceList.filter(d => d.kind === 'videoinput'), 
-                    audioOut: deviceList.filter(d => d.kind === 'audiooutput') 
-                });
+                const audioIn = deviceList.filter(d => d.kind === 'audioinput');
+                const videoIn = deviceList.filter(d => d.kind === 'videoinput');
+                const audioOut = deviceList.filter(d => d.kind === 'audiooutput');
+
+                setDevices({ audioIn, videoIn, audioOut });
+                
                 // Establecer valores predeterminados (el primero de cada tipo)
-                if (devices.audioIn.length > 0) setAudioDeviceId(devices.audioIn[0].deviceId);
-                if (devices.videoIn.length > 0) setVideoDeviceId(devices.videoIn[0].deviceId);
-                if (devices.audioOut.length > 0) setAudioOutputDeviceId(devices.audioOut[0].deviceId);
+                if (audioIn.length > 0) setAudioDeviceId(audioIn[0].deviceId);
+                if (videoIn.length > 0) setVideoDeviceId(videoIn[0].deviceId);
+                if (audioOut.length > 0) setAudioOutputDeviceId(audioOut[0].deviceId);
                 
             } catch (error) {
                 console.error("Error al obtener dispositivos o permisos:", error);
+                showSimpleNotification("Advertencia: No se pudo obtener la lista de dispositivos (permisos denegados).");
             } finally {
                 setIsLoading(false);
             }
         };
 
-        // Si ya tenemos permisos y el navegador lo soporta, enumeramos
         if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
              getDevices();
         } else {
-             // Fallback rápido si el navegador es una "patata" de verdad
              setIsLoading(false);
         }
-    }, [devices.audioIn.length, devices.videoIn.length, devices.audioOut.length]); // Dependencias para evitar bucle
+    }, []); 
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -664,10 +686,9 @@ const Lobby = ({ onJoin }) => {
     };
 
     if (isLoading) {
-        return <div className={styles.loadingMessage}>Cargando...</div>;
+        return <div className={styles.loadingMessage}>Cargando dispositivos...</div>;
     }
 
-    // Se eliminan los select boxes si no se encontraron dispositivos, para evitar errores.
     const hasVideo = devices.videoIn.length > 0;
     const hasAudioIn = devices.audioIn.length > 0;
     const hasAudioOut = devices.audioOut.length > 0;
@@ -677,6 +698,7 @@ const Lobby = ({ onJoin }) => {
         <div className={styles.lobbyContainer}>
             <div className={styles.lobbyCard}>
                 <h1 className={styles.lobbyTitle}>Ultra-Meet: Ligera</h1>
+                <p className={styles.lobbySubtitle}>La videollamada más rápida y optimizada.</p>
                 <form onSubmit={handleSubmit} className={styles.lobbyForm}>
                     <div className={styles.formGroup}>
                         <label className={styles.formLabel} htmlFor="name">Tu Nombre</label>
@@ -711,7 +733,7 @@ const Lobby = ({ onJoin }) => {
 
                     {hasAudioOut && (
                         <div className={styles.formGroup}>
-                            <label className={styles.formLabel} htmlFor="audio-out">Salida</label>
+                            <label className={styles.formLabel} htmlFor="audio-out">Salida de Audio</label>
                             <select id="audio-out" value={audioOutputDeviceId} onChange={(e) => setAudioOutputDeviceId(e.target.value)} className={styles.formSelect}>
                                 {devices.audioOut.map(device => <option key={device.deviceId} value={device.deviceId}>{device.label || `Altavoz ${device.deviceId}`}</option>)}
                             </select>
@@ -760,12 +782,12 @@ export default function App() {
         setIsChatOpen(false);
     };
 
-    // Aplicar el tema al body (efecto más ligero que usar la librería Tailwind)
+    // Aplicar el tema al body
     useEffect(() => {
         document.body.className = webRTCLogic.appTheme === 'light' ? styles.lightMode : '';
     }, [webRTCLogic.appTheme]);
 
-    // Limpieza
+    // Limpieza al desmontar
     useEffect(() => {
         const cleanupHandler = () => webRTCLogic.cleanup();
         window.addEventListener('beforeunload', cleanupHandler);
