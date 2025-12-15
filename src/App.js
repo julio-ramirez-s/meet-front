@@ -54,7 +54,7 @@ const useWebRTCLogic = (roomId) => {
         }
     };
 
-    // Lógica de conexión a Socket.IO y PeerJS (sin cambios funcionales)
+    // Lógica de conexión a Socket.IO y PeerJS (CORRECCIÓN APLICADA AQUÍ)
     const connect = useCallback((stream, userName) => {
         currentUserNameRef.current = userName;
 
@@ -63,11 +63,12 @@ const useWebRTCLogic = (roomId) => {
 
         socketRef.current = io(SERVER_URL);
         
-        // PeerJS usa un socket seguro sobre el mismo host
+        // CORRECCIÓN: Se cambió 'path: "/peerjs"' a 'path: "/"' para evitar la doble ruta (/peerjs/peerjs) 
+        // que causaba el error 404 al intentar conectar con PeerJS.
         myPeerRef.current = new Peer(undefined, { 
             host: API_HOST, 
-            path: '/peerjs',
-            secure: true, // Asumimos HTTPS para Render
+            path: '/', 
+            secure: true, 
             port: 443 
         });
 
