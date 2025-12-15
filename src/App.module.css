@@ -1,542 +1,295 @@
 /* --------------------------------------------------------------------------------
-
 CSS NATIVO MINIMALISTA PARA MÁXIMA VELOCIDAD Y COMPATIBILIDAD
-
-Objetivo: Reducir el tamaño del archivo y la carga de la GPU.
-
+Objetivo: Layout de Foco en Pantalla Compartida
 -------------------------------------------------------------------------------- */
 
-/* Variables de Color Simples */
+/* VARIABLES DE COLOR */
 :root {
-/* Tema Oscuro (DEFAULT) */
---primary-color: #3b82f6; 
---background-color: #0f172a; 
---surface-color: #1e293b; 
---text-color: #f8fafc; 
---text-muted-color: #94a3b8; 
---danger-color: #ef4444; 
---success-color: #22c55e; 
+  /* Tema Oscuro (DEFAULT) */
+  --primary-color: #3b82f6;
+  --background-color: #0f172a;
+  --surface-color: #1e293b;
+  --text-color: #f8fafc;
+  --text-muted-color: #94a3b8;
+  --danger-color: #ef4444;
+  --success-color: #22c55e;
+  --share-color: #f97316;
 }
 
 /* Tema Claro */
 .lightMode {
---primary-color: #007bff;
---background-color: #f0f2f5;
---surface-color: #ffffff;
---text-color: #212529;
---text-muted-color: #6c757d;
---danger-color: #dc3545;
---success-color: #28a745;
+  --primary-color: #007bff;
+  --background-color: #f0f2f5;
+  --surface-color: #ffffff;
+  --text-color: #212529;
+  --text-muted-color: #6c757d;
+  --danger-color: #dc3545;
+  --success-color: #28a745;
+  --share-color: #ff8c00;
 }
 
+/* RESET / BASE */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html, body, #root {
-height: 100%;
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-background-color: var(--background-color);
-color: var(--text-color);
-transition: background-color 0.3s, color 0.3s;
+html,
+body,
+#root {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .globalWrapper {
-height: 100%;
+  height: 100%;
 }
 
-/* --------------------------------------------------------------------------------
-
-NOTIFICACIÓN SIMPLE (Reemplaza Toastify)
-
--------------------------------------------------------------------------------- */
+/* NOTIFICACIONES */
 .notificationBox {
-position: fixed;
-top: 10px;
-right: 10px;
-background-color: var(--surface-color);
-color: var(--text-color);
-padding: 10px 15px;
-border-radius: 6px;
-opacity: 0;
-transition: opacity 0.5s ease-in-out;
-z-index: 1000;
-max-width: 90%;
-box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+  padding: 10px 15px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  z-index: 1000;
+  max-width: 90%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* --------------------------------------------------------------------------------
-
 LOBBY / LOGIN
-
 -------------------------------------------------------------------------------- */
 .lobbyContainer {
-display: flex;
-justify-content: center;
-align-items: center;
-min-height: 100vh;
-padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
 }
 
 .lobbyCard {
-background-color: var(--surface-color);
-padding: 30px;
-border-radius: 10px;
-max-width: 400px;
-width: 100%;
+  background-color: var(--surface-color);
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .lobbyTitle {
-font-size: 1.5rem;
-font-weight: 700;
-margin-bottom: 20px;
-color: var(--primary-color);
-text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: var(--primary-color);
+  text-align: center;
+}
+
+.lobbySubtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted-color);
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .lobbyForm {
-display: flex;
-flex-direction: column;
-gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .formGroup {
-display: flex;
-flex-direction: column;
+  display: flex;
+  flex-direction: column;
 }
 
 .formLabel {
-font-size: 0.9rem;
-font-weight: 600;
-color: var(--text-muted-color);
-margin-bottom: 5px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted-color);
+  margin-bottom: 5px;
 }
 
-.formInput, .formSelect {
-width: 100%;
-padding: 10px;
-background-color: var(--background-color);
-border: 1px solid var(--text-muted-color);
-border-radius: 6px;
-color: var(--text-color);
-outline: none;
-}
-
-.formInput:focus, .formSelect:focus {
-border-color: var(--primary-color);
-box-shadow: 0 0 0 1px var(--primary-color);
+.formInput,
+.formSelect {
+  width: 100%;
+  padding: 10px;
+  background-color: var(--background-color);
+  border: 1px solid var(--text-muted-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  outline: none;
 }
 
 .joinButton {
-display: flex;
-align-items: center;
-justify-content: center;
-padding: 12px;
-background-color: var(--primary-color);
-color: white;
-border: none;
-border-radius: 6px;
-cursor: pointer;
-font-size: 1rem;
-font-weight: 600;
-margin-top: 10px;
+  padding: 12px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 /* --------------------------------------------------------------------------------
-
-APLICACIÓN PRINCIPAL (Sala de Reunión)
-
+APLICACIÓN PRINCIPAL
 -------------------------------------------------------------------------------- */
 .appContainer {
-display: grid;
-grid-template-rows: auto 1fr; /* Header, Main Content */
-height: 100vh;
-padding-bottom: 80px; /* Espacio para la barra de controles inferior */
-overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  padding-bottom: 80px;
+  overflow: hidden;
 }
 
 .appHeader {
-padding: 10px 20px;
-background-color: var(--surface-color);
-display: flex;
-justify-content: space-between;
-align-items: center;
-border-bottom: 1px solid var(--text-muted-color);
+  padding: 10px 20px;
+  background-color: var(--surface-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--text-muted-color);
 }
 
-.roomTitle {
-font-size: 1.1rem;
-font-weight: 600;
-display: flex;
-align-items: center;
-color: var(--text-color);
-}
-
-.themeToggle {
-background: none;
-border: none;
-color: var(--text-color);
-cursor: pointer;
-}
-
-/* MAIN CONTENT (Video Gallery + Chat) */
 .mainContent {
-display: flex;
-flex: 1;
-overflow: hidden;
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* --------------------------------------------------------------------------------
-
-GALERÍA DE VIDEO (GRID NATIVO SIMPLE)
-
+LAYOUT FOCO EN PANTALLA
 -------------------------------------------------------------------------------- */
-.videoGallery {
-flex-grow: 1;
-display: grid;
-/* Responsive Grid: de 1 a 4 columnas. Ajusta el tamaño de celda según el ancho */
-grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-gap: 10px;
-padding: 10px;
-background-color: var(--background-color);
-overflow-y: auto;
-align-items: center;
-justify-content: center;
-align-content: center;
+.screenFocusLayout {
+  flex-grow: 1;
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  background-color: var(--background-color);
+  overflow: hidden;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
 }
 
-.videoContainer {
-position: relative;
-width: 100%;
-/* Truco para mantener una proporción de video (16:9, aproximadamente) */
-padding-bottom: 56.25%;
-background-color: var(--surface-color);
-border-radius: 8px;
-overflow: hidden;
-grid-column: span 1; /* Valor por defecto */
+@media (min-width: 768px) {
+  .screenFocusLayout {
+    grid-template-columns: 3fr 1fr;
+    grid-template-rows: 1fr;
+  }
+
+  .cameraFeedsArea {
+    flex-direction: column;
+    overflow-y: auto;
+  }
 }
 
-/* Pantalla Compartida toma más espacio */
-.screenShareVideo {
-grid-column: 1 / -1; /* Ocupa todo el ancho en el grid */
-padding-bottom: 50%; /* Más panorámico para pantalla */
+/* STREAM PRINCIPAL */
+.mainStreamArea {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
 }
 
-.videoElement {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-object-fit: cover;
-transform: scaleX(-1); /* Reflejo para la cámara local */
+.mainScreenVideoContainer {
+  width: 100%;
+  height: 100%;
 }
 
-.screenShareVideo .videoElement {
-object-fit: contain; /* Contiene el video sin recortar /
-transform: none; / No reflejar la pantalla compartida */
+.mainScreenVideoContainer .videoElement {
+  object-fit: contain;
+}
+
+/* CAMARAS PEQUEÑAS */
+.cameraFeedsArea {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.smallCameraVideoContainer {
+  width: 150px;
+  min-width: 150px;
+  padding-bottom: 112.5%;
+  position: relative;
+}
+
+.smallCameraVideoContainer .videoElement {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .localVideo .videoElement {
-transform: scaleX(-1); /* Reflejo para la cámara local */
-}
-
-.videoOffOverlay {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-display: flex;
-flex-direction: column;
-justify-content: center;
-align-items: center;
-background-color: var(--surface-color);
-color: var(--text-muted-color);
-font-size: 1.2rem;
-}
-
-.nameTag {
-position: absolute;
-bottom: 5px;
-left: 5px;
-background-color: rgba(0, 0, 0, 0.6);
-color: white;
-padding: 4px 8px;
-border-radius: 4px;
-font-size: 0.75rem;
-display: flex;
-align-items: center;
-z-index: 10;
-}
-
-.screenShareLabel {
-position: absolute;
-top: 5px;
-right: 5px;
-background-color: var(--success-color);
-color: white;
-padding: 3px 6px;
-border-radius: 4px;
-font-size: 0.7rem;
-font-weight: bold;
-z-index: 10;
+  transform: scaleX(-1);
 }
 
 /* --------------------------------------------------------------------------------
-
-BARRA DE CONTROLES (Flotante y Fija)
-
+BARRA DE CONTROLES
 -------------------------------------------------------------------------------- */
 .controlsBar {
-position: fixed;
-bottom: 0;
-left: 0;
-right: 0;
-height: 80px; /* Altura fija para el espacio inferior */
-display: flex;
-justify-content: center;
-align-items: center;
-z-index: 500;
-}
-
-.mainFloatingButton {
-/* Botón que siempre está visible si el panel está cerrado */
-position: absolute;
-bottom: 15px;
-background-color: var(--primary-color) !important;
-color: white !important;
-}
-
-.floatingPanel {
-position: absolute;
-bottom: 15px;
-background-color: var(--surface-color);
-padding: 10px 15px;
-border-radius: 12px;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.controlButtonsGroup {
-display: flex;
-gap: 10px;
-justify-content: center;
-align-items: center;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 500;
 }
 
 .controlButton {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-width: 60px;
-height: 60px;
-border-radius: 10px;
-border: none;
-cursor: pointer;
-font-size: 0.75rem;
-font-weight: 500;
-color: var(--text-color);
-transition: background-color 0.1s, transform 0.1s;
-}
-
-.controlButton:hover {
-filter: brightness(1.2);
-}
-
-.controlLabel {
-margin-top: 2px;
-font-size: 0.7rem;
-}
-
-/* Colores de Estado */
-.primaryControl {
-background-color: var(--primary-color);
-color: white;
-}
-.secondaryControl {
-background-color: var(--text-muted-color);
-color: var(--text-color);
-}
-.dangerControl {
-background-color: var(--danger-color);
-color: white;
-}
-.successControl {
-background-color: var(--success-color);
-color: white;
-}
-.leaveControl {
-background-color: var(--danger-color);
-color: white;
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
 }
 
 /* --------------------------------------------------------------------------------
-
-PANEL DE CHAT
-
+CHAT
 -------------------------------------------------------------------------------- */
 .chatPanel {
-width: 0; /* Por defecto, oculto */
-height: 100%;
-background-color: var(--surface-color);
-border-left: 1px solid var(--text-muted-color);
-display: flex;
-flex-direction: column;
-transition: width 0.3s ease-in-out;
-flex-shrink: 0;
+  width: 0;
+  height: 100%;
+  background-color: var(--surface-color);
+  border-left: 1px solid var(--text-muted-color);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease;
 }
 
 .chatPanelOpen {
-width: 300px; /* Ancho en escritorio */
+  width: 300px;
 }
 
-.chatHeader {
-display: flex;
-justify-content: space-between;
-align-items: center;
-padding: 10px 15px;
-border-bottom: 1px solid var(--text-muted-color);
-}
-
-.chatTitle {
-font-size: 1rem;
-font-weight: 600;
-display: flex;
-align-items: center;
-gap: 5px;
-}
-
-.chatCloseButton {
-background: none;
-border: none;
-color: var(--text-color);
-cursor: pointer;
-}
-
-.chatMessages {
-flex-grow: 1;
-overflow-y: auto;
-padding: 10px 15px;
-display: flex;
-flex-direction: column;
-gap: 10px;
-}
-
-.chatMessage {
-display: flex;
-}
-
-.messageContent {
-max-width: 85%;
-padding: 8px 12px;
-border-radius: 10px;
-font-size: 0.9rem;
-}
-
-.messageSender {
-font-size: 0.7rem;
-font-weight: bold;
-display: block;
-margin-bottom: 2px;
-}
-.messageTime {
-font-size: 0.65rem;
-color: var(--text-muted-color);
-display: block;
-text-align: right;
-margin-top: 2px;
-}
-
-.myMessage {
-justify-content: flex-end;
-}
-.myMessage .messageContent {
-background-color: var(--primary-color);
-color: white;
-}
-.myMessage .messageSender {
-color: rgba(255, 255, 255, 0.8);
-}
-
-.otherMessage {
-justify-content: flex-start;
-}
-.otherMessage .messageContent {
-background-color: var(--background-color);
-border: 1px solid var(--text-muted-color);
-color: var(--text-color);
-}
-.otherMessage .messageSender {
-color: var(--primary-color);
-}
-
-.chatInputForm {
-display: flex;
-padding: 10px 15px;
-border-top: 1px solid var(--text-muted-color);
-}
-
-.chatInput {
-flex-grow: 1;
-padding: 8px;
-border: 1px solid var(--text-muted-color);
-border-radius: 6px 0 0 6px;
-background-color: var(--background-color);
-color: var(--text-color);
-outline: none;
-}
-.chatInput:focus {
-border-color: var(--primary-color);
-}
-
-.chatSendButton {
-background-color: var(--primary-color);
-color: white;
-border: none;
-padding: 8px 12px;
-border-radius: 0 6px 6px 0;
-cursor: pointer;
-}
-
-/* --------------------------------------------------------------------------------
-
-MEDIA QUERIES (RESPONSIVE)
-
--------------------------------------------------------------------------------- /
-/* Pantallas Pequeñas (Móvil) */
 @media (max-width: 768px) {
-.appContainer {
-padding-bottom: 90px; /* Más espacio para los dedos */
-}
+  .chatPanelOpen {
+    width: 100%;
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+  }
 
-.videoGallery {
-grid-template-columns: 1fr; /* Una sola columna en móvil */
-gap: 5px;
-}
+  .controlLabel {
+    display: none;
+  }
 
-.videoContainer {
-min-height: 200px;
-padding-bottom: 0;
-height: 200px;
-}
-.screenShareVideo {
-height: 50vw;
-}
-
-/* Panel de Chat en Móvil (Cubre más de la pantalla) */
-.chatPanelOpen {
-width: 100%;
-position: absolute;
-bottom: 90px;
-z-index: 400;
-height: calc(100vh - 100px);
-border: none;
-}
-
-/* Panel de Controles: menos espacio */
-.controlButton {
-width: 50px;
-height: 50px;
-}
-.controlLabel {
-display: none; /* Ocultar etiquetas para ahorrar espacio */
-}
+  .controlButton {
+    width: 50px;
+    height: 50px;
+  }
 }

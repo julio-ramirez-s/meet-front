@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext, useCallback, useMemo } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Sun, Moon, Settings, Users } from 'lucide-react'; 
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Sun, Moon, Settings, Users, ArrowLeft } from 'lucide-react'; 
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import styles from './App.module.css';
@@ -10,7 +10,6 @@ const useWebRTC = () => useContext(WebRTCContext);
 
 // Función de utilidad para mostrar notificaciones simples sin librería externa
 const showSimpleNotification = (message) => {
-    // Implementación mínima para dispositivos de bajo consumo
     console.log(`[NOTIFICACIÓN] ${message}`);
     const notificationBox = document.getElementById('notification-box');
     if (notificationBox) {
@@ -72,8 +71,7 @@ const useWebRTCLogic = (roomId) => {
 
     const connectToNewUser = useCallback((userId, userName, stream) => {
         if (!myPeerRef.current || !stream || peerConnections.current[userId]) return;
-        console.log(`Llamando al nuevo usuario: ${userName} (${userId})`);
-
+        
         const call = myPeerRef.current.call(userId, stream);
         
         call.on('stream', (userVideoStream) => {
@@ -84,7 +82,6 @@ const useWebRTCLogic = (roomId) => {
         });
 
         call.on('close', () => {
-            console.log('Llamada cerrada con:', userId);
             setPeers(prevPeers => {
                 const newPeers = { ...prevPeers };
                 delete newPeers[userId];
@@ -98,8 +95,7 @@ const useWebRTCLogic = (roomId) => {
     const connect = useCallback((stream, userName) => {
         currentUserNameRef.current = userName;
 
-        // URL para el servidor PeerJS y Socket.IO
-        // Asegúrate de reemplazar con tu URL de Render si la usas en producción
+        // Servidor PeerJS y Socket.IO (Usando la URL de Render recomendada)
         const SERVER_URL = "https://meet-clone-v0ov.onrender.com"; 
         const API_HOST = new URL(SERVER_URL).hostname;
 
@@ -136,7 +132,7 @@ const useWebRTCLogic = (roomId) => {
 
         myPeerRef.current.on('error', (err) => {
             console.error('Error en PeerJS:', err);
-            showSimpleNotification(`Error de conexión P2P: ${err.type}`);
+            showSimpleNotification(`Error P2P: ${err.type}`);
         });
 
         // --- MANEJO DE SOCKET.IO ---
@@ -262,7 +258,7 @@ const useWebRTCLogic = (roomId) => {
                 showSimpleNotification("No se pudo iniciar la compartición de pantalla.");
             }
         }
-    }, [myStream, myScreenStream]); // Se elimina toggleScreenShare de dependencias para evitar warnings
+    }, [myStream, myScreenStream]); 
 
     const sendChatMessage = useCallback((message) => {
         if (socketRef.current && message.trim()) {
@@ -291,11 +287,9 @@ const useWebRTCLogic = (roomId) => {
         if (myPeerRef.current) {
             myPeerRef.current.destroy();
         }
-        // Cerrar todas las conexiones P2P
         Object.values(peerConnections.current).forEach(call => call.close());
         peerConnections.current = {};
         
-        // Resetear estados
         setMyStream(null);
         setMyScreenStream(null);
         setPeers({});
@@ -303,7 +297,6 @@ const useWebRTCLogic = (roomId) => {
         setChatMessages([]);
     }, [myStream, myScreenStream]);
 
-    // Crear un objeto de contexto estable usando useMemo
     const contextValue = useMemo(() => ({
         myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme,
         roomUsers, initializeStream, connect, toggleMute, toggleVideo, toggleScreenShare,
@@ -321,10 +314,9 @@ const useWebRTCLogic = (roomId) => {
 // --- COMPONENTES DE UI ---
 
 // Declaración de la función del componente VideoComponent
-function VideoComponentContent({ stream, muted, name, isLocal, isMuted, isVideoOff, isScreen }) {
+function VideoComponentContent({ stream, muted, name, isLocal, isMuted, isVideoOff, isScreen, className }) {
     const videoRef = useRef(null);
     
-    // Configura el srcObject cuando el stream cambia
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
@@ -333,12 +325,12 @@ function VideoComponentContent({ stream, muted, name, isLocal, isMuted, isVideoO
 
     const statusIcon = isScreen ? <ScreenShare size={16} /> : (isMuted ? <MicOff size={16} /> : <Mic size={16} />);
     
-    // Si es mi pantalla compartida o una pantalla remota, siempre mostramos video.
+    // Si es pantalla compartida, siempre mostramos video. Si es cámara, depende de isVideoOff.
     const showVideo = !isVideoOff || isScreen;
 
     return (
-        <div className={`${styles.videoContainer} ${isLocal ? styles.localVideo : ''} ${isScreen ? styles.screenShareVideo : ''}`}>
-            {/* Elemento de video: oculto si es mi video off y no es pantalla */}
+        <div className={`${styles.videoContainer} ${className || ''} ${isLocal ? styles.localVideo : ''}`}>
+            
             <video 
                 ref={videoRef} 
                 className={styles.videoElement} 
@@ -349,14 +341,14 @@ function VideoComponentContent({ stream, muted, name, isLocal, isMuted, isVideoO
             />
 
             {/* Overlay si el video está apagado y no es pantalla compartida */}
-            {!showVideo && (
+            {!showVideo && !isScreen && (
                 <div className={styles.videoOffOverlay}>
                     <VideoOff size={32} />
                     <span className="mt-2 text-sm">{name}</span>
                 </div>
             )}
 
-            {/* Etiqueta de Nombre y Estado (siempre visible) */}
+            {/* Etiqueta de Nombre y Estado */}
             <div className={styles.nameTag}>
                 {statusIcon}
                 <span className={styles.nameLabel}>{name} {isLocal ? '(Yo)' : ''}</span>
@@ -365,7 +357,7 @@ function VideoComponentContent({ stream, muted, name, isLocal, isMuted, isVideoO
         </div>
     );
 }
-// React.memo aplicado a la función, no a una definición inline.
+// React.memo aplicado a la función.
 const VideoComponent = React.memo(VideoComponentContent);
 
 
@@ -375,14 +367,14 @@ const VideoGallery = () => {
         isMuted, isVideoOff, currentUserName 
     } = useWebRTC();
     
-    // Lógica para generar la lista de streams (estable y optimizada)
-    const uniqueStreams = useMemo(() => {
-        const streams = [];
+    // Lógica para generar la lista de streams, separando el principal
+    const { mainStream, secondaryStreams } = useMemo(() => {
         const localStatus = roomUsers[currentUserId] || { isMuted, isVideoOff, isSharingScreen: !!myScreenStream };
+        const allStreams = [];
 
         // 1. Stream propio (cámara/micrófono)
         if (myStream) {
-            streams.push({
+            allStreams.push({
                 id: currentUserId,
                 name: currentUserName,
                 stream: myStream,
@@ -390,19 +382,21 @@ const VideoGallery = () => {
                 isMuted: localStatus.isMuted,
                 isVideoOff: localStatus.isVideoOff,
                 isScreen: false,
+                isCamera: true,
             });
         }
 
-        // 2. Stream de mi pantalla compartida
+        // 2. Stream de mi pantalla compartida (si existe)
         if (myScreenStream) {
-            streams.unshift({ // Prioridad alta
+            allStreams.push({ 
                 id: `${currentUserId}-screen`,
-                name: `${currentUserName} (Pantalla)`,
+                name: `${currentUserName} (Mi Pantalla)`,
                 stream: myScreenStream,
                 isLocal: true,
                 isMuted: false,
                 isVideoOff: false,
                 isScreen: true,
+                isCamera: false,
             });
         }
 
@@ -410,9 +404,9 @@ const VideoGallery = () => {
         Object.entries(peers).forEach(([id, peerData]) => {
             const userData = roomUsers[id] || {};
             const isPeerScreen = userData.isSharingScreen || false;
-
+            
             if (peerData.stream) {
-                streams.push({
+                allStreams.push({
                     id: id,
                     name: userData.name || 'Usuario Remoto',
                     stream: peerData.stream,
@@ -420,37 +414,74 @@ const VideoGallery = () => {
                     isMuted: userData.isMuted || false,
                     isVideoOff: userData.isVideoOff || false,
                     isScreen: isPeerScreen,
+                    isCamera: !isPeerScreen,
                 });
             }
         });
         
-        // Ordenar: primero la pantalla compartida (sea local o remota), luego mi propio video.
-        streams.sort((a, b) => {
-            if (a.isScreen && !b.isScreen) return -1;
-            if (!a.isScreen && b.isScreen) return 1;
-            if (a.isLocal && !b.isLocal) return -1;
-            return 0;
-        });
+        let main = null;
+        let secondary = [];
 
-        return streams;
+        // Prioridad del Main Stream: 1. Cualquier pantalla compartida (la última que encuentre para ser la más reciente)
+        const screenStream = allStreams.reverse().find(s => s.isScreen);
+        
+        if (screenStream) {
+            main = screenStream;
+            // Todos los demás streams (incluyendo cámaras y otras pantallas, aunque solo una será la grande)
+            secondary = allStreams.filter(s => s.id !== main.id && s.isCamera);
+        } else {
+            // Si no hay pantalla compartida, el stream principal es mi propia cámara (si existe)
+            main = allStreams.find(s => s.id === currentUserId);
+            // El resto son cámaras secundarias
+            secondary = allStreams.filter(s => s.id !== currentUserId && s.isCamera);
+        }
+        
+        // Desestructuración limpia y segura
+        return { mainStream: main, secondaryStreams: secondary.filter(s => s && s.isCamera) };
+
     }, [myStream, myScreenStream, peers, roomUsers, currentUserId, isMuted, isVideoOff, currentUserName]);
 
 
     return (
-        // Usamos Grid nativo en CSS para el layout responsive y ligero
-        <div className={styles.videoGallery}>
-            {uniqueStreams.map(data => (
-                <VideoComponent 
-                    key={data.id}
-                    stream={data.stream}
-                    muted={data.isLocal} 
-                    name={data.name}
-                    isLocal={data.isLocal}
-                    isMuted={data.isMuted}
-                    isVideoOff={data.isVideoOff}
-                    isScreen={data.isScreen}
-                />
-            ))}
+        <div className={styles.screenFocusLayout}>
+            {/* 1. AREA PRINCIPAL: Pantalla Compartida o Mi Video (si no hay pantalla) */}
+            <div className={styles.mainStreamArea}>
+                {mainStream ? (
+                    <VideoComponent 
+                        key={mainStream.id}
+                        stream={mainStream.stream}
+                        muted={mainStream.isLocal && !mainStream.isScreen} // Mute only my camera, not my screen audio
+                        name={mainStream.name}
+                        isLocal={mainStream.isLocal}
+                        isMuted={mainStream.isMuted}
+                        isVideoOff={mainStream.isVideoOff}
+                        isScreen={mainStream.isScreen}
+                        className={styles.mainScreenVideoContainer} 
+                    />
+                ) : (
+                    <div className={styles.videoOffOverlay} style={{ width: '100%', height: '100%' }}>
+                        <Video size={48} />
+                        <span className="mt-4 text-lg">Esperando contenido o usuarios...</span>
+                    </div>
+                )}
+            </div>
+
+            {/* 2. AREA SECUNDARIA: Cámaras pequeñas (Feeds) */}
+            <div className={styles.cameraFeedsArea}>
+                {secondaryStreams.map(data => (
+                    <VideoComponent 
+                        key={data.id}
+                        stream={data.stream}
+                        muted={data.isLocal} 
+                        name={data.name}
+                        isLocal={data.isLocal}
+                        isMuted={data.isMuted}
+                        isVideoOff={data.isVideoOff}
+                        isScreen={data.isScreen}
+                        className={styles.smallCameraVideoContainer} 
+                    />
+                ))}
+            </div>
         </div>
     );
 };
@@ -507,10 +538,10 @@ const ControlPanel = ({ onLeave, isControlsOpen, setIsControlsOpen, isChatOpen, 
                             <span className={styles.controlLabel}>{isVideoOff ? 'Vid ON' : 'Vid OFF'}</span>
                         </button>
                         
-                        {/* Botón Compartir Pantalla */}
+                        {/* Botón Compartir Pantalla (Prioridad para ti y tu novia) */}
                         <button 
                             onClick={toggleScreenShare} 
-                            className={`${styles.controlButton} ${isSharingScreen ? styles.primaryControl : styles.secondaryControl}`}
+                            className={`${styles.controlButton} ${isSharingScreen ? styles.primaryControl : styles.shareControl}`}
                             aria-label={isSharingScreen ? "Detener compartir pantalla" : "Compartir pantalla"}
                         >
                             <ScreenShare size={24} />
@@ -573,7 +604,6 @@ const ChatPanel = ({ isChatOpen, setIsChatOpen }) => {
 
     useEffect(() => {
         if (isChatOpen) {
-            // Desplazamiento suave para el chat
             chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
         }
     }, [chatMessages, isChatOpen]);
@@ -582,7 +612,7 @@ const ChatPanel = ({ isChatOpen, setIsChatOpen }) => {
 
     return (
         <div className={`${styles.chatPanel} ${isChatOpen ? styles.chatPanelOpen : ''}`}>
-            {/* Cabecera, siempre renderizada para el botón de cerrar */}
+            
             <div className={styles.chatHeader}>
                 <h3 className={styles.chatTitle}>
                     <MessageSquare size={16} /> Chat ({activeUsersCount})
@@ -592,11 +622,11 @@ const ChatPanel = ({ isChatOpen, setIsChatOpen }) => {
                     className={styles.chatCloseButton}
                     aria-label="Cerrar chat"
                 >
-                    <X size={16} />
+                    <ArrowLeft size={16} className="md:hidden" />
+                    <X size={16} className="hidden md:block" />
                 </button>
             </div>
             
-            {/* Cuerpo del chat y formulario (Solo se renderizan si está abierto) */}
             {isChatOpen && (
                 <>
                     <div className={styles.chatMessages}>
@@ -642,11 +672,9 @@ const Lobby = ({ onJoin }) => {
     const [devices, setDevices] = useState({ audioIn: [], videoIn: [], audioOut: [] });
     const [isLoading, setIsLoading] = useState(true);
 
-    // Obtener dispositivos de forma ultra-sencilla
     useEffect(() => {
         const getDevices = async () => {
             try {
-                // Pre-solicitar permisos (es necesario para que enumerate los nombres)
                 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 const deviceList = await navigator.mediaDevices.enumerateDevices();
 
@@ -656,7 +684,6 @@ const Lobby = ({ onJoin }) => {
 
                 setDevices({ audioIn, videoIn, audioOut });
                 
-                // Establecer valores predeterminados (el primero de cada tipo)
                 if (audioIn.length > 0) setAudioDeviceId(audioIn[0].deviceId);
                 if (videoIn.length > 0) setVideoDeviceId(videoIn[0].deviceId);
                 if (audioOut.length > 0) setAudioOutputDeviceId(audioOut[0].deviceId);
@@ -697,8 +724,8 @@ const Lobby = ({ onJoin }) => {
     return (
         <div className={styles.lobbyContainer}>
             <div className={styles.lobbyCard}>
-                <h1 className={styles.lobbyTitle}>Ultra-Meet: Ligera</h1>
-                <p className={styles.lobbySubtitle}>La videollamada más rápida y optimizada.</p>
+                <h1 className={styles.lobbyTitle}>Ultra-Meet: Streaming Ligero</h1>
+                <p className={styles.lobbySubtitle}>Optimizado para dispositivos con recursos limitados.</p>
                 <form onSubmit={handleSubmit} className={styles.lobbyForm}>
                     <div className={styles.formGroup}>
                         <label className={styles.formLabel} htmlFor="name">Tu Nombre</label>
@@ -708,7 +735,7 @@ const Lobby = ({ onJoin }) => {
                             value={name} 
                             onChange={(e) => setName(e.target.value)} 
                             className={styles.formInput} 
-                            placeholder="Nombre Simple"
+                            placeholder="Ej: David o [tu nombre]"
                             required
                         />
                     </div>
@@ -759,8 +786,7 @@ export default function App() {
     const [isControlsOpen, setIsControlsOpen] = useState(false); 
     const [isChatOpen, setIsChatOpen] = useState(false); 
     
-    // Usamos useMemo para garantizar que webRTCLogic solo cambie si el roomId cambia
-    const webRTCLogic = useWebRTCLogic('main-room'); 
+    const webRTCLogic = useWebRTCLogic('screen-focus-room'); 
 
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         setUserName(name);
@@ -808,13 +834,12 @@ export default function App() {
                     <div className={styles.appContainer}>
                         <header className={styles.appHeader}>
                             <h1 className={styles.roomTitle}>
-                                <Users size={16} className="mr-2" /> Ultra-Meet (Sala Simple)
+                                <Users size={16} className="mr-2" /> Ultra-Meet (Foco en Streaming)
                             </h1>
                         </header>
                         
                         <main className={styles.mainContent}>
                             <VideoGallery />
-                            {/* Renderizar el ChatPanel siempre, pero que solo renderice el contenido si está abierto */}
                             <ChatPanel isChatOpen={isChatOpen} setIsChatOpen={setIsChatOpen} />
                         </main>
 
