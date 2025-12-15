@@ -3,7 +3,7 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogI
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import 'react-toastify/dist/React-Toastify.css';
 import styles from './App.module.css';
 
 // --- CONTEXTO PARA WEBRTC ---
@@ -43,9 +43,15 @@ const useWebRTCLogic = (roomId) => {
                 audio: { deviceId: audioDeviceId ? { exact: audioDeviceId } : true }
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            // Establecer el estado inicial de mute/video basado en si la cámara/micrófono se obtuvo
+            const audioTrack = stream.getAudioTracks()[0];
+            const videoTrack = stream.getVideoTracks()[0];
+
+            setIsMuted(audioTrack ? !audioTrack.enabled : false);
+            setIsVideoOff(videoTrack ? !videoTrack.enabled : false);
+
             setMyStream(stream);
-            setIsMuted(!stream.getAudioTracks()[0].enabled);
-            setIsVideoOff(!stream.getVideoTracks()[0].enabled);
             return stream;
         } catch (error) {
             console.error("Error al obtener el stream:", error);
@@ -63,11 +69,11 @@ const useWebRTCLogic = (roomId) => {
 
         socketRef.current = io(SERVER_URL);
         
-        // CORRECCIÓN: Se cambió 'path: "/peerjs"' a 'path: "/"' para evitar la doble ruta (/peerjs/peerjs) 
-        // que causaba el error 404 al intentar conectar con PeerJS.
+        // CORRECCIÓN CLAVE: El PeerServer está montado en /peerjs y el ExpressPeerServer tiene path: '/myapp'.
+        // La ruta completa debe ser '/peerjs/myapp'.
         myPeerRef.current = new Peer(undefined, { 
             host: API_HOST, 
-            path: '/', 
+            path: '/peerjs/myapp', // <--- RUTA CORREGIDA
             secure: true, 
             port: 443 
         });
@@ -76,7 +82,12 @@ const useWebRTCLogic = (roomId) => {
         myPeerRef.current.on('open', (id) => {
             currentPeerIdRef.current = id;
             console.log('Mi ID de Peer es:', id);
-            socketRef.current.emit('join-room', roomId, id, userName);
+            // Al unirse, enviar el estado inicial de mute/video
+            socketRef.current.emit('join-room', roomId, id, userName, { 
+                isMuted: isMuted,
+                isVideoOff: isVideoOff,
+                isSharingScreen: false
+            });
         });
 
         // Al recibir una llamada de un nuevo usuario
@@ -101,20 +112,25 @@ const useWebRTCLogic = (roomId) => {
 
         // --- MANEJO DE SOCKET.IO ---
 
-        // Nuevo usuario se une a la sala
+        // Nuevo usuario se une a la sala (solo notifica)
         socketRef.current.on('user-connected', (userId, userName) => {
             toast.info(`${userName} se ha unido a la sala.`);
-            connectToNewUser(userId, userName, stream);
+            // No hacemos la llamada aquí, ya que 'room-state' se encargará.
         });
 
-        // Estado inicial de la sala
+        // Estado inicial de la sala y llamadas a usuarios existentes
         socketRef.current.on('room-state', (users) => {
             setRoomUsers(users);
-            // Si el stream ya existe, llama a todos los usuarios
+            console.log('Estado de la sala recibido:', users);
+            
+            // Llama a todos los usuarios, excepto a mí mismo, solo si el stream está listo
             if (stream) {
                 Object.entries(users).forEach(([id, user]) => {
                     if (id !== currentPeerIdRef.current) {
-                        connectToNewUser(id, user.name, stream);
+                        // Comprobar si ya existe una conexión para evitar llamadas duplicadas
+                        if (!peerConnections.current[id]) {
+                            connectToNewUser(id, user.name, stream);
+                        }
                     }
                 });
             }
@@ -142,18 +158,24 @@ const useWebRTCLogic = (roomId) => {
                 delete newPeers[userId];
                 return newPeers;
             });
+            // Actualiza la lista de usuarios de la sala
+            setRoomUsers(prevUsers => {
+                const newUsers = { ...prevUsers };
+                delete newUsers[userId];
+                return newUsers;
+            });
         });
 
         // Manejo del chat
         socketRef.current.on('chat-message', (message) => {
             setChatMessages(prevMessages => [...prevMessages, message]);
         });
-    }, [roomId]);
+    }, [roomId, isMuted, isVideoOff]); // Dependencias: isMuted y isVideoOff para enviar el estado inicial
 
 
     // Función para llamar a un nuevo usuario (sin cambios)
     const connectToNewUser = (userId, userName, stream) => {
-        if (!myPeerRef.current) return;
+        if (!myPeerRef.current || !stream) return;
         console.log(`Llamando al nuevo usuario: ${userName} (${userId})`);
 
         const call = myPeerRef.current.call(userId, stream);
@@ -348,15 +370,18 @@ const VideoGallery = () => {
 
     // 1. Agregar el stream propio
     if (myStream) {
+        // Obtenemos el estado más reciente del usuario local
+        const localStatus = roomUsers[currentUserId] || { isMuted, isVideoOff, isSharingScreen: !!myScreenStream };
+
         allStreams.push({
             id: currentUserId,
             name: currentUserName,
             stream: myStream,
             isLocal: true,
-            isMuted: isMuted,
-            isVideoOff: isVideoOff,
+            isMuted: localStatus.isMuted,
+            isVideoOff: localStatus.isVideoOff,
             isScreen: false,
-            isSharingScreen: false
+            isSharingScreen: localStatus.isSharingScreen
         });
     }
 
@@ -378,22 +403,12 @@ const VideoGallery = () => {
     Object.entries(peers).forEach(([id, peerData]) => {
         const userData = roomUsers[id] || {};
         const isSharingScreen = userData.isSharingScreen || false;
+        
+        if (peerData.stream) {
+            // El stream de un peer es su cámara O su pantalla.
+            // Si está compartiendo, tratamos su stream como pantalla remota.
+            const isPeerScreen = isSharingScreen;
 
-        // Si el usuario está compartiendo, su stream normal debe ir al final
-        // Esto es un workaround simple; en producción se debería manejar un stream separado para la pantalla remota
-        if (isSharingScreen && peerData.stream) {
-             // Si el par está compartiendo, su stream es la pantalla
-            allStreams.unshift({
-                id: `${id}-remote-screen`,
-                name: `${userData.name} (Pantalla)`,
-                stream: peerData.stream,
-                isLocal: false,
-                isMuted: userData.isMuted || false,
-                isVideoOff: userData.isVideoOff || false,
-                isScreen: true,
-                isSharingScreen: true
-            });
-        } else if (peerData.stream) {
             allStreams.push({
                 id: id,
                 name: userData.name || id,
@@ -401,18 +416,18 @@ const VideoGallery = () => {
                 isLocal: false,
                 isMuted: userData.isMuted || false,
                 isVideoOff: userData.isVideoOff || false,
-                isScreen: false,
-                isSharingScreen: false
+                isScreen: isPeerScreen,
+                isSharingScreen: isSharingScreen
             });
         }
     });
 
-    // Filtra las entradas de pantalla remota duplicadas
+    // Filtra para mostrar solo streams únicos (puede haber duplicados si la lógica no es perfecta)
     const uniqueStreams = allStreams.filter((stream, index, self) => 
         index === self.findIndex((t) => t.id === stream.id)
     );
 
-    // Si hay una pantalla compartida, ponerla de primero
+    // Si hay una pantalla compartida (local o remota), ponerla de primero
     uniqueStreams.sort((a, b) => {
         if (a.isScreen && !b.isScreen) return -1;
         if (!a.isScreen && b.isScreen) return 1;
