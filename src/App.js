@@ -16,7 +16,7 @@ const useWebRTC = () => useContext(WebRTCContext);
 /* ================= HOOK PRINCIPAL ================= */
 const useWebRTCLogic = (roomId) => {
   // Configuración inicial (Ajusta tu URL real)
-  const API_URL = "http://localhost:3000"; 
+  const API_URL = "https://meet-clone-v0ov.onrender.com"; 
   const socketRef = useRef();
   const peerRef = useRef();
   const connections = useRef({});
