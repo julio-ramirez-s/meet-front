@@ -370,8 +370,11 @@ const useWebRTCLogic = (roomId) => {
                 // Limpiar también las conexiones PeerJS aquí
                 Object.keys(peerConnections.current).forEach(key => {
                     if (key.endsWith('_screen')) {
-                        peerConnections.current[key].current.close();
-                        delete peerConnections.current[key];
+                        // FIX: Corregido el acceso incorrecto a `current`
+                        if (peerConnections.current[key]) {
+                            peerConnections.current[key].close();
+                            delete peerConnections.current[key];
+                        }
                     }
                 });
             };
@@ -382,9 +385,13 @@ const useWebRTCLogic = (roomId) => {
             Object.keys(peerConnections.current).forEach(peerKey => {
                 // Solo conectar a peers que no sean mi propia conexión de pantalla compartida
                 if (!peerKey.endsWith('_screen')) {
-                    const peerId = peerKey;
-                    if (peerId === myPeerRef.current?.id) return; // No llamarme a mí mismo
-                    connectToNewUser(peerId, peers[peerId]?.userName, screenStream, currentUserNameRef.current, true);
+                    const remotePeerId = peerKey; 
+                    
+                    // Buscar el nombre del usuario remoto para pasarlo a connectToNewUser
+                    const remoteUser = Object.values(roomUsers).find(u => u.userId === remotePeerId);
+                    const remoteUserName = remoteUser ? remoteUser.userName : 'Usuario Remoto';
+
+                    connectToNewUser(remotePeerId, remoteUserName, screenStream, currentUserNameRef.current, true);
                 }
             });
 
@@ -408,20 +415,40 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
     const videoRef = useRef();
 
     useEffect(() => {
-        if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+        if (video && stream) {
+            video.srcObject = stream;
 
-            // FIX: Intentar reproducir el video de forma explícita.
-            // Esto es crucial para navegadores móviles (iOS/Safari) que a menudo bloquean autoPlay.
-            videoRef.current.play().catch(error => {
-                // NotAllowedError (si el navegador no lo permite sin interacción) es esperado, 
-                // pero al menos lo intentamos.
-                console.warn(`[VideoPlayer] Error al intentar play en el móvil: ${error.name}`, error);
-            });
-            // FIN FIX
+            // Función robusta para intentar la reproducción.
+            const attemptPlay = () => {
+                const playPromise = video.play();
 
-            if (selectedAudioOutput && videoRef.current.setSinkId) {
-                videoRef.current.setSinkId(selectedAudioOutput)
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Reproducción iniciada correctamente
+                        console.log(`[VideoPlayer] Reproducción exitosa para ${userName}.`);
+                    }).catch(error => {
+                        // Esto a menudo ocurre en móviles (iOS/Safari) si no hay interacción previa.
+                        console.warn(`[VideoPlayer] Falló el intento de play para ${userName}: ${error.name}`, error);
+                    });
+                }
+            };
+            
+            // 1. Intentar reproducir inmediatamente después de asignar el srcObject
+            attemptPlay(); 
+
+            // 2. Escuchar el evento 'loadedmetadata' para reintentar una vez que el stream está completamente cargado.
+            // Esto es crucial para streams remotos (como la pantalla compartida).
+            video.addEventListener('loadedmetadata', attemptPlay);
+            
+            // Limpieza del listener al desmontar o cambiar el stream
+            return () => {
+                video.removeEventListener('loadedmetadata', attemptPlay);
+            };
+
+            // Lógica para la salida de audio
+            if (selectedAudioOutput && video.setSinkId) {
+                video.setSinkId(selectedAudioOutput)
                     .then(() => {
                         console.log(`Audio output set to device ID: ${selectedAudioOutput}`);
                     })
@@ -430,13 +457,13 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
                     });
             }
         }
-    }, [stream, selectedAudioOutput]);
+    }, [stream, selectedAudioOutput, userName]); // Añadido userName a deps para mejor logging
 
     return (
         <div className={styles.videoWrapper}>
             <video
                 ref={videoRef}
-                playsInline // Ya estaba, es correcto.
+                playsInline // Permite la reproducción dentro de la página en iOS.
                 autoPlay
                 muted={muted}
                 className={`${styles.videoElement} ${isLocal && !isScreenShare ? styles.localVideo : ''}`}
@@ -520,7 +547,7 @@ const Controls = ({ onToggleChat, onLeave }) => {
     const emojis = [
         '👍', '👎', '👏', '🙌', '🤝', '🙏', '✋', '🖐️', '👌', '🤌', '🤏', '✌️', '🤘', '🖖', '👋',
         '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '☺️',
-        '🥲', '😋', '', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
+        '🥲', '😋', '😶', '😜', '😝', '🤑', '🤗', '🤭', '🤫', '🤨', '🤔', '🤐', '😐', '😑', '😶', '😏', '😒', '😬', '😮‍💨',
         '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎',
         '😭', '😢', '😤', '😠', '😡', '😳', '🥺', '😱', '😨', '😥', '😓', '😞', '😟', '😣', '😫', '🥱',
         '💔', '💕', '💞', '💗', '💖', '💘', '🎉',
