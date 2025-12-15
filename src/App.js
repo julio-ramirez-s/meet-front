@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon } from 'lucide-react'; // Flame ha sido eliminado
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon } from 'lucide-react'; 
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { ToastContainer, toast } from 'react-toastify';
@@ -18,7 +18,7 @@ const useWebRTCLogic = (roomId) => {
     const [chatMessages, setChatMessages] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const [appTheme, setAppTheme] = useState('dark'); // Nuevo estado para el tema de la aplicación
+    const [appTheme, setAppTheme] = useState('dark'); 
 
     const [roomUsers, setRoomUsers] = useState({});
 
@@ -395,9 +395,9 @@ const useWebRTCLogic = (roomId) => {
     };
 
     return {
-        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, // appTheme incluido
+        myStream, myScreenStream, peers, chatMessages, isMuted, isVideoOff, appTheme, 
         initializeStream, connect, cleanup,
-        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, // sendThemeChange incluido
+        toggleMute, toggleVideo, sendMessage, shareScreen, sendReaction, sendThemeChange, 
         currentUserName: currentUserNameRef.current
     };
 };
@@ -410,6 +410,15 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
+
+            // FIX: Intentar reproducir el video de forma explícita.
+            // Esto es crucial para navegadores móviles (iOS/Safari) que a menudo bloquean autoPlay.
+            videoRef.current.play().catch(error => {
+                // NotAllowedError (si el navegador no lo permite sin interacción) es esperado, 
+                // pero al menos lo intentamos.
+                console.warn(`[VideoPlayer] Error al intentar play en el móvil: ${error.name}`, error);
+            });
+            // FIN FIX
 
             if (selectedAudioOutput && videoRef.current.setSinkId) {
                 videoRef.current.setSinkId(selectedAudioOutput)
@@ -427,7 +436,7 @@ const VideoPlayer = ({ stream, userName, muted = false, isScreenShare = false, i
         <div className={styles.videoWrapper}>
             <video
                 ref={videoRef}
-                playsInline
+                playsInline // Ya estaba, es correcto.
                 autoPlay
                 muted={muted}
                 className={`${styles.videoElement} ${isLocal && !isScreenShare ? styles.localVideo : ''}`}
@@ -496,16 +505,16 @@ const VideoGrid = () => {
 };
 
 
-const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme ni appTheme directamente
+const Controls = ({ onToggleChat, onLeave }) => { 
     const { 
-        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, // sendThemeChange del contexto
-        isMuted, isVideoOff, myScreenStream, peers, appTheme // appTheme del contexto
+        toggleMute, toggleVideo, shareScreen, sendReaction, sendThemeChange, 
+        isMuted, isVideoOff, myScreenStream, peers, appTheme 
     } = useWebRTC();
     
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const emojiPickerRef = useRef(null);
     
-    // Emojis (Ahora no son condicionales, ya que se eliminó 'hot')
+    // Emojis 
     const commonEmojis = ['👍', '😆', '❤️', '🎉', '🥺'];
 
     const emojis = [
@@ -607,8 +616,8 @@ const Controls = ({ onToggleChat, onLeave }) => { // Ya no se recibe cycleTheme 
     );
 };
 
-const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contexto
-    const { chatMessages, sendMessage, currentUserName } = useWebRTC(); // Ya no se usa appTheme para el título
+const ChatSidebar = ({ isOpen, onClose }) => { 
+    const { chatMessages, sendMessage, currentUserName } = useWebRTC(); 
     const [message, setMessage] = useState('');
     const messagesEndRef = useRef(null);
 
@@ -668,21 +677,21 @@ const ChatSidebar = ({ isOpen, onClose }) => { // appTheme se obtiene del contex
     );
 };
 
-const CallRoom = ({ onLeave }) => { // Ya no se recibe cycleTheme ni appTheme como prop
+const CallRoom = ({ onLeave }) => { 
     const [isChatOpen, setIsChatOpen] = useState(false);
-    const { appTheme } = useWebRTC(); // Obtener appTheme del contexto
+    const { appTheme } = useWebRTC(); 
     return (
-        <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> {/* Aplicar clase de tema */}
+        <div className={`${styles.mainContainer} ${styles[appTheme + 'Mode']}`}> 
             <main className={styles.mainContent}>
                 <VideoGrid />
-                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> {/* No se pasan cycleTheme ni appTheme */}
+                <Controls onToggleChat={() => setIsChatOpen(o => !o)} onLeave={onLeave} /> 
             </main>
-            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> {/* No se pasa appTheme */}
+            <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} /> 
         </div>
     );
 };
 
-const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
+const Lobby = ({ onJoin }) => { 
     const [userName, setUserName] = useState('');
     const [videoDevices, setVideoDevices] = useState([]);
     const [audioDevices, setAudioDevices] = useState([]);
@@ -730,7 +739,7 @@ const Lobby = ({ onJoin }) => { // Ya no se recibe appTheme como prop
     const lobbyTitleText = 'Unirse a Mundi-Link'; 
 
     return (
-        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> {/* El lobby usa el tema oscuro por defecto */}
+        <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> 
             <div className={styles.lobbyFormWrapper}>
                 <div className={styles.lobbyCard}>
                     <img src="logo512.png" alt="Mundi-Link Logo" className={styles.lobbyLogo} />
@@ -815,9 +824,6 @@ export default function App() {
         setSelectedAudioOutput('');
     };
 
-    // La función cycleTheme ya no es necesaria aquí, la lógica de cambio de tema está en useWebRTCLogic
-    // y se activa directamente desde los botones de Control a través de sendThemeChange.
-
     useEffect(() => {
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
         return () => {
@@ -826,11 +832,11 @@ export default function App() {
     }, [webRTCLogic]);
 
     if (!isJoined) {
-        return <Lobby onJoin={handleJoin} />; // Ya no se pasa appTheme al Lobby
+        return <Lobby onJoin={handleJoin} />; 
     } else {
         return (
-            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}> {/* Se pasa todo webRTCLogic */}
-                <CallRoom onLeave={handleLeave} /> {/* Ya no se pasan cycleTheme ni appTheme */}
+            <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput }}> 
+                <CallRoom onLeave={handleLeave} /> 
                 <ToastContainer />
             </WebRTCContext.Provider>
         );
