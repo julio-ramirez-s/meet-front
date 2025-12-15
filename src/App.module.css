@@ -1,296 +1,507 @@
 /* --------------------------------------------------------------------------------
+
 CSS NATIVO MINIMALISTA PARA MÁXIMA VELOCIDAD Y COMPATIBILIDAD
-Objetivo: Reducir el tamaño del archivo y la carga de la GPU.
+Objetivo: Layout de Foco en Pantalla Compartida
 -------------------------------------------------------------------------------- */
 
-/* VARIABLES DE COLOR */
+/* Variables de Color Simples */
 :root {
-  --primary-color: #3b82f6;
-  --background-color: #0f172a;
-  --surface-color: #1e293b;
-  --text-color: #f8fafc;
-  --text-muted-color: #94a3b8;
-  --danger-color: #ef4444;
-  --success-color: #22c55e;
+/* Tema Oscuro (DEFAULT) */
+--primary-color: #3b82f6; /* Azul */
+--background-color: #0f172a; /* Oscuro */
+--surface-color: #1e293b; /* Superficie */
+--text-color: #f8fafc; /* Claro */
+--text-muted-color: #94a3b8; /* Gris */
+--danger-color: #ef4444; /* Rojo */
+--success-color: #22c55e; /* Verde Mic/Vid */
+--share-color: #f97316; /* Naranja Compartir */
 }
 
 /* Tema Claro */
 .lightMode {
-  --primary-color: #007bff;
-  --background-color: #f0f2f5;
-  --surface-color: #ffffff;
-  --text-color: #212529;
-  --text-muted-color: #6c757d;
-  --danger-color: #dc3545;
-  --success-color: #28a745;
+--primary-color: #007bff;
+--background-color: #f0f2f5;
+--surface-color: #ffffff;
+--text-color: #212529;
+--text-muted-color: #6c757d;
+--danger-color: #dc3545;
+--success-color: #28a745;
+--share-color: #ff8c00;
 }
 
-/* RESET / BASE */
+/* RESET/BASE */
+/* Se corrigió el selector universal que estaba incompleto ({ en lugar de * {) */
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+box-sizing: border-box;
+margin: 0;
+padding: 0;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  transition: background-color 0.3s, color 0.3s;
+html, body, #root {
+height: 100%;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+background-color: var(--background-color);
+color: var(--text-color);
+transition: background-color 0.3s, color 0.3s;
 }
 
 .globalWrapper {
-  height: 100%;
+height: 100%;
 }
 
-/* --------------------------------------------------------------------------------
-NOTIFICACIÓN SIMPLE
--------------------------------------------------------------------------------- */
 .notificationBox {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background-color: var(--surface-color);
-  color: var(--text-color);
-  padding: 10px 15px;
-  border-radius: 6px;
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out;
-  z-index: 1000;
-  max-width: 90%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+position: fixed;
+top: 10px;
+right: 10px;
+background-color: var(--surface-color);
+color: var(--text-color);
+padding: 10px 15px;
+border-radius: 6px;
+opacity: 0;
+transition: opacity 0.5s ease-in-out;
+z-index: 1000;
+max-width: 90%;
+box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* --------------------------------------------------------------------------------
+
 LOBBY / LOGIN
+(Se mantienen los estilos del Lobby)
 -------------------------------------------------------------------------------- */
 .lobbyContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 20px;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+padding: 20px;
 }
 
 .lobbyCard {
-  background-color: var(--surface-color);
-  padding: 30px;
-  border-radius: 10px;
-  max-width: 400px;
-  width: 100%;
+background-color: var(--surface-color);
+padding: 30px;
+border-radius: 10px;
+max-width: 400px;
+width: 100%;
+box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 .lobbyTitle {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 20px;
-  color: var(--primary-color);
-  text-align: center;
+font-size: 1.5rem;
+font-weight: 700;
+margin-bottom: 5px;
+color: var(--primary-color);
+text-align: center;
+}
+
+.lobbySubtitle {
+font-size: 0.9rem;
+color: var(--text-muted-color);
+text-align: center;
+margin-bottom: 20px;
 }
 
 .lobbyForm {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+display: flex;
+flex-direction: column;
+gap: 15px;
 }
 
 .formGroup {
-  display: flex;
-  flex-direction: column;
+display: flex;
+flex-direction: column;
 }
 
 .formLabel {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-muted-color);
-  margin-bottom: 5px;
+font-size: 0.9rem;
+font-weight: 600;
+color: var(--text-muted-color);
+margin-bottom: 5px;
 }
 
-.formInput,
-.formSelect {
-  width: 100%;
-  padding: 10px;
-  background-color: var(--background-color);
-  border: 1px solid var(--text-muted-color);
-  border-radius: 6px;
-  color: var(--text-color);
-  outline: none;
-}
-
-.formInput:focus,
-.formSelect:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 1px var(--primary-color);
+.formInput, .formSelect {
+width: 100%;
+padding: 10px;
+background-color: var(--background-color);
+border: 1px solid var(--text-muted-color);
+border-radius: 6px;
+color: var(--text-color);
+outline: none;
 }
 
 .joinButton {
-  padding: 12px;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 12px;
+background-color: var(--primary-color);
+color: white;
+border: none;
+border-radius: 6px;
+cursor: pointer;
+font-size: 1rem;
+font-weight: 600;
+margin-top: 10px;
+transition: background-color 0.2s;
 }
 
 /* --------------------------------------------------------------------------------
-APLICACIÓN PRINCIPAL
+
+APLICACIÓN PRINCIPAL (Sala de Reunión)
 -------------------------------------------------------------------------------- */
+/* Se corrigió el comentario multilínea que estaba mal cerrado */
 .appContainer {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: 100vh;
-  padding-bottom: 80px;
-  overflow: hidden;
+display: grid;
+grid-template-rows: auto 1fr; /* Header, Main Content */
+height: 100vh;
+padding-bottom: 80px; /* Espacio para la barra de controles inferior */
+overflow: hidden;
 }
 
 .appHeader {
-  padding: 10px 20px;
-  background-color: var(--surface-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--text-muted-color);
+padding: 10px 20px;
+background-color: var(--surface-color);
+display: flex;
+justify-content: space-between;
+align-items: center;
+border-bottom: 1px solid var(--text-muted-color);
 }
 
+.roomTitle {
+font-size: 1.1rem;
+font-weight: 600;
+display: flex;
+align-items: center;
+color: var(--text-color);
+}
+
+/* MAIN CONTENT (Video Gallery + Chat) */
 .mainContent {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
+display: flex;
+flex: 1;
+overflow: hidden;
 }
 
 /* --------------------------------------------------------------------------------
-GALERÍA DE VIDEO
+
+LAYOUT DE FOCO EN PANTALLA COMPARTIDA
 -------------------------------------------------------------------------------- */
-.videoGallery {
-  flex-grow: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 10px;
-  padding: 10px;
-  background-color: var(--background-color);
-  overflow-y: auto;
-  align-items: center;
+.screenFocusLayout {
+flex-grow: 1;
+display: grid;
+gap: 10px;
+padding: 10px;
+background-color: var(--background-color);
+overflow: hidden;
+/* Default a MÓVIL (Vertical stack) */
+grid-template-columns: 1fr;
+grid-template-rows: 1fr auto; /* Main stream toma 1fr, cámaras toman auto (altura) */
 }
 
+/* DESKTOP/HORIZONTAL (Screen on Left, Cameras on Right) */
+@media (min-width: 768px) {
+.screenFocusLayout {
+grid-template-columns: 3fr 1fr; /* 75% para pantalla, 25% para cámaras */
+grid-template-rows: 1fr;
+}
+.mainStreamArea {
+grid-column: 1 / 2; /* Columna Izquierda */
+}
+.cameraFeedsArea {
+grid-column: 2 / 3; /* Columna Derecha */
+max-height: 100%;
+overflow-y: auto;
+flex-direction: column; /* Vertical stack en desktop */
+}
+}
+
+/* AREA PRINCIPAL (Main Screen) */
+.mainStreamArea {
+overflow: hidden;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 200px; /* Mínimo en móvil */
+}
+
+.mainScreenVideoContainer {
+width: 100%;
+height: 100%;
+padding-bottom: 0 !important; /* Deshabilita el truco de padding para altura dinámica */
+}
+
+.mainScreenVideoContainer .videoElement {
+object-fit: contain; /* Asegura que se vea todo el stream de pantalla */
+transform: none; /* No reflejar */
+}
+
+.mainScreenVideoContainer.localVideo .videoElement {
+/* Si la cámara se pone en grande, sí reflejarla */
+object-fit: cover;
+transform: scaleX(-1);
+}
+
+/* AREA SECUNDARIA (Cámaras pequeñas) */
+.cameraFeedsArea {
+display: flex;
+flex-direction: row; /* Horizontal scroll en móvil por defecto */
+gap: 8px;
+overflow-x: auto;
+overflow-y: hidden;
+padding: 5px 0;
+}
+
+/* Contenedor de video genérico */
 .videoContainer {
-  position: relative;
-  width: 100%;
-  padding-bottom: 56.25%;
-  background-color: var(--surface-color);
-  border-radius: 8px;
-  overflow: hidden;
+position: relative;
+background-color: var(--surface-color);
+border-radius: 8px;
+overflow: hidden;
 }
 
-.screenShareVideo {
-  grid-column: 1 / -1;
-  padding-bottom: 50%;
+/* Cámaras Pequeñas (Feeds) */
+.smallCameraVideoContainer {
+width: 150px; /* Ancho fijo para móvil */
+min-width: 150px;
+padding-bottom: 112.5%; /* 4:3 Aspect ratio para mejor uso del espacio */
+flex-shrink: 0;
 }
 
-.videoElement {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.smallCameraVideoContainer .videoElement {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+object-fit: cover;
 }
 
-.screenShareVideo .videoElement {
-  object-fit: contain;
-  transform: none;
-}
-
-/* Reflejo SOLO para cámara local */
+/* Reflejo para la cámara local SOLO en los feeds secundarios (para que el usuario se vea como en un espejo) */
 .localVideo .videoElement {
-  transform: scaleX(-1);
+transform: scaleX(-1);
+}
+
+/* En Desktop, las cámaras pequeñas se ajustan al 100% de la columna */
+@media (min-width: 768px) {
+.smallCameraVideoContainer {
+width: 100%;
+min-width: 100%;
+padding-bottom: 56.25%; /* 16:9 Aspect Ratio en el sidebar */
+}
+}
+
+.videoOffOverlay {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+display: flex;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+background-color: var(--surface-color);
+color: var(--text-muted-color);
+font-size: 1.2rem;
+}
+
+.nameTag {
+position: absolute;
+bottom: 5px;
+left: 5px;
+background-color: rgba(0, 0, 0, 0.6);
+color: white;
+padding: 4px 8px;
+border-radius: 4px;
+font-size: 0.75rem;
+display: flex;
+align-items: center;
+z-index: 10;
+}
+
+.nameLabel {
+margin-left: 5px;
+}
+
+.screenShareLabel {
+position: absolute;
+top: 5px;
+right: 5px;
+background-color: var(--share-color);
+color: white;
+padding: 3px 6px;
+border-radius: 4px;
+font-size: 0.7rem;
+font-weight: bold;
+z-index: 10;
 }
 
 /* --------------------------------------------------------------------------------
+
 BARRA DE CONTROLES
 -------------------------------------------------------------------------------- */
 .controlsBar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 500;
+position: fixed;
+bottom: 0;
+left: 0;
+right: 0;
+height: 80px;
+display: flex;
+justify-content: center;
+align-items: center;
+z-index: 500;
+}
+
+.mainFloatingButton {
+position: absolute;
+bottom: 15px;
+background-color: var(--primary-color) !important;
+color: white !important;
+}
+
+.floatingPanel {
+position: absolute;
+bottom: 15px;
+background-color: var(--surface-color);
+padding: 10px 15px;
+border-radius: 12px;
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .controlButtonsGroup {
-  display: flex;
-  gap: 10px;
+display: flex;
+gap: 10px;
+justify-content: center;
+align-items: center;
 }
 
 .controlButton {
-  width: 60px;
-  height: 60px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  font-size: 0.75rem;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+width: 60px;
+height: 60px;
+border-radius: 10px;
+border: none;
+cursor: pointer;
+font-size: 0.75rem;
+font-weight: 500;
+color: var(--text-color);
+transition: background-color 0.1s, transform 0.1s;
 }
 
+.controlLabel {
+margin-top: 2px;
+font-size: 0.7rem;
+}
+
+/* Colores de Estado */
+.primaryControl { background-color: var(--primary-color); color: white; }
+.secondaryControl { background-color: var(--text-muted-color); color: var(--text-color); }
+.dangerControl { background-color: var(--danger-color); color: white; }
+.successControl { background-color: var(--success-color); color: white; }
+.shareControl { background-color: var(--share-color); color: white; }
+.leaveControl { background-color: var(--danger-color); color: white; }
+
 /* --------------------------------------------------------------------------------
+
 PANEL DE CHAT
 -------------------------------------------------------------------------------- */
 .chatPanel {
-  width: 0;
-  height: 100%;
-  background-color: var(--surface-color);
-  border-left: 1px solid var(--text-muted-color);
-  display: flex;
-  flex-direction: column;
-  transition: width 0.3s ease-in-out;
+width: 0;
+height: 100%;
+background-color: var(--surface-color);
+border-left: 1px solid var(--text-muted-color);
+display: flex;
+flex-direction: column;
+transition: width 0.3s ease-in-out;
+flex-shrink: 0;
 }
 
 .chatPanelOpen {
-  width: 300px;
+width: 300px;
 }
 
-/* --------------------------------------------------------------------------------
-RESPONSIVE
--------------------------------------------------------------------------------- */
+/* MÓVIL: Chat a pantalla completa */
 @media (max-width: 768px) {
-  .appContainer {
-    padding-bottom: 90px;
-  }
+.chatPanelOpen {
+width: 100%;
+position: fixed;
+top: 0;
+bottom: 0;
+z-index: 600;
+height: 100%;
+border: none;
+}
+}
 
-  .videoGallery {
-    grid-template-columns: 1fr;
-    gap: 5px;
-  }
+.chatHeader {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 10px 15px;
+border-bottom: 1px solid var(--text-muted-color);
+}
 
-  .videoContainer {
-    height: 200px;
-    padding-bottom: 0;
-  }
+.chatMessages {
+flex-grow: 1;
+overflow-y: auto;
+padding: 10px 15px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
 
-  .screenShareVideo {
-    height: 50vw;
-  }
+.myMessage .messageContent { background-color: var(--primary-color); color: white; }
+.otherMessage .messageContent { background-color: var(--background-color); border: 1px solid var(--text-muted-color); color: var(--text-color); }
 
-  .chatPanelOpen {
-    width: 100%;
-    position: absolute;
-    bottom: 90px;
-    height: calc(100vh - 100px);
-    z-index: 400;
-    border: none;
-  }
+.chatInputForm {
+display: flex;
+padding: 10px 15px;
+border-top: 1px solid var(--text-muted-color);
+}
 
-  .controlButton {
-    width: 50px;
-    height: 50px;
-  }
+.chatInput {
+flex-grow: 1;
+padding: 8px;
+border: 1px solid var(--text-muted-color);
+border-radius: 6px 0 0 6px;
+background-color: var(--background-color);
+color: var(--text-color);
+outline: none;
+}
 
-  .controlLabel {
-    display: none;
-  }
+.chatSendButton {
+background-color: var(--primary-color);
+color: white;
+border: none;
+padding: 8px 12px;
+border-radius: 0 6px 6px 0;
+cursor: pointer;
+}
+
+/* Ajustes de Controles en Móvil */
+@media (max-width: 768px) {
+.appContainer {
+padding-bottom: 70px; /* Reducir padding de footer */
+}
+
+.controlButton {
+width: 50px;
+height: 50px;
+}
+
+.controlLabel {
+display: none;
+}
+
+.floatingPanel {
+padding: 5px;
+bottom: 5px;
+}
+
+.mainFloatingButton {
+bottom: 5px;
+}
 }
