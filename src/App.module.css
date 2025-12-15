@@ -1,9 +1,6 @@
-/* ---------------------------------- */
-/* 1. Variables y Temas (THEMING)     */
-/* ---------------------------------- */
-
-/* Base de la aplicación - Tema Oscuro (Dark Mode) */
+/* Base de la aplicación */
 :root {
+    /* Tema Oscuro (valores por defecto) */
     --primary-color: #3b82f6; /* Azul brillante, para botones y títulos */
     --secondary-color: #1e3a8a; /* Azul más oscuro, para detalles */
     --background-color: #0f172a; /* Fondo muy oscuro, casi negro */
@@ -13,59 +10,35 @@
     --border-color: #334155; /* Bordes sutiles */
     --red-alert-color: #ef4444; /* Rojo para alertas y salir */
     --green-share-color: #22c55e; /* Verde para compartir pantalla */
-    
-    font-family: 'Inter', sans-serif;
 }
 
-/* Tema Claro (Light Mode) */
+/* Tema Claro */
 .lightMode {
-    --primary-color: #007bff;
-    --secondary-color: #0056b3;
-    --background-color: #f0f2f5;
-    --surface-color: #ffffff;
-    --text-color: #212529;
-    --text-muted-color: #6c757d;
-    --border-color: #ced4da;
-    --red-alert-color: #dc3545;
-    --green-share-color: #28a745;
+    --primary-color: #007bff; /* Azul brillante, para botones y títulos */
+    --secondary-color: #0056b3; /* Azul más oscuro, para detalles */
+    --background-color: #f0f2f5; /* Fondo muy claro, casi blanco */
+    --surface-color: #ffffff; /* Superficies, cards */
+    --text-color: #212529; /* Texto oscuro */
+    --text-muted-color: #6c757d; /* Texto secundario oscuro */
+    --border-color: #ced4da; /* Bordes sutiles claros */
+    --red-alert-color: #dc3545; /* Rojo para alertas y salir */
+    --green-share-color: #28a745; /* Verde para compartir pantalla */
 }
-
-/* Tema Mundi-Hot (Vibrante) */
-.hotMode {
-    --primary-color: #ff4500;
-    --secondary-color: #cc3700;
-    --background-color: #2a0f0f;
-    --surface-color: #4a1c1c;
-    --text-color: #fce4ec;
-    --text-muted-color: #ff8c00;
-    --border-color: #8b0000;
-    --red-alert-color: #ff0000;
-    --green-share-color: #ffea00;
-}
-
-/* ---------------------------------- */
-/* 2. Estructura General y Contenedores */
-/* ---------------------------------- */
 
 body {
-    margin: 0;
-    padding: 0;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    transition: background-color 0.3s ease;
+    background-color: var(--background-color); /* Usa la variable */
 }
 
 .mainContainer {
-    /* Contenedor principal de la sala de video */
     display: flex;
     height: 100vh;
+    background-color: var(--background-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    font-family: 'Inter', sans-serif;
     overflow: hidden;
-    background-color: var(--background-color);
-    flex-direction: column; /* Por defecto en móvil */
 }
 
 .mainContent {
-    /* Contenedor que alberga videos y footer */
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -73,235 +46,84 @@ body {
     overflow: hidden;
 }
 
-
-/* ---------------------------------- */
-/* 3. Lobby / Sala de Espera (React component: <Lobby />) */
-/* ---------------------------------- */
-
-.lobbyContainer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 1rem;
-    background-color: var(--background-color);
-}
-
-.lobbyFormWrapper {
-    width: 100%;
-    max-width: 32rem;
-}
-
-.lobbyCard {
-    background-color: var(--surface-color);
-    padding: 2.5rem;
-    border-radius: 1.5rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    border: 1px solid var(--border-color);
-    text-align: center;
-    transition: background-color 0.3s, border-color 0.3s;
-}
-
-.lobbyLogo {
-    height: 96px;
-    margin-bottom: 1rem;
-    color: var(--primary-color);
-    font-size: 4rem;
-}
-
-.lobbyTitle {
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin-bottom: 2rem;
-}
-
-.lobbyForm {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.formGroup {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-}
-
-.formLabel {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--text-color);
-    margin-bottom: 0.5rem;
-}
-
-.formInput,
-.formSelect {
-    width: 100%;
-    padding: 0.9rem 1rem;
-    background-color: var(--background-color);
-    border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
-    color: var(--text-color);
-    outline: none;
-    transition: all 0.2s ease-in-out;
-    box-sizing: border-box;
-}
-.formInput:focus,
-.formSelect:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
-}
-
-.joinButton {
-    width: 100%;
+/* Estilos para el contenedor de reacciones y el menú de emojis */
+.reactionContainer {
+    position: relative;
     display: flex;
     align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
+}
+
+.emojiPicker {
+    position: fixed;
+    bottom: calc(4.75rem + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--surface-color); /* Usa la variable */
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    z-index: 200;
+    width: 90%;
+    max-width: 400px;
     justify-content: center;
-    padding: 1rem;
-    font-size: 1.15rem;
-    font-weight: 600;
-    border-radius: 0.75rem;
-    background-color: var(--primary-color);
-    color: #fff;
-    transition: background-color 0.3s ease;
+}
+
+.emojiButton {
+    background: none;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-}
-.joinButton:hover {
-    background-color: var(--secondary-color);
-}
-.joinButton:disabled {
-    background-color: #64748b;
-    cursor: not-allowed;
-    box-shadow: none;
+    font-size: 24px;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.joinButtonIcon {
-    margin-right: 0.75rem;
+.emojiButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
+    transform: scale(1.1);
 }
 
-/* ---------------------------------- */
-/* 4. Controles (React component: <Controls />) */
-/* ---------------------------------- */
-
-.controlsFooter {
-    background-color: var(--surface-color);
-    backdrop-filter: blur(8px);
-    padding: 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    z-index: 100;
-    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2);
-    position: relative; /* Para posicionar .themeControls */
+.emojiButton:active {
+    transform: scale(0.95);
 }
 
-@media (min-width: 640px) {
-    .controlsFooter {
-        gap: 1.5rem;
-    }
-}
-
-.controlButton {
+.commonEmojiButton, .plusButton {
     padding: 0.75rem;
     border-radius: 9999px;
-    background-color: var(--surface-color);
-    transition: all 0.2s ease-in-out;
+    background-color: var(--surface-color); /* Usa la variable */
+    transition: background-color 0.2s ease;
     border: none;
-    color: var(--text-color);
+    color: var(--text-color); /* Usa la variable */
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-    font-size: 1.15rem;
 }
 
-.controlButton:hover {
-    background-color: var(--border-color);
+.commonEmojiButton:hover, .plusButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
 }
 
 .controlButtonActive {
-    background-color: var(--primary-color) !important;
-    color: var(--text-color);
+    background-color: var(--primary-color) !important; /* Usa la variable */
 }
 
-.controlButtonScreenShare {
-    background-color: var(--green-share-color) !important;
-    color: var(--text-color);
-}
-
-.leaveButton {
-    padding: 0.75rem 1.25rem;
-    border-radius: 9999px;
-    background-color: var(--red-alert-color);
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.95rem;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-.leaveButton:hover {
-    background-color: #b91c1c; /* Rojo más oscuro */
-}
-
-/* Controles de Tema */
-.themeControls {
-    display: flex;
-    gap: 0.5rem;
-    position: absolute;
-    right: 1rem;
-}
-
-@media (max-width: 640px) {
-    .themeControls {
-        position: static;
-        margin-top: 1rem;
-        width: 100%;
-        justify-content: center;
-    }
-}
-
-.themeButton {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid var(--border-color);
-    transition: border-color 0.2s;
-    /* Colores estáticos para que el usuario los distinga */
-}
-#darkThemeBtn { background-color: #0f172a; }
-#lightThemeBtn { background-color: #ffffff; }
-#hotThemeBtn { background-color: #ff4500; }
-
-.themeButtonSelected {
-    border-color: var(--primary-color);
-    border-width: 4px;
-}
-
-
-/* ---------------------------------- */
-/* 5. Video Grid (React component: <VideoGrid />) */
-/* ---------------------------------- */
-
+/* ---------------- Video Grid ---------------- */
 .videoGridContainer {
     flex-grow: 1;
     display: flex;
     gap: 1rem;
     padding: 1rem;
     overflow: auto;
-    background-color: var(--surface-color);
+    background-color: var(--surface-color); /* Usa la variable */
     align-items: stretch;
     justify-content: center;
-    transition: background-color 0.3s;
 }
 
 /* Contenedor principal para el video más grande (pantalla compartida) */
@@ -321,43 +143,122 @@ body {
 
 /* Contenedor para los videos secundarios (cámaras) */
 .videoSecondaryGrid {
-    display: flex;
+    display: flex; /* Por defecto a flex */
     gap: 1rem;
     flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
+    align-items: center; /* Centrar elementos */
+    justify-content: center; /* Centrar elementos */
 }
+
+/* Diseño para escritorio (PC): min-width: 769px */
+@media (min-width: 769px) { 
+    .videoGridContainer {
+        flex-direction: row; /* Contenido principal y videos secundarios lado a lado */
+    }
+
+    /* Cuando se comparte pantalla en escritorio, videos secundarios en columna a la derecha */
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
+        flex-direction: column;
+        width: 25%; /* Ancho fijo para la barra lateral */
+        max-width: 300px;
+        overflow-y: auto;
+    }
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Cuando NO se comparte pantalla en escritorio, todos los videos en una cuadrícula */
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
+        flex-direction: row; /* Organizar en una fila */
+        flex-wrap: wrap; /* Permitir que se envuelvan para crear cuadrícula */
+        width: 100%; /* Ocupar todo el ancho disponible */
+        justify-content: center; /* Centrar elementos en la cuadrícula */
+    }
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+        flex-shrink: 0;
+        width: calc(33.33% - 0.67rem); /* 3 columnas por defecto en escritorio */
+        max-width: 400px; /* Tamaño máximo para video individual en cuadrícula */
+        aspect-ratio: 16 / 9;
+    }
+    /* Ajustar para más columnas en pantallas más grandes de escritorio */
+    @media (min-width: 1024px) {
+        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+            width: calc(25% - 0.75rem); /* 4 columnas */
+        }
+    }
+    @media (min-width: 1440px) {
+        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+            width: calc(20% - 0.8rem); /* 5 columnas */
+        }
+    }
+}
+
+/* Diseño para móvil (celulares): max-width: 768px */
+@media (max-width: 500px) { 
+    .videoGridContainer {
+        flex-direction: column; /* Contenido principal encima de los videos secundarios */
+    }
+
+    /* Cuando se comparte pantalla en móvil, videos secundarios en fila (scroll horizontal) */
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
+        flex-direction: row;
+        width: 100%;
+        overflow-x: auto;
+        min-height: 20%;
+    }
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
+        flex-shrink: 0;
+        width: 200px; /* Ancho fijo para scroll horizontal */
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Cuando NO se comparte pantalla en móvil, todos los videos en una columna */
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
+        flex-direction: column; /* Todos los videos en una sola columna */
+        width: 100%;
+        overflow-y: auto;
+    }
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+    }
+}
+
 
 /* Contenedor del video */
 .videoWrapper {
     align-items: center;
     aspect-ratio: 16 / 9;
     background-color: #000000;
-    border: 2px solid var(--border-color);
+    border: 2px solid var(--border-color); /* Usa la variable */
     border-radius: .5rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
     display: flex;
     justify-content: center;
     position: relative;
-    transition: transform .3s ease-in-out, border-color 0.3s;
+    transition: transform .3s ease-in-out;
     width: 100%;
-    overflow: hidden;
 }
 
 .videoElement {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     max-width: 100%;
     max-height: 100%;
 }
 
-/* Etiqueta del nombre de usuario */
+.localVideo {
+    transform: scaleX(-1);
+}
+
 .userNameLabel {
     position: absolute;
     bottom: 0.5rem;
     left: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.5);
     color: white;
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
@@ -365,37 +266,77 @@ body {
     font-weight: 500;
     z-index: 10;
 }
-
-/* El video local se espeja */
-.localVideo {
-    transform: scaleX(-1);
+/* ---------------- Controles ---------------- */
+.controlsFooter {
+    background-color: var(--surface-color); /* Usa la variable */
+    backdrop-filter: blur(8px);
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    z-index: 100;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2); /* Sombra para el footer */
 }
 
-/* Simulación de vídeo (Para cuando la cámara está apagada o no hay stream) */
-.videoPlaceholder {
+@media (min-width: 640px) {
+    .controlsFooter {
+        gap: 1.5rem;
+    }
+}
+
+.controlButton {
+    padding: 0.75rem;
+    border-radius: 9999px;
+    background-color: var(--surface-color); /* Usa la variable */
+    transition: all 0.2s ease-in-out;
+    border: none;
+    color: var(--text-color); /* Usa la variable */
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    background-color: var(--surface-color);
-    color: var(--text-muted-color);
-    font-size: 0.9rem;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 5;
-}
-/* Ocultar el placeholder cuando hay un stream activo */
-.videoWrapper:has(video:not([data-muted])) .videoPlaceholder {
-    display: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
+.controlButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
+}
 
-/* ---------------------------------- */
-/* 6. Sidebar de Chat (React component: <ChatSidebar />) */
-/* ---------------------------------- */
+.controlButtonActive {
+    background-color: var(--primary-color) !important; /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+}
 
+.controlButtonScreenShare {
+    background-color: var(--green-share-color) !important; /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+}
+
+/* Nuevo contenedor para los botones de tema */
+.themeControls {
+    display: flex;
+    gap: 0.5rem; /* Espacio entre los botones de tema */
+}
+
+.leaveButton {
+    padding: 0.75rem 1.25rem;
+    border-radius: 9999px;
+    background-color: var(--red-alert-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+.leaveButton:hover {
+    background-color: #b91c1c; /* Color fijo para hover de botón de salir */
+}
+
+/* ---------------- Sidebar de Chat ---------------- */
 .chatSidebar {
     position: fixed;
     top: 0;
@@ -403,7 +344,7 @@ body {
     height: 100%;
     width: 100%;
     max-width: 24rem;
-    background-color: var(--surface-color);
+    background-color: var(--surface-color); /* Usa la variable */
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
@@ -411,7 +352,7 @@ body {
     z-index: 300;
     box-shadow: -4px 0 15px rgba(0, 0, 0, 0.3);
 }
-.chatSidebar.open {
+.chatSidebarOpen {
     transform: translateX(0);
 }
 
@@ -420,13 +361,13 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color); /* Usa la variable */
 }
 
 .chatTitle {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--primary-color);
+    color: var(--primary-color); /* Usa la variable */
 }
 
 .closeChatButton {
@@ -434,12 +375,11 @@ body {
     border-radius: 9999px;
     border: none;
     background-color: transparent;
-    color: var(--text-color);
+    color: var(--text-color); /* Usa la variable */
     cursor: pointer;
-    font-size: 1.25rem;
 }
 .closeChatButton:hover {
-    background-color: var(--border-color);
+    background-color: var(--border-color); /* Usa la variable */
 }
 
 .chatMessages {
@@ -454,7 +394,7 @@ body {
 .systemMessage {
     text-align: center;
     font-size: 0.8rem;
-    color: var(--text-muted-color);
+    color: var(--text-muted-color); /* Usa la variable */
     font-style: italic;
 }
 
@@ -463,7 +403,7 @@ body {
     flex-direction: column;
     align-items: flex-start;
 }
-.chatMessageWrapper.me {
+.chatMessageWrapperMe {
     align-items: flex-end;
 }
 
@@ -471,18 +411,17 @@ body {
     padding: 0.6rem 0.9rem;
     border-radius: 1rem;
     max-width: 85%;
-    background-color: var(--border-color);
+    background-color: var(--border-color); /* Usa la variable */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-.chatMessage.me {
-    background-color: var(--primary-color);
-    color: white; /* Asegurar contraste en el mensaje propio */
+.chatMessageMe {
+    background-color: var(--primary-color); /* Usa la variable */
 }
 
 .chatUserName {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--primary-color); /* Usa la variable */
     margin-bottom: 0.2rem;
 }
 
@@ -493,7 +432,7 @@ body {
 
 .chatForm {
     padding: 1rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color); /* Usa la variable */
     display: flex;
     gap: 0.5rem;
 }
@@ -501,166 +440,137 @@ body {
 .chatInput {
     flex-grow: 1;
     padding: 0.75rem;
-    background-color: var(--background-color);
+    background-color: var(--background-color); /* Usa la variable */
     border-radius: 9999px;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
+    border: 1px solid var(--border-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
     outline: none;
     transition: border-color 0.2s ease;
 }
 .chatInput::placeholder {
-    color: var(--text-muted-color);
+    color: var(--text-muted-color); /* Usa la variable */
 }
 .chatInput:focus {
-    border-color: var(--primary-color);
+    border-color: var(--primary-color); /* Usa la variable */
 }
 
 .chatSendButton {
-    background-color: var(--primary-color);
-    padding: 0.75rem 1rem;
+    background-color: var(--primary-color); /* Usa la variable */
+    padding: 0.75rem;
     border-radius: 9999px;
     color: #fff;
     border: none;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 .chatSendButton:hover {
-    background-color: var(--secondary-color);
+    background-color: var(--secondary-color); /* Usa la variable */
 }
 
-/* ---------------------------------- */
-/* 7. Reacciones y Emojis */
-/* ---------------------------------- */
+/* ---------------- Lobby ---------------- */
+.lobbyContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--background-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    padding: 1rem;
+}
 
-.reactionContainer {
-    position: relative;
+.lobbyFormWrapper {
+    width: 100%;
+    max-width: 32rem;
+}
+
+.lobbyCard {
+    background-color: var(--surface-color); /* Usa la variable */
+    padding: 2.5rem;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color); /* Usa la variable */
+    text-align: center;
+}
+
+.lobbyLogo {
+    height: 96px;
+    margin-bottom: 1rem;
+}
+
+.lobbyTitle {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Usa la variable */
+    margin-bottom: 2rem;
+}
+
+.lobbyForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.formLabel {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color); /* Usa la variable */
+    margin-bottom: 0.5rem;
+}
+
+.formInput,
+.formSelect {
+    width: 100%;
+    padding: 0.9rem 0.2rem;
+    background-color: var(--background-color); /* Usa la variable */
+    border: 1px solid var(--border-color); /* Usa la variable */
+    border-radius: 0.75rem;
+    color: var(--text-color); /* Usa la variable */
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+.formInput:focus,
+.formSelect:focus {
+    border-color: var(--primary-color); /* Usa la variable */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.loadingMessage {
+    text-align: center;
+    color: var(--text-muted-color); /* Usa la variable */
+}
+
+.joinButton {
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    z-index: 1000;
-}
-
-.emojiPicker {
-    position: fixed;
-    /* Ajuste para que se vea justo encima del footer en móvil/escritorio */
-    bottom: calc(4.75rem + 10px); 
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--surface-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    padding: 8px;
-    display: none; /* Controlado por estado en React */
-    flex-wrap: wrap;
-    gap: 4px;
-    z-index: 200;
-    width: 90%;
-    max-width: 400px;
     justify-content: center;
-}
-
-.emojiPicker.open {
-    display: flex;
-}
-
-.emojiButton {
-    background: none;
+    padding: 1rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    background-color: var(--primary-color); /* Usa la variable */
+    color: #fff;
+    transition: background-color 0.3s ease;
     border: none;
     cursor: pointer;
-    font-size: 24px;
-    padding: 4px;
-    border-radius: 8px;
-    transition: background-color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+.joinButton:hover {
+    background-color: var(--secondary-color); /* Usa la variable */
+}
+.joinButton:disabled {
+    background-color: #64748b; /* Color fijo */
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
-.emojiButton:hover {
-    background-color: var(--border-color);
-    transform: scale(1.1);
-}
-
-/* ---------------------------------- */
-/* 8. Media Queries para Responsividad */
-/* ---------------------------------- */
-
-/* Diseño para Escritorio (PC): min-width: 769px */
-@media (min-width: 769px) {
-    .mainContainer {
-        flex-direction: row; /* Layout horizontal: Videos y Sidebar (si el chat está abierto) */
-    }
-
-    /* Ajuste de la cuadrícula de video */
-    .videoGridContainer {
-        flex-direction: row;
-        /* Ocupa todo el espacio si el chat está cerrado */
-        width: 100%;
-    }
-
-    /* Cuando se comparte pantalla en escritorio: videos secundarios en columna a la derecha */
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
-        flex-direction: column;
-        width: 25%;
-        max-width: 300px;
-        overflow-y: auto;
-    }
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-    }
-
-    /* Cuando NO se comparte pantalla en escritorio: todos los videos en una cuadrícula */
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
-        flex-direction: row;
-        flex-wrap: wrap;
-        width: 100%;
-        justify-content: center;
-    }
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-        flex-shrink: 0;
-        width: calc(33.33% - 0.67rem);
-        max-width: 400px;
-        aspect-ratio: 16 / 9;
-    }
-    /* Más columnas en pantallas más grandes de escritorio */
-    @media (min-width: 1024px) {
-        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-            width: calc(25% - 0.75rem);
-        }
-    }
-}
-
-/* Diseño para Móvil (Celulares): max-width: 768px */
-@media (max-width: 768px) {
-    .videoGridContainer {
-        flex-direction: column;
-    }
-
-    /* Cuando se comparte pantalla en móvil: videos secundarios en fila (scroll horizontal) */
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
-        flex-direction: row;
-        width: 100%;
-        overflow-x: auto;
-        min-height: 120px;
-        padding-bottom: 0.5rem;
-        justify-content: flex-start;
-    }
-    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
-        flex-shrink: 0;
-        width: 160px;
-        height: auto;
-        aspect-ratio: 16 / 9;
-    }
-
-    /* Cuando NO se comparte pantalla en móvil: todos los videos en una columna */
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
-        flex-direction: column;
-        width: 100%;
-        overflow-y: auto;
-    }
-    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-    }
+.joinButtonIcon {
+    margin-right: 0.75rem;
 }
