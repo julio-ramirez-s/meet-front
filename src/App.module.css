@@ -1,6 +1,6 @@
 /* Base de la aplicación */
 :root {
-    /* Tema Único (Oscuro/Alto Contraste) - Optimizado para dispositivos de bajo rendimiento */
+    /* Tema Oscuro (valores por defecto) */
     --primary-color: #3b82f6; /* Azul brillante, para botones y títulos */
     --secondary-color: #1e3a8a; /* Azul más oscuro, para detalles */
     --background-color: #0f172a; /* Fondo muy oscuro, casi negro */
@@ -12,6 +12,20 @@
     --green-share-color: #22c55e; /* Verde para compartir pantalla */
     --transition-speed: 0.2s;
 }
+
+/* Tema Claro (añadido para soportar el cambio de tema) */
+.lightMode {
+    --primary-color: #007bff;
+    --secondary-color: #0056b3;
+    --background-color: #f0f2f5;
+    --surface-color: #ffffff;
+    --text-color: #212529;
+    --text-muted-color: #6c757d;
+    --border-color: #ced4da;
+    --red-alert-color: #dc3545;
+    --green-share-color: #28a745;
+}
+
 
 /* Estilos de Botones */
 .controlButton {
@@ -29,7 +43,7 @@
 }
 
 .controlButton:hover {
-    background-color: #334155; /* Un tono más claro para el hover */
+    background-color: var(--border-color); /* Usar border-color para hover en ambos temas */
     transform: translateY(-2px);
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
 }
@@ -41,7 +55,7 @@
 }
 .controlButton.muted:hover,
 .controlButton.videoOffButton:hover {
-    background-color: #dc2626; /* Rojo más oscuro */
+    background-color: #dc2626;
 }
 
 .controlButton.sharing {
@@ -49,13 +63,13 @@
     color: var(--background-color);
 }
 .controlButton.sharing:hover {
-    background-color: #15803d; /* Verde más oscuro */
+    background-color: #15803d;
 }
 
 .leaveButton {
     background-color: var(--red-alert-color);
     color: var(--text-color);
-    margin-left: 1.5rem; /* Separación del botón de salir */
+    margin-left: 1.5rem;
     font-weight: 600;
 }
 .leaveButton:hover {
@@ -70,7 +84,7 @@
     background-color: var(--background-color);
     color: var(--text-color);
     font-family: 'Inter', sans-serif;
-    overflow: hidden; /* Evita barras de desplazamiento innecesarias */
+    overflow: hidden;
 }
 
 .header {
@@ -102,10 +116,20 @@
     margin-top: 0.25rem;
 }
 
+.mainLayout {
+    flex-grow: 1;
+    display: flex;
+    overflow: hidden;
+}
+
 .mainContent {
     flex-grow: 1;
-    overflow: auto; /* Para que la cuadrícula de video pueda desplazarse si es necesario */
+    overflow: auto;
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Panel de Control (Footer) */
@@ -128,20 +152,21 @@
     height: 100%;
     align-items: center;
     justify-content: center;
+    max-width: 1400px;
 }
 
+/* ... (Estilos de cuadrícula de video sin cambios) ... */
 .videoContainer {
     position: relative;
     background-color: var(--background-color);
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-    min-width: 200px; /* Tamaño mínimo para móviles */
-    aspect-ratio: 16 / 9; /* Relación de aspecto estándar para video */
+    min-width: 200px;
+    aspect-ratio: 16 / 9;
     transition: all 0.3s ease;
 }
 
-/* Estilos de la cuadrícula para conteos específicos (optimización de layout) */
 .videoGrid.grid1 .videoContainer {
     width: 90%;
     max-height: 80vh;
@@ -154,9 +179,8 @@
     width: calc(50% - 0.5rem);
     max-width: 500px;
 }
-/* Layout más flexible para muchos usuarios (5+) */
 .videoGrid.gridFlex .videoContainer {
-    flex: 1 1 calc(33.333% - 1rem); /* 3 videos por fila en desktop */
+    flex: 1 1 calc(33.333% - 1rem);
     max-width: 400px;
 }
 
@@ -164,7 +188,7 @@
     .videoGrid.gridFlex .videoContainer,
     .videoGrid.grid4 .videoContainer,
     .videoGrid.grid2 .videoContainer {
-        flex: 1 1 100%; /* 1 video por fila en móvil */
+        flex: 1 1 100%;
         width: 100%;
     }
     .videoGrid.grid1 .videoContainer {
@@ -176,18 +200,17 @@
 .videoElement {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Asegura que el video llene el contenedor */
+    object-fit: cover;
     display: block;
-    transform: rotateY(180deg); /* Voltear video local horizontalmente (espejo) */
+    transform: rotateY(180deg);
     -webkit-transform: rotateY(180deg);
     -moz-transform: rotateY(180deg);
 }
 
 .screenSharing .videoElement {
-    transform: none; /* NO espejar el stream de pantalla */
+    transform: none;
 }
 
-/* Indicador de Compartir Pantalla */
 .screenSharing {
     border: 3px solid var(--green-share-color);
     box-shadow: 0 0 15px var(--green-share-color);
@@ -230,7 +253,6 @@
     margin-left: 8px;
 }
 
-/* Placeholder cuando el video está apagado */
 .videoOffPlaceholder {
     position: absolute;
     top: 0;
@@ -262,7 +284,7 @@
 }
 
 
-/* --- Lobby Styles --- */
+/* --- Lobby Styles (Sin cambios) --- */
 .lobbyContainer {
     display: flex;
     justify-content: center;
@@ -334,7 +356,7 @@
 .loadingMessage {
     text-align: center;
     color: var(--text-muted-color);
-    padding: 50vh 0; /* Centra el mensaje de carga */
+    padding: 50vh 0;
 }
 
 .joinButton {
@@ -363,4 +385,171 @@
     background-color: var(--border-color);
     cursor: not-allowed;
     opacity: 0.7;
+}
+
+/* --- CHAT STYLES (Restaurado) --- */
+.chatSidebar {
+    width: 300px;
+    height: 100%;
+    background-color: var(--surface-color);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+}
+
+.chatBox {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chatHeader {
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}
+
+.chatToggleButton {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+}
+.chatToggleButton:hover, .chatToggleButton.chatActive {
+    background-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+.chatMessages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.noMessages {
+    color: var(--text-muted-color);
+    text-align: center;
+    margin-top: 2rem;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+.chatMessage {
+    max-width: 90%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    word-wrap: break-word;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.localMessage {
+    align-self: flex-end;
+    background-color: var(--primary-color);
+    color: white;
+    margin-left: auto;
+}
+
+.remoteMessage {
+    align-self: flex-start;
+    background-color: var(--border-color);
+    color: var(--text-color);
+    margin-right: auto;
+}
+
+.chatSender {
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.2rem;
+    font-size: 0.8rem;
+    color: inherit;
+}
+
+.localMessage .chatSender {
+    color: rgba(255, 255, 255, 0.8);
+}
+.remoteMessage .chatSender {
+    color: var(--text-muted-color);
+}
+
+.chatTimestamp {
+    display: block;
+    text-align: right;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.2rem;
+}
+.remoteMessage .chatTimestamp {
+    color: var(--text-muted-color);
+}
+
+
+.chatInputForm {
+    display: flex;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.chatInput {
+    flex-grow: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem 0 0 0.5rem;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    outline: none;
+}
+.chatInput:focus {
+    border-color: var(--primary-color);
+}
+
+.chatSendButton {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.chatSendButton:hover:not(:disabled) {
+    background-color: #2563eb;
+}
+.chatSendButton:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+    .mainLayout {
+        flex-direction: column;
+    }
+    .chatSidebar {
+        width: 100%;
+        height: 50vh;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+    .mainContent {
+        padding: 0.5rem;
+    }
+    .header {
+        padding: 0.75rem 1rem;
+    }
+    .controlPanel {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
 }

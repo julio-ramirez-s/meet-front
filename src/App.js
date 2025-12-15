@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { Mic, MicOff, Video, VideoOff, ScreenShare, LogIn, Plus, X } from 'lucide-react'; // Imports simplificados
+import { Mic, MicOff, Video, VideoOff, ScreenShare, MessageSquare, Send, X, LogIn, Plus, Sun, Moon } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
-// Eliminadas las dependencias de Toastify
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import styles from './App.module.css';
 
 // =========================================================================================
-// !!! IMPORTANTE: Reemplaza esta URL con la dirección REAL de tu servidor Socket.IO/PeerJS !!!
-// Si tu backend está en https://api.mi-app.com, usa esa URL.
-const SIGNALING_SERVER_URL = 'https://meet-clone-v0ov.onrender.com'; 
+// !!! CORRECCIÓN CRÍTICA: Usando la dirección REAL proporcionada por el usuario !!!
+const SIGNALING_SERVER_URL = 'https://meet-clone-v0ov.onrender.com';
 // =========================================================================================
 
 // --- CONTEXTO PARA WEBRTC ---
@@ -20,28 +20,40 @@ const useWebRTCLogic = (roomId) => {
     const [myStream, setMyStream] = useState(null);
     const [myScreenStream, setMyScreenStream] = useState(null);
     // peers: { peerId: { stream, userName, peerConnection } }
-    const [peers, setPeers] = useState({}); 
+    const [peers, setPeers] = useState({});
+    const [chatMessages, setChatMessages] = useState([]); // Restaurado
     const [isMuted, setIsMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const [roomUsers, setRoomUsers] = useState({}); // { userId: userName }
+    const [appTheme, setAppTheme] = useState('dark'); // Restaurado
+    const [roomUsers, setRoomUsers] = useState({});
 
     const socketRef = useRef(null);
     const myPeerRef = useRef(null);
     const peerConnections = useRef({});
-    // Referencia al stream principal (cámara o pantalla) para un manejo eficiente de tracks
-    const currentStreamRef = useRef(null); 
+    const currentStreamRef = useRef(null);
 
-    // Helper para manejar notificaciones internas (reemplaza toastify)
-    const showLocalNotification = (message) => {
-        console.log("Notification:", message);
-        // En una app real, aquí iría una UI simple de mensajes
+    // Helper para manejar notificaciones (usando Toastify)
+    const showLocalNotification = (message, type = 'info') => {
+        switch (type) {
+            case 'success':
+                toast.success(message, { theme: appTheme });
+                break;
+            case 'error':
+                toast.error(message, { theme: appTheme });
+                break;
+            case 'warning':
+                toast.warn(message, { theme: appTheme });
+                break;
+            default:
+                toast.info(message, { theme: appTheme });
+        }
     };
+
 
     // --- 1. Inicialización de MediaStream ---
     const initializeStream = async (audioId, videoId) => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                // Usar deviceId específico para forzar la selección de la cámara/micrófono más ligero
                 video: videoId ? { deviceId: videoId } : true,
                 audio: audioId ? { deviceId: audioId } : true,
             });
@@ -49,7 +61,7 @@ const useWebRTCLogic = (roomId) => {
             currentStreamRef.current = stream;
             return stream;
         } catch (err) {
-            showLocalNotification("Error al acceder a cámara/micrófono: " + err.message);
+            showLocalNotification("Error al acceder a cámara/micrófono: " + err.message, 'error');
             return null;
         }
     };
@@ -60,32 +72,37 @@ const useWebRTCLogic = (roomId) => {
 
         // Modificación clave: Usar la URL explícita del servidor de señalización.
         socketRef.current = io(SIGNALING_SERVER_URL, {
-            // Optimización: Forzar un transporte preferido para iniciar más rápido
             transports: ['websocket', 'polling']
         });
 
         socketRef.current.on('connect', () => {
+            showLocalNotification("Conexión al servidor de señalización exitosa.", 'success');
+            
             // Inicialización de PeerJS
+            const serverUrl = new URL(SIGNALING_SERVER_URL);
+            const host = serverUrl.hostname;
+            // PeerJS en Render a veces requiere el puerto 443 si es HTTPS, pero omitirlo y confiar en la ruta a menudo funciona
+            const port = serverUrl.port || (serverUrl.protocol === 'https:' ? 443 : 80);
+
             myPeerRef.current = new Peer(undefined, {
-                // Modificación clave: PeerJS DEBE usar el mismo host y puerto que Socket.IO
-                host: new URL(SIGNALING_SERVER_URL).hostname,
-                port: new URL(SIGNALING_SERVER_URL).port || (new URL(SIGNALING_SERVER_URL).protocol === 'https:' ? 443 : 80),
+                host: host,
+                port: port,
                 path: '/peerjs', // Asegúrate de que tu servidor PeerJS esté configurado con esta ruta
-                // Optimización: Servidores STUN para NAT traversal más rápido
                 config: {
                     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
                 },
             });
 
             myPeerRef.current.on('open', (id) => {
-                showLocalNotification(`Conectado. ID: ${id}`);
+                showLocalNotification(`Conectado a PeerJS. Mi ID: ${id}`);
                 // Unirse a la sala con información de usuario
                 socketRef.current.emit('join-room', roomId, id, userName);
+                // Inicializar el tema de la aplicación al unirse (si hay otros temas)
+                document.body.className = appTheme === 'light' ? styles.lightMode : '';
             });
 
             // Escuchar llamadas entrantes
             myPeerRef.current.on('call', (call) => {
-                // Responder la llamada y enviarle mi stream actual
                 call.answer(currentStreamRef.current);
 
                 call.on('stream', (remoteStream) => {
@@ -94,36 +111,35 @@ const useWebRTCLogic = (roomId) => {
                         [call.peer]: {
                             ...prev[call.peer],
                             stream: remoteStream,
-                            peerConnection: call.peerConnection // Guardar la conexión
+                            peerConnection: call.peerConnection
                         }
                     }));
                 });
                 call.on('close', () => {
                     handlePeerDisconnect(call.peer, 'Call closed');
                 });
-                peerConnections.current[call.peer] = call; // Guardar la llamada
+                peerConnections.current[call.peer] = call;
             });
 
             myPeerRef.current.on('error', (err) => {
                 console.error("PeerJS Error:", err);
-                showLocalNotification(`Error de PeerJS: ${err.type}`);
+                showLocalNotification(`Error de PeerJS: ${err.type}`, 'error');
             });
         });
-        
+
         // Manejo de errores de conexión de Socket.IO
         socketRef.current.on('connect_error', (err) => {
             console.error("Socket.IO Connection Error:", err.message);
-            showLocalNotification(`Error de conexión al servidor de señalización: ${err.message}`);
+            showLocalNotification(`Error de conexión al servidor de señalización: ${err.message}. Revise la URL: ${SIGNALING_SERVER_URL}`, 'error');
         });
 
         // --- Manejo de mensajes de Socket.IO ---
 
         // Nuevo usuario conectado
         socketRef.current.on('user-connected', (userId, userName) => {
-            showLocalNotification(`${userName} se ha unido a la sala.`);
+            showLocalNotification(`${userName} se ha unido a la sala.`, 'info');
             setRoomUsers(prev => ({ ...prev, [userId]: userName }));
 
-            // Llamar al nuevo usuario con mi stream actual
             const call = myPeerRef.current.call(userId, currentStreamRef.current);
 
             call.on('stream', (remoteStream) => {
@@ -145,17 +161,28 @@ const useWebRTCLogic = (roomId) => {
                 handlePeerDisconnect(userId, 'Call error');
             });
 
-            peerConnections.current[userId] = call; // Guardar la llamada
+            peerConnections.current[userId] = call;
         });
 
         // Usuario desconectado
         socketRef.current.on('user-disconnected', (userId, userName) => {
-            handlePeerDisconnect(userId, `${userName} ha abandonado la sala.`);
+            handlePeerDisconnect(userId, `${userName} ha abandonado la sala.`, 'warning');
         });
 
         // Actualización de estado (solo nombre)
         socketRef.current.on('update-user-list', (users) => {
             setRoomUsers(users);
+        });
+
+        // --- CHAT Listeners (Restaurado) ---
+        socketRef.current.on('chat-message', ({ message, senderId, senderName, timestamp }) => {
+            setChatMessages(prev => [...prev, { message, senderId, senderName, timestamp, isRemote: true }]);
+        });
+
+        // --- THEME Listener (Restaurado) ---
+        socketRef.current.on('theme-change', (newTheme) => {
+            setAppTheme(newTheme);
+            document.body.className = newTheme === 'light' ? styles.lightMode : '';
         });
     };
 
@@ -163,23 +190,18 @@ const useWebRTCLogic = (roomId) => {
 
     // Función crucial para el rendimiento: reemplaza eficientemente todos los tracks en todas las conexiones
     const replaceAllTracks = (newStream) => {
-        // Detener tracks del stream anterior (si no es el mismo)
         if (currentStreamRef.current && currentStreamRef.current !== newStream) {
             currentStreamRef.current.getTracks().forEach(track => track.stop());
         }
-        
-        // Actualizar el estado local y la referencia
+
         setMyStream(newStream);
         currentStreamRef.current = newStream;
 
-        // Iterar sobre todas las conexiones P2P y reemplazar los tracks sin reiniciar la llamada
         Object.values(peerConnections.current).forEach(call => {
-            // Reemplazar Video Track
             const videoSender = call.peerConnection.getSenders().find(s => s.track.kind === 'video');
             if (videoSender && newStream.getVideoTracks().length > 0) {
                 videoSender.replaceTrack(newStream.getVideoTracks()[0]).catch(err => console.error("Error replacing video track:", err));
             }
-            // Reemplazar Audio Track
             const audioSender = call.peerConnection.getSenders().find(s => s.track.kind === 'audio');
             if (audioSender && newStream.getAudioTracks().length > 0) {
                 audioSender.replaceTrack(newStream.getAudioTracks()[0]).catch(err => console.error("Error replacing audio track:", err));
@@ -192,8 +214,8 @@ const useWebRTCLogic = (roomId) => {
         if (myStream) {
             const audioTrack = myStream.getAudioTracks()[0];
             if (audioTrack) {
-                audioTrack.enabled = isMuted; 
-                setIsMuted(!isMuted); 
+                audioTrack.enabled = isMuted;
+                setIsMuted(!isMuted);
             }
         }
     };
@@ -202,53 +224,79 @@ const useWebRTCLogic = (roomId) => {
         if (myStream) {
             const videoTrack = myStream.getVideoTracks()[0];
             if (videoTrack) {
-                videoTrack.enabled = isVideoOff; 
-                setIsVideoOff(!isVideoOff); 
+                videoTrack.enabled = isVideoOff;
+                setIsVideoOff(!isVideoOff);
             }
         }
     };
 
     const startScreenShare = async () => {
         if (myScreenStream) {
-            // Ya compartiendo, detener:
+            // Detener compartición
             myScreenStream.getTracks().forEach(track => track.stop());
             setMyScreenStream(null);
-            // Volver al stream de cámara original
             if (myStream) {
                 replaceAllTracks(myStream);
             }
         } else {
             try {
-                // Capturar pantalla y audio del sistema
+                // Capturar pantalla y audio del sistema (si es posible)
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 setMyScreenStream(screenStream);
-
-                // Reemplazar tracks en todas las conexiones P2P con el stream de pantalla
                 replaceAllTracks(screenStream);
 
-                // Escuchar evento de fin de compartir pantalla por botón nativo
                 screenStream.getVideoTracks()[0].onended = () => {
-                    startScreenShare(); // Llama a la función para detener la compartición
+                    startScreenShare();
                 };
             } catch (err) {
                 console.error("Error al compartir pantalla:", err);
-                showLocalNotification("No se pudo iniciar la compartición de pantalla.");
+                showLocalNotification("No se pudo iniciar la compartición de pantalla.", 'error');
             }
         }
     };
 
-    // --- 4. Cleanup y Desconexión ---
+    // --- 4. Funciones de Chat y Tema (Restaurado) ---
 
-    const handlePeerDisconnect = (userId, message) => {
-        showLocalNotification(message);
+    const sendChatMessage = (message, senderName) => {
+        if (socketRef.current && message.trim()) {
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const senderId = myPeerRef.current?.id || 'local';
 
-        // 1. Cerrar la llamada P2P
+            // Emitir mensaje al servidor
+            socketRef.current.emit('send-chat-message', {
+                roomId,
+                message,
+                senderId,
+                senderName,
+                timestamp
+            });
+
+            // Agregar a la lista local inmediatamente
+            setChatMessages(prev => [...prev, { message, senderId, senderName, timestamp, isLocal: true }]);
+        }
+    };
+
+    const cycleTheme = () => {
+        const newTheme = appTheme === 'dark' ? 'light' : 'dark';
+        setAppTheme(newTheme);
+        document.body.className = newTheme === 'light' ? styles.lightMode : '';
+
+        // Emitir cambio de tema a otros usuarios
+        if (socketRef.current) {
+            socketRef.current.emit('change-theme', roomId, newTheme);
+        }
+    };
+
+    // --- 5. Cleanup y Desconexión ---
+
+    const handlePeerDisconnect = (userId, message, type = 'info') => {
+        showLocalNotification(message, type);
+
         if (peerConnections.current[userId]) {
             peerConnections.current[userId].close();
             delete peerConnections.current[userId];
         }
 
-        // 2. Eliminar de la lista de pares y actualizar la UI
         setPeers(prev => {
             const newPeers = { ...prev };
             delete newPeers[userId];
@@ -262,20 +310,17 @@ const useWebRTCLogic = (roomId) => {
     };
 
     const cleanup = () => {
-        // 1. Cerrar Socket
         if (socketRef.current) {
             socketRef.current.emit('disconnect-room', roomId, myPeerRef.current?.id);
             socketRef.current.disconnect();
             socketRef.current = null;
         }
 
-        // 2. Cerrar PeerJS
         if (myPeerRef.current) {
             myPeerRef.current.destroy();
             myPeerRef.current = null;
         }
 
-        // 3. Cerrar todas las conexiones P2P activas
         Object.values(peerConnections.current).forEach(call => {
             try {
                 call.close();
@@ -285,7 +330,6 @@ const useWebRTCLogic = (roomId) => {
         });
         peerConnections.current = {};
 
-        // 4. Detener tracks de streams
         if (myStream) {
             myStream.getTracks().forEach(track => track.stop());
             setMyStream(null);
@@ -295,11 +339,11 @@ const useWebRTCLogic = (roomId) => {
             setMyScreenStream(null);
         }
 
-        // 5. Limpiar estados
         setPeers({});
         setRoomUsers({});
         setIsMuted(false);
         setIsVideoOff(false);
+        setChatMessages([]);
         currentStreamRef.current = null;
     };
 
@@ -308,8 +352,10 @@ const useWebRTCLogic = (roomId) => {
         myStream,
         myScreenStream,
         peers,
+        chatMessages,
         isMuted,
         isVideoOff,
+        appTheme,
         roomUsers,
         initializeStream,
         connect,
@@ -317,17 +363,75 @@ const useWebRTCLogic = (roomId) => {
         toggleMute,
         toggleVideo,
         startScreenShare,
+        sendChatMessage,
+        cycleTheme,
     };
+};
+
+// --- COMPONENTE: ChatBox (Restaurado) ---
+const ChatBox = ({ userName }) => {
+    const { chatMessages, sendChatMessage, appTheme } = useWebRTC();
+    const [messageInput, setMessageInput] = useState('');
+    const chatEndRef = useRef(null);
+
+    // Scroll automático al final
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [chatMessages]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (messageInput.trim()) {
+            sendChatMessage(messageInput, userName);
+            setMessageInput('');
+        }
+    };
+
+    return (
+        <div className={styles.chatBox} data-theme={appTheme}>
+            <div className={styles.chatHeader}>
+                <MessageSquare size={20} className="mr-2" /> Chat de la Sala
+            </div>
+            <div className={styles.chatMessages}>
+                {chatMessages.length === 0 ? (
+                    <p className={styles.noMessages}>Aún no hay mensajes. ¡Di algo!</p>
+                ) : (
+                    chatMessages.map((msg, index) => (
+                        <div
+                            key={index}
+                            className={`${styles.chatMessage} ${msg.isLocal ? styles.localMessage : styles.remoteMessage}`}
+                        >
+                            <span className={styles.chatSender}>{msg.isLocal ? 'Tú' : msg.senderName}:</span>
+                            <p className={styles.chatText}>{msg.message}</p>
+                            <span className={styles.chatTimestamp}>{msg.timestamp}</span>
+                        </div>
+                    ))
+                )}
+                <div ref={chatEndRef} />
+            </div>
+            <form onSubmit={handleSubmit} className={styles.chatInputForm}>
+                <input
+                    type="text"
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder="Escribe un mensaje..."
+                    className={styles.chatInput}
+                    aria-label="Escribir mensaje de chat"
+                />
+                <button type="submit" disabled={!messageInput.trim()} className={styles.chatSendButton}>
+                    <Send size={20} />
+                </button>
+            </form>
+        </div>
+    );
 };
 
 // --- COMPONENTE: VideoGrid (Muestra los videos) ---
 const VideoGrid = () => {
     const { myStream, peers, myScreenStream } = useWebRTC();
 
-    // Solo mostrar el stream principal (cámara o pantalla) como video local
     const mainStream = myScreenStream || myStream;
 
-    // Calcular la lista de videos a mostrar
     const videoList = [
         mainStream ? { id: 'local-video', stream: mainStream, userName: 'Tú', isLocal: true, isScreenSharing: !!myScreenStream } : null,
         ...Object.entries(peers).map(([id, peer]) => ({
@@ -335,11 +439,10 @@ const VideoGrid = () => {
             stream: peer.stream,
             userName: peer.userName || 'Usuario Remoto',
             isLocal: false,
-            isScreenSharing: false, // Simplificamos el estado remoto, solo nos interesa si es local
+            isScreenSharing: false,
         }))
     ].filter(Boolean);
 
-    // Determinar la clase de la cuadrícula para el layout fluido
     let gridClass = styles.videoGrid;
     const count = videoList.length;
 
@@ -350,7 +453,7 @@ const VideoGrid = () => {
     } else if (count <= 4) {
         gridClass += ` ${styles.grid4}`;
     } else {
-        gridClass += ` ${styles.gridFlex}`; // Para 5+ videos, usa flexbox wrap (más simple)
+        gridClass += ` ${styles.gridFlex}`;
     }
 
     return (
@@ -358,7 +461,6 @@ const VideoGrid = () => {
             {videoList.map(videoProps => (
                 <RemoteVideo key={videoProps.id} {...videoProps} />
             ))}
-            {/* Mensaje de espera si solo está el usuario local */}
             {count === 1 && (
                 <div className={styles.waitingMessage}>
                     Esperando a otros usuarios...
@@ -376,8 +478,7 @@ const RemoteVideo = ({ id, stream, userName, isLocal, isScreenSharing }) => {
     useEffect(() => {
         if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
-            
-            // Asignar el dispositivo de salida de audio solo a videos remotos
+
             if (!isLocal && videoRef.current.setSinkId && selectedAudioOutput) {
                 videoRef.current.setSinkId(selectedAudioOutput).catch(err => {
                     console.error("Error al establecer el dispositivo de salida de audio:", err);
@@ -386,37 +487,31 @@ const RemoteVideo = ({ id, stream, userName, isLocal, isScreenSharing }) => {
         }
     }, [stream, isLocal, selectedAudioOutput]);
 
-    // Ocultar el video si el track de video está deshabilitado (si es local)
     const isVideoHidden = isLocal && stream && stream.getVideoTracks().length > 0 && !stream.getVideoTracks()[0].enabled;
     const isAudioHidden = isLocal && stream && stream.getAudioTracks().length > 0 && !stream.getAudioTracks()[0].enabled;
 
 
     return (
         <div className={`${styles.videoContainer} ${isLocal ? styles.localVideo : ''} ${isVideoHidden ? styles.videoOff : ''} ${isScreenSharing ? styles.screenSharing : ''}`}>
-            {/* El atributo `autoPlay` y `playsInline` son cruciales para el móvil */}
             <video
                 ref={videoRef}
                 autoPlay
                 playsInline
-                muted={isLocal} // Silenciar video local para evitar eco
+                muted={isLocal}
                 className={styles.videoElement}
             />
 
-            {/* Overlay para indicador de usuario y estado */}
             <div className={styles.videoOverlay}>
                 <span className={styles.videoUserName}>{userName}</span>
-                
-                {/* Indicador de audio apagado */}
+
                 {isAudioHidden && (
                     <MicOff size={24} className={styles.micOffIcon} />
                 )}
-                {/* Indicador de que el usuario local está compartiendo pantalla */}
                 {isScreenSharing && (
                     <ScreenShare size={24} className={styles.screenShareIconIndicator} />
                 )}
             </div>
 
-            {/* Placeholder cuando el video está apagado */}
             {isVideoHidden && (
                 <div className={styles.videoOffPlaceholder}>
                     <VideoOff size={48} />
@@ -429,10 +524,19 @@ const RemoteVideo = ({ id, stream, userName, isLocal, isScreenSharing }) => {
 
 // --- COMPONENTE: ControlPanel (Botones de control) ---
 const ControlPanel = ({ onLeave }) => {
-    const { toggleMute, toggleVideo, startScreenShare, isMuted, isVideoOff, myScreenStream } = useWebRTC();
+    const { toggleMute, toggleVideo, startScreenShare, cycleTheme, isMuted, isVideoOff, myScreenStream, appTheme } = useWebRTC();
 
     return (
         <div className={styles.controlPanel}>
+            {/* Botón de Tema (Restaurado) */}
+            <button
+                className={styles.controlButton}
+                onClick={cycleTheme}
+                title={appTheme === 'dark' ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'}
+            >
+                {appTheme === 'dark' ? <Moon size={24} /> : <Sun size={24} />}
+            </button>
+
             <button
                 className={`${styles.controlButton} ${isMuted ? styles.muted : ''}`}
                 onClick={toggleMute}
@@ -457,7 +561,6 @@ const ControlPanel = ({ onLeave }) => {
                 <ScreenShare size={24} />
             </button>
 
-            {/* Botón de Salir (rojo, enfatizado) */}
             <button
                 className={`${styles.controlButton} ${styles.leaveButton}`}
                 onClick={onLeave}
@@ -480,11 +583,10 @@ const Lobby = ({ onJoin }) => {
     const [selectedAudioOut, setSelectedAudioOut] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
-    // Obtener dispositivos
     useEffect(() => {
         const getDevices = async () => {
             try {
-                // Solicitar permisos primero
+                // Pedir permisos de media para enumerar dispositivos con nombres reales
                 await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
                 const devices = await navigator.mediaDevices.enumerateDevices();
 
@@ -492,7 +594,6 @@ const Lobby = ({ onJoin }) => {
                 setVideoDevices(devices.filter(d => d.kind === 'videoinput'));
                 setAudioOutputDevices(devices.filter(d => d.kind === 'audiooutput'));
 
-                // Establecer valores por defecto
                 setSelectedAudioIn(devices.find(d => d.kind === 'audioinput')?.deviceId || '');
                 setSelectedVideoIn(devices.find(d => d.kind === 'videoinput')?.deviceId || '');
                 setSelectedAudioOut(devices.find(d => d.kind === 'audiooutput')?.deviceId || '');
@@ -524,7 +625,6 @@ const Lobby = ({ onJoin }) => {
                 <p className={styles.lobbySubtitle}>Optimizado para fluidez y dispositivos de bajo rendimiento.</p>
 
                 <form onSubmit={handleSubmit} className={styles.lobbyForm}>
-                    {/* Campo de Nombre */}
                     <div className={styles.formGroup}>
                         <label htmlFor="userName" className={styles.formLabel}>Tu Nombre</label>
                         <input
@@ -538,7 +638,6 @@ const Lobby = ({ onJoin }) => {
                         />
                     </div>
 
-                    {/* Selector de Micrófono */}
                     <div className={styles.formGroup}>
                         <label htmlFor="audioIn" className={styles.formLabel}>Micrófono</label>
                         <select
@@ -555,7 +654,6 @@ const Lobby = ({ onJoin }) => {
                         </select>
                     </div>
 
-                    {/* Selector de Cámara */}
                     <div className={styles.formGroup}>
                         <label htmlFor="videoIn" className={styles.formLabel}>Cámara</label>
                         <select
@@ -572,7 +670,6 @@ const Lobby = ({ onJoin }) => {
                         </select>
                     </div>
 
-                    {/* Selector de Salida de Audio (Altavoces) */}
                     <div className={styles.formGroup}>
                         <label htmlFor="audioOut" className={styles.formLabel}>Altavoces (Salida)</label>
                         <select
@@ -601,10 +698,11 @@ const Lobby = ({ onJoin }) => {
 
 // --- COMPONENTE: CallRoom (Sala de Llamada Principal) ---
 const CallRoom = ({ onLeave }) => {
-    const { peers } = useWebRTC();
+    const { peers, userName, appTheme } = useWebRTC();
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
     return (
-        <div className={styles.appContainer}>
+        <div className={styles.appContainer} data-theme={appTheme}>
             <header className={styles.header}>
                 <div className={styles.roomInfo}>
                     <h1 className={styles.roomTitle}>Conferencia P2P Liviana</h1>
@@ -613,15 +711,29 @@ const CallRoom = ({ onLeave }) => {
                         {Object.keys(peers).length + 1} Participantes
                     </span>
                 </div>
+                <button
+                    className={`${styles.chatToggleButton} ${isChatOpen ? styles.chatActive : ''}`}
+                    onClick={() => setIsChatOpen(!isChatOpen)}
+                    title="Alternar Chat"
+                >
+                    <MessageSquare size={24} />
+                </button>
             </header>
 
-            {/* Video Grid principal */}
-            <main className={styles.mainContent}>
-                <VideoGrid />
-            </main>
+            <div className={styles.mainLayout}>
+                <main className={styles.mainContent}>
+                    <VideoGrid />
+                </main>
 
-            {/* Panel de Control en la parte inferior */}
+                {isChatOpen && (
+                    <aside className={styles.chatSidebar}>
+                        <ChatBox userName={userName} />
+                    </aside>
+                )}
+            </div>
+
             <ControlPanel onLeave={onLeave} />
+            <ToastContainer position="bottom-right" />
         </div>
     );
 };
@@ -630,14 +742,13 @@ const CallRoom = ({ onLeave }) => {
 const App = () => {
     const [isJoined, setIsJoined] = useState(false);
     const [userName, setUserName] = useState('');
-    const [selectedAudioOutput, setSelectedAudioOutput] = useState(''); // Guarda el ID de altavoz seleccionado
+    const [selectedAudioOutput, setSelectedAudioOutput] = useState('');
 
     const webRTCLogic = useWebRTCLogic('main-room');
 
     const handleJoin = async (name, audioId, videoId, audioOutputId) => {
         setUserName(name);
         setSelectedAudioOutput(audioOutputId);
-        // Inicialización del stream antes de conectar
         const stream = await webRTCLogic.initializeStream(audioId, videoId);
         if (stream) {
             webRTCLogic.connect(stream, name);
@@ -651,9 +762,14 @@ const App = () => {
         setUserName('');
         setSelectedAudioOutput('');
     };
+    
+    // Aplicar el tema globalmente
+    useEffect(() => {
+        document.body.className = webRTCLogic.appTheme === 'light' ? styles.lightMode : '';
+    }, [webRTCLogic.appTheme]);
+
 
     useEffect(() => {
-        // Asegurar que la limpieza se haga al cerrar la pestaña/navegador
         window.addEventListener('beforeunload', webRTCLogic.cleanup);
         return () => {
             window.removeEventListener('beforeunload', webRTCLogic.cleanup);
@@ -664,7 +780,6 @@ const App = () => {
         return <Lobby onJoin={handleJoin} />;
     } else {
         return (
-            // Se pasa el contexto optimizado
             <WebRTCContext.Provider value={{ ...webRTCLogic, selectedAudioOutput, userName }}>
                 <CallRoom onLeave={handleLeave} />
             </WebRTCContext.Provider>
