@@ -190,7 +190,7 @@ body {
     }
     @media (min-width: 1440px) {
         .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-            width: calc(20% - 0.8rem); /* 5 columnas */
+            width: calc(50% - 0.8rem); /* 5 columnas */
         }
     }
 }
