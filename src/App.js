@@ -763,7 +763,7 @@ const Lobby = ({ onJoin }) => {
     };
 
     // El lobby siempre usará el tema oscuro por defecto
-    const lobbyTitleText = 'Unirse a Mundi-Link'; 
+    const lobbyTitleText = 'Uneté a Mundi-Link'; 
 
     return (
         <div className={`${styles.lobbyContainer} ${styles.darkMode}`}> 

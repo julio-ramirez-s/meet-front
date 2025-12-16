@@ -179,13 +179,13 @@ body {
     .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
         flex-shrink: 0;
         width: calc(33.33% - 0.67rem); /* 3 columnas por defecto en escritorio */
-        max-width: 400px; /* Tamaño máximo para video individual en cuadrícula */
+        /* Tamaño máximo para video individual en cuadrícula */
         aspect-ratio: 16 / 9;
     }
     /* Ajustar para más columnas en pantallas más grandes de escritorio */
     @media (min-width: 1024px) {
         .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
-            width: calc(25% - 0.75rem); /* 4 columnas */
+            width: calc(50% - 0.75rem); /* 4 columnas */
         }
     }
     @media (min-width: 1440px) {
