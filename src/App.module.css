@@ -1,507 +1,577 @@
-/* --------------------------------------------------------------------------------
-
-CSS NATIVO MINIMALISTA PARA MÁXIMA VELOCIDAD Y COMPATIBILIDAD
-Objetivo: Layout de Foco en Pantalla Compartida
--------------------------------------------------------------------------------- */
-
-/* Variables de Color Simples */
+/* Base de la aplicación */
 :root {
-/* Tema Oscuro (DEFAULT) */
---primary-color: #3b82f6; /* Azul */
---background-color: #0f172a; /* Oscuro */
---surface-color: #1e293b; /* Superficie */
---text-color: #f8fafc; /* Claro */
---text-muted-color: #94a3b8; /* Gris */
---danger-color: #ef4444; /* Rojo */
---success-color: #22c55e; /* Verde Mic/Vid */
---share-color: #f97316; /* Naranja Compartir */
+    /* Tema Oscuro (valores por defecto) */
+    --primary-color: #3b82f6; /* Azul brillante, para botones y títulos */
+    --secondary-color: #1e3a8a; /* Azul más oscuro, para detalles */
+    --background-color: #0f172a; /* Fondo muy oscuro, casi negro */
+    --surface-color: #1e293b; /* Superficies, cards */
+    --text-color: #f8fafc; /* Texto claro */
+    --text-muted-color: #94a3b8; /* Texto secundario */
+    --border-color: #334155; /* Bordes sutiles */
+    --red-alert-color: #ef4444; /* Rojo para alertas y salir */
+    --green-share-color: #22c55e; /* Verde para compartir pantalla */
 }
 
 /* Tema Claro */
 .lightMode {
---primary-color: #007bff;
---background-color: #f0f2f5;
---surface-color: #ffffff;
---text-color: #212529;
---text-muted-color: #6c757d;
---danger-color: #dc3545;
---success-color: #28a745;
---share-color: #ff8c00;
+    --primary-color: #007bff; /* Azul brillante, para botones y títulos */
+    --secondary-color: #0056b3; /* Azul más oscuro, para detalles */
+    --background-color: #f0f2f5; /* Fondo muy claro, casi blanco */
+    --surface-color: #ffffff; /* Superficies, cards */
+    --text-color: #212529; /* Texto oscuro */
+    --text-muted-color: #6c757d; /* Texto secundario oscuro */
+    --border-color: #ced4da; /* Bordes sutiles claros */
+    --red-alert-color: #dc3545; /* Rojo para alertas y salir */
+    --green-share-color: #28a745; /* Verde para compartir pantalla */
 }
 
-/* RESET/BASE */
-/* Se corrigió el selector universal que estaba incompleto ({ en lugar de * {) */
-* {
-box-sizing: border-box;
-margin: 0;
-padding: 0;
+
+body {
+    background-color: var(--background-color); /* Usa la variable */
 }
 
-html, body, #root {
-height: 100%;
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-background-color: var(--background-color);
-color: var(--text-color);
-transition: background-color 0.3s, color 0.3s;
+.mainContainer {
+    display: flex;
+    height: 100vh;
+    background-color: var(--background-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
 }
 
-.globalWrapper {
-height: 100%;
-}
-
-.notificationBox {
-position: fixed;
-top: 10px;
-right: 10px;
-background-color: var(--surface-color);
-color: var(--text-color);
-padding: 10px 15px;
-border-radius: 6px;
-opacity: 0;
-transition: opacity 0.5s ease-in-out;
-z-index: 1000;
-max-width: 90%;
-box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* --------------------------------------------------------------------------------
-
-LOBBY / LOGIN
-(Se mantienen los estilos del Lobby)
--------------------------------------------------------------------------------- */
-.lobbyContainer {
-display: flex;
-justify-content: center;
-align-items: center;
-min-height: 100vh;
-padding: 20px;
-}
-
-.lobbyCard {
-background-color: var(--surface-color);
-padding: 30px;
-border-radius: 10px;
-max-width: 400px;
-width: 100%;
-box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-
-.lobbyTitle {
-font-size: 1.5rem;
-font-weight: 700;
-margin-bottom: 5px;
-color: var(--primary-color);
-text-align: center;
-}
-
-.lobbySubtitle {
-font-size: 0.9rem;
-color: var(--text-muted-color);
-text-align: center;
-margin-bottom: 20px;
-}
-
-.lobbyForm {
-display: flex;
-flex-direction: column;
-gap: 15px;
-}
-
-.formGroup {
-display: flex;
-flex-direction: column;
-}
-
-.formLabel {
-font-size: 0.9rem;
-font-weight: 600;
-color: var(--text-muted-color);
-margin-bottom: 5px;
-}
-
-.formInput, .formSelect {
-width: 100%;
-padding: 10px;
-background-color: var(--background-color);
-border: 1px solid var(--text-muted-color);
-border-radius: 6px;
-color: var(--text-color);
-outline: none;
-}
-
-.joinButton {
-display: flex;
-align-items: center;
-justify-content: center;
-padding: 12px;
-background-color: var(--primary-color);
-color: white;
-border: none;
-border-radius: 6px;
-cursor: pointer;
-font-size: 1rem;
-font-weight: 600;
-margin-top: 10px;
-transition: background-color 0.2s;
-}
-
-/* --------------------------------------------------------------------------------
-
-APLICACIÓN PRINCIPAL (Sala de Reunión)
--------------------------------------------------------------------------------- */
-/* Se corrigió el comentario multilínea que estaba mal cerrado */
-.appContainer {
-display: grid;
-grid-template-rows: auto 1fr; /* Header, Main Content */
-height: 100vh;
-padding-bottom: 80px; /* Espacio para la barra de controles inferior */
-overflow: hidden;
-}
-
-.appHeader {
-padding: 10px 20px;
-background-color: var(--surface-color);
-display: flex;
-justify-content: space-between;
-align-items: center;
-border-bottom: 1px solid var(--text-muted-color);
-}
-
-.roomTitle {
-font-size: 1.1rem;
-font-weight: 600;
-display: flex;
-align-items: center;
-color: var(--text-color);
-}
-
-/* MAIN CONTENT (Video Gallery + Chat) */
 .mainContent {
-display: flex;
-flex: 1;
-overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
 }
 
-/* --------------------------------------------------------------------------------
-
-LAYOUT DE FOCO EN PANTALLA COMPARTIDA
--------------------------------------------------------------------------------- */
-.screenFocusLayout {
-flex-grow: 1;
-display: grid;
-gap: 10px;
-padding: 10px;
-background-color: var(--background-color);
-overflow: hidden;
-/* Default a MÓVIL (Vertical stack) */
-grid-template-columns: 1fr;
-grid-template-rows: 1fr auto; /* Main stream toma 1fr, cámaras toman auto (altura) */
+/* Estilos para el contenedor de reacciones y el menú de emojis */
+.reactionContainer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
 }
 
-/* DESKTOP/HORIZONTAL (Screen on Left, Cameras on Right) */
-@media (min-width: 768px) {
-.screenFocusLayout {
-grid-template-columns: 3fr 1fr; /* 75% para pantalla, 25% para cámaras */
-grid-template-rows: 1fr;
-}
-.mainStreamArea {
-grid-column: 1 / 2; /* Columna Izquierda */
-}
-.cameraFeedsArea {
-grid-column: 2 / 3; /* Columna Derecha */
-max-height: 100%;
-overflow-y: auto;
-flex-direction: column; /* Vertical stack en desktop */
-}
-}
-
-/* AREA PRINCIPAL (Main Screen) */
-.mainStreamArea {
-overflow: hidden;
-display: flex;
-justify-content: center;
-align-items: center;
-min-height: 200px; /* Mínimo en móvil */
+.emojiPicker {
+    position: fixed;
+    bottom: calc(4.75rem + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--surface-color); /* Usa la variable */
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    z-index: 200;
+    width: 90%;
+    max-width: 400px;
+    justify-content: center;
 }
 
-.mainScreenVideoContainer {
-width: 100%;
-height: 100%;
-padding-bottom: 0 !important; /* Deshabilita el truco de padding para altura dinámica */
+.emojiButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
-.mainScreenVideoContainer .videoElement {
-object-fit: contain; /* Asegura que se vea todo el stream de pantalla */
-transform: none; /* No reflejar */
+.emojiButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
+    transform: scale(1.1);
 }
 
-.mainScreenVideoContainer.localVideo .videoElement {
-/* Si la cámara se pone en grande, sí reflejarla */
-object-fit: cover;
-transform: scaleX(-1);
+.emojiButton:active {
+    transform: scale(0.95);
 }
 
-/* AREA SECUNDARIA (Cámaras pequeñas) */
-.cameraFeedsArea {
-display: flex;
-flex-direction: row; /* Horizontal scroll en móvil por defecto */
-gap: 8px;
-overflow-x: auto;
-overflow-y: hidden;
-padding: 5px 0;
+.commonEmojiButton, .plusButton {
+    padding: 0.75rem;
+    border-radius: 9999px;
+    background-color: var(--surface-color); /* Usa la variable */
+    transition: background-color 0.2s ease;
+    border: none;
+    color: var(--text-color); /* Usa la variable */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-/* Contenedor de video genérico */
-.videoContainer {
-position: relative;
-background-color: var(--surface-color);
-border-radius: 8px;
-overflow: hidden;
+.commonEmojiButton:hover, .plusButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
 }
 
-/* Cámaras Pequeñas (Feeds) */
-.smallCameraVideoContainer {
-width: 150px; /* Ancho fijo para móvil */
-min-width: 150px;
-padding-bottom: 112.5%; /* 4:3 Aspect ratio para mejor uso del espacio */
-flex-shrink: 0;
+.controlButtonActive {
+    background-color: var(--primary-color) !important; /* Usa la variable */
 }
 
-.smallCameraVideoContainer .videoElement {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-object-fit: cover;
+/* ---------------- Video Grid ---------------- */
+.videoGridContainer {
+    flex-grow: 1;
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    overflow: auto;
+    background-color: var(--surface-color); /* Usa la variable */
+    align-items: stretch;
+    justify-content: center;
 }
 
-/* Reflejo para la cámara local SOLO en los feeds secundarios (para que el usuario se vea como en un espejo) */
-.localVideo .videoElement {
-transform: scaleX(-1);
+/* Contenedor principal para el video más grande (pantalla compartida) */
+.mainVideo {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-height: 100%;
 }
 
-/* En Desktop, las cámaras pequeñas se ajustan al 100% de la columna */
-@media (min-width: 768px) {
-.smallCameraVideoContainer {
-width: 100%;
-min-width: 100%;
-padding-bottom: 56.25%; /* 16:9 Aspect Ratio en el sidebar */
-}
+.mainVideo .videoWrapper {
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
 }
 
-.videoOffOverlay {
-position: absolute;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-display: flex;
-flex-direction: column;
-justify-content: center;
-align-items: center;
-background-color: var(--surface-color);
-color: var(--text-muted-color);
-font-size: 1.2rem;
+/* Contenedor para los videos secundarios (cámaras) */
+.videoSecondaryGrid {
+    display: flex; /* Por defecto a flex */
+    gap: 1rem;
+    flex-shrink: 0;
+    align-items: center; /* Centrar elementos */
+    justify-content: center; /* Centrar elementos */
 }
 
-.nameTag {
-position: absolute;
-bottom: 5px;
-left: 5px;
-background-color: rgba(0, 0, 0, 0.6);
-color: white;
-padding: 4px 8px;
-border-radius: 4px;
-font-size: 0.75rem;
-display: flex;
-align-items: center;
-z-index: 10;
+/* Diseño para escritorio (PC): min-width: 769px */
+@media (min-width: 769px) { 
+    .videoGridContainer {
+        flex-direction: row; /* Contenido principal y videos secundarios lado a lado */
+    }
+
+    /* Cuando se comparte pantalla en escritorio, videos secundarios en columna a la derecha */
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
+        flex-direction: column;
+        width: 25%; /* Ancho fijo para la barra lateral */
+        max-width: 300px;
+        overflow-y: auto;
+    }
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Cuando NO se comparte pantalla en escritorio, todos los videos en una cuadrícula */
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
+        flex-direction: row; /* Organizar en una fila */
+        flex-wrap: wrap; /* Permitir que se envuelvan para crear cuadrícula */
+        width: 100%; /* Ocupar todo el ancho disponible */
+        justify-content: center; /* Centrar elementos en la cuadrícula */
+    }
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+        flex-shrink: 0;
+        width: calc(33.33% - 0.67rem); /* 3 columnas por defecto en escritorio */
+        max-width: 400px; /* Tamaño máximo para video individual en cuadrícula */
+        aspect-ratio: 16 / 9;
+    }
+    /* Ajustar para más columnas en pantallas más grandes de escritorio */
+    @media (min-width: 1024px) {
+        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+            width: calc(25% - 0.75rem); /* 4 columnas */
+        }
+    }
+    @media (min-width: 1440px) {
+        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+            width: calc(20% - 0.8rem); /* 5 columnas */
+        }
+    }
 }
 
-.nameLabel {
-margin-left: 5px;
+/* Diseño para móvil (celulares): max-width: 768px */
+@media (max-width: 768px) { 
+    .videoGridContainer {
+        flex-direction: column; /* Contenido principal encima de los videos secundarios */
+    }
+
+    /* Cuando se comparte pantalla en móvil, videos secundarios en fila (scroll horizontal) */
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
+        flex-direction: row;
+        width: 100%;
+        overflow-x: auto;
+        min-height: 20%;
+    }
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
+        flex-shrink: 0;
+        width: 200px; /* Ancho fijo para scroll horizontal */
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Cuando NO se comparte pantalla en móvil, todos los videos en una columna */
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
+        flex-direction: column; /* Todos los videos en una sola columna */
+        width: 100%;
+        overflow-y: auto;
+    }
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+    }
 }
 
-.screenShareLabel {
-position: absolute;
-top: 5px;
-right: 5px;
-background-color: var(--share-color);
-color: white;
-padding: 3px 6px;
-border-radius: 4px;
-font-size: 0.7rem;
-font-weight: bold;
-z-index: 10;
+
+/* Contenedor del video */
+.videoWrapper {
+    align-items: center;
+    aspect-ratio: 16 / 9;
+    background-color: #000000;
+    border: 2px solid var(--border-color); /* Usa la variable */
+    border-radius: .5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    position: relative;
+    transition: transform .3s ease-in-out;
+    width: 100%;
 }
 
-/* --------------------------------------------------------------------------------
-
-BARRA DE CONTROLES
--------------------------------------------------------------------------------- */
-.controlsBar {
-position: fixed;
-bottom: 0;
-left: 0;
-right: 0;
-height: 80px;
-display: flex;
-justify-content: center;
-align-items: center;
-z-index: 500;
+.videoElement {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
 }
 
-.mainFloatingButton {
-position: absolute;
-bottom: 15px;
-background-color: var(--primary-color) !important;
-color: white !important;
+.localVideo {
+    transform: scaleX(-1);
 }
 
-.floatingPanel {
-position: absolute;
-bottom: 15px;
-background-color: var(--surface-color);
-padding: 10px 15px;
-border-radius: 12px;
-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+.userNameLabel {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    z-index: 10;
+}
+/* ---------------- Controles ---------------- */
+.controlsFooter {
+    background-color: var(--surface-color); /* Usa la variable */
+    backdrop-filter: blur(8px);
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    z-index: 100;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2); /* Sombra para el footer */
 }
 
-.controlButtonsGroup {
-display: flex;
-gap: 10px;
-justify-content: center;
-align-items: center;
+@media (min-width: 640px) {
+    .controlsFooter {
+        gap: 1.5rem;
+    }
 }
 
 .controlButton {
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
-width: 60px;
-height: 60px;
-border-radius: 10px;
-border: none;
-cursor: pointer;
-font-size: 0.75rem;
-font-weight: 500;
-color: var(--text-color);
-transition: background-color 0.1s, transform 0.1s;
+    padding: 0.75rem;
+    border-radius: 9999px;
+    background-color: var(--surface-color); /* Usa la variable */
+    transition: all 0.2s ease-in-out;
+    border: none;
+    color: var(--text-color); /* Usa la variable */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
-.controlLabel {
-margin-top: 2px;
-font-size: 0.7rem;
+.controlButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
 }
 
-/* Colores de Estado */
-.primaryControl { background-color: var(--primary-color); color: white; }
-.secondaryControl { background-color: var(--text-muted-color); color: var(--text-color); }
-.dangerControl { background-color: var(--danger-color); color: white; }
-.successControl { background-color: var(--success-color); color: white; }
-.shareControl { background-color: var(--share-color); color: white; }
-.leaveControl { background-color: var(--danger-color); color: white; }
-
-/* --------------------------------------------------------------------------------
-
-PANEL DE CHAT
--------------------------------------------------------------------------------- */
-.chatPanel {
-width: 0;
-height: 100%;
-background-color: var(--surface-color);
-border-left: 1px solid var(--text-muted-color);
-display: flex;
-flex-direction: column;
-transition: width 0.3s ease-in-out;
-flex-shrink: 0;
+.controlButtonActive {
+    background-color: var(--primary-color) !important; /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
 }
 
-.chatPanelOpen {
-width: 300px;
+.controlButtonScreenShare {
+    background-color: var(--green-share-color) !important; /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
 }
 
-/* MÓVIL: Chat a pantalla completa */
-@media (max-width: 768px) {
-.chatPanelOpen {
-width: 100%;
-position: fixed;
-top: 0;
-bottom: 0;
-z-index: 600;
-height: 100%;
-border: none;
+/* Nuevo contenedor para los botones de tema */
+.themeControls {
+    display: flex;
+    gap: 0.5rem; /* Espacio entre los botones de tema */
 }
+
+.leaveButton {
+    padding: 0.75rem 1.25rem;
+    border-radius: 9999px;
+    background-color: var(--red-alert-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+.leaveButton:hover {
+    background-color: #b91c1c; /* Color fijo para hover de botón de salir */
+}
+
+/* ---------------- Sidebar de Chat ---------------- */
+.chatSidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 100%;
+    max-width: 24rem;
+    background-color: var(--surface-color); /* Usa la variable */
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 300;
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.3);
+}
+.chatSidebarOpen {
+    transform: translateX(0);
 }
 
 .chatHeader {
-display: flex;
-justify-content: space-between;
-align-items: center;
-padding: 10px 15px;
-border-bottom: 1px solid var(--text-muted-color);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color); /* Usa la variable */
+}
+
+.chatTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Usa la variable */
+}
+
+.closeChatButton {
+    padding: 0.5rem;
+    border-radius: 9999px;
+    border: none;
+    background-color: transparent;
+    color: var(--text-color); /* Usa la variable */
+    cursor: pointer;
+}
+.closeChatButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
 }
 
 .chatMessages {
-flex-grow: 1;
-overflow-y: auto;
-padding: 10px 15px;
-display: flex;
-flex-direction: column;
-gap: 10px;
+    flex-grow: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-.myMessage .messageContent { background-color: var(--primary-color); color: white; }
-.otherMessage .messageContent { background-color: var(--background-color); border: 1px solid var(--text-muted-color); color: var(--text-color); }
+.systemMessage {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted-color); /* Usa la variable */
+    font-style: italic;
+}
 
-.chatInputForm {
-display: flex;
-padding: 10px 15px;
-border-top: 1px solid var(--text-muted-color);
+.chatMessageWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.chatMessageWrapperMe {
+    align-items: flex-end;
+}
+
+.chatMessage {
+    padding: 0.6rem 0.9rem;
+    border-radius: 1rem;
+    max-width: 85%;
+    background-color: var(--border-color); /* Usa la variable */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.chatMessageMe {
+    background-color: var(--primary-color); /* Usa la variable */
+}
+
+.chatUserName {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color); /* Usa la variable */
+    margin-bottom: 0.2rem;
+}
+
+.chatMessageText {
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+
+.chatForm {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color); /* Usa la variable */
+    display: flex;
+    gap: 0.5rem;
 }
 
 .chatInput {
-flex-grow: 1;
-padding: 8px;
-border: 1px solid var(--text-muted-color);
-border-radius: 6px 0 0 6px;
-background-color: var(--background-color);
-color: var(--text-color);
-outline: none;
+    flex-grow: 1;
+    padding: 0.75rem;
+    background-color: var(--background-color); /* Usa la variable */
+    border-radius: 9999px;
+    border: 1px solid var(--border-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+.chatInput::placeholder {
+    color: var(--text-muted-color); /* Usa la variable */
+}
+.chatInput:focus {
+    border-color: var(--primary-color); /* Usa la variable */
 }
 
 .chatSendButton {
-background-color: var(--primary-color);
-color: white;
-border: none;
-padding: 8px 12px;
-border-radius: 0 6px 6px 0;
-cursor: pointer;
+    background-color: var(--primary-color); /* Usa la variable */
+    padding: 0.75rem;
+    border-radius: 9999px;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.chatSendButton:hover {
+    background-color: var(--secondary-color); /* Usa la variable */
 }
 
-/* Ajustes de Controles en Móvil */
-@media (max-width: 768px) {
-.appContainer {
-padding-bottom: 70px; /* Reducir padding de footer */
+/* ---------------- Lobby ---------------- */
+.lobbyContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: var(--background-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    padding: 1rem;
 }
 
-.controlButton {
-width: 50px;
-height: 50px;
+.lobbyFormWrapper {
+    width: 100%;
+    max-width: 32rem;
 }
 
-.controlLabel {
-display: none;
+.lobbyCard {
+    background-color: var(--surface-color); /* Usa la variable */
+    padding: 2.5rem;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color); /* Usa la variable */
+    text-align: center;
 }
 
-.floatingPanel {
-padding: 5px;
-bottom: 5px;
+.lobbyLogo {
+    height: 96px;
+    margin-bottom: 1rem;
 }
 
-.mainFloatingButton {
-bottom: 5px;
+.lobbyTitle {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Usa la variable */
+    margin-bottom: 2rem;
 }
+
+.lobbyForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.formLabel {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color); /* Usa la variable */
+    margin-bottom: 0.5rem;
+}
+
+.formInput,
+.formSelect {
+    width: 100%;
+    padding: 0.9rem 0.2rem;
+    background-color: var(--background-color); /* Usa la variable */
+    border: 1px solid var(--border-color); /* Usa la variable */
+    border-radius: 0.75rem;
+    color: var(--text-color); /* Usa la variable */
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+.formInput:focus,
+.formSelect:focus {
+    border-color: var(--primary-color); /* Usa la variable */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.loadingMessage {
+    text-align: center;
+    color: var(--text-muted-color); /* Usa la variable */
+}
+
+.joinButton {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    background-color: var(--primary-color); /* Usa la variable */
+    color: #fff;
+    transition: background-color 0.3s ease;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+.joinButton:hover {
+    background-color: var(--secondary-color); /* Usa la variable */
+}
+.joinButton:disabled {
+    background-color: #64748b; /* Color fijo */
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.joinButtonIcon {
+    margin-right: 0.75rem;
 }
