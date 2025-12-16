@@ -25,111 +25,106 @@
     --green-share-color: #28a745; /* Verde para compartir pantalla */
 }
 
-/* Aplicar variables al body (para el fondo global y fuente) */
-body {
-    background-color: var(--background-color);
-    color: var(--text-color);
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    padding: 0;
-    transition: background-color 0.3s, color 0.3s;
-}
 
-/* ---------------- Estructura Principal ---------------- */
-.appWrapper {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+body {
+    background-color: var(--background-color); /* Usa la variable */
 }
 
 .mainContainer {
+    display: flex;
+    height: 100vh;
+    background-color: var(--background-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    font-family: 'Inter', sans-serif;
+    overflow: hidden;
+}
+
+.mainContent {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
     position: relative;
     overflow: hidden;
+}
+
+/* Estilos para el contenedor de reacciones y el menú de emojis */
+.reactionContainer {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1000;
+}
+
+.emojiPicker {
+    position: fixed;
+    bottom: calc(4.75rem + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--surface-color); /* Usa la variable */
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    padding: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    z-index: 200;
+    width: 90%;
+    max-width: 400px;
+    justify-content: center;
+}
+
+.emojiButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.emojiButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
+    transform: scale(1.1);
+}
+
+.emojiButton:active {
+    transform: scale(0.95);
+}
+
+.commonEmojiButton, .plusButton {
+    padding: 0.75rem;
+    border-radius: 9999px;
+    background-color: var(--surface-color); /* Usa la variable */
+    transition: background-color 0.2s ease;
+    border: none;
+    color: var(--text-color); /* Usa la variable */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.commonEmojiButton:hover, .plusButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
+}
+
+.controlButtonActive {
+    background-color: var(--primary-color) !important; /* Usa la variable */
 }
 
 /* ---------------- Video Grid ---------------- */
 .videoGridContainer {
     flex-grow: 1;
     display: flex;
-    gap: 0.75rem; /* Espacio más compacto */
+    gap: 1rem;
     padding: 1rem;
-    overflow: hidden; /* Controlar desbordamiento */
+    overflow: auto;
+    background-color: var(--surface-color); /* Usa la variable */
     align-items: stretch;
     justify-content: center;
-}
-
-/* Estilos comunes para todos los wrappers de video */
-.videoWrapper {
-    position: relative;
-    background-color: var(--surface-color);
-    border-radius: 0.75rem; 
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    border: 2px solid var(--border-color); /* Borde sutil */
-    transition: all 0.3s ease;
-}
-
-.videoElement {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* Llenar el contenedor */
-    transition: opacity 0.3s;
-}
-
-.videoHidden {
-    opacity: 0;
-    width: 100%;
-    height: 100%;
-}
-
-.videoPlaceholder {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--surface-color);
-    color: var(--text-muted-color);
-    text-align: center;
-    font-size: 1rem;
-}
-
-.userNameTag {
-    position: absolute;
-    bottom: 0.5rem;
-    left: 0.5rem;
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    z-index: 10;
-}
-
-.muteIcon {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background-color: var(--red-alert-color);
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
 }
 
 /* Contenedor principal para el video más grande (pantalla compartida) */
@@ -138,399 +133,340 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
-    border-radius: 0.75rem;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+    max-height: 100%;
 }
 
 .mainVideo .videoWrapper {
-    border: none;
-    width: 100%;
     height: 100%;
+    width: 100%;
     max-width: 100%;
-}
-
-.mainVideo .videoElement {
-    object-fit: contain; /* Ajusta la pantalla completa sin cortar */
 }
 
 /* Contenedor para los videos secundarios (cámaras) */
 .videoSecondaryGrid {
-    display: flex; 
-    gap: 0.75rem;
+    display: flex; /* Por defecto a flex */
+    gap: 1rem;
     flex-shrink: 0;
-    align-items: center; 
-    justify-content: center;
-}
-
-.videoSecondaryGrid .videoWrapper {
-    aspect-ratio: 16 / 9;
-    min-height: 0;
-}
-
-/* ---------------- RESPONSIVIDAD ---------------- */
-
-/* Diseño para móvil (celulares): max-width: 768px */
-@media (max-width: 768px) { 
-    .videoGridContainer {
-        flex-direction: column; 
-        padding-bottom: 0.5rem;
-    }
-
-    /* Vista sin pantalla compartida: todos los videos en columna */
-    .videoGridContainer:not(.mainVideoPresent) {
-        overflow-y: auto;
-    }
-    .videoGridContainer:not(.mainVideoPresent) .videoWrapper {
-        width: 100%;
-        max-width: 600px;
-        margin: 0 auto;
-        min-height: 200px;
-    }
-
-    /* Cuando se comparte pantalla en móvil */
-    .videoGridContainer.mainVideoPresent {
-        flex-direction: column; 
-        padding: 0.5rem 0.5rem 0; /* Más compacto arriba */
-    }
-    .videoGridContainer.mainVideoPresent .mainVideo {
-        flex-basis: 75vh; /* Dar al video principal un tamaño dominante */
-        min-height: 0;
-        max-height: 75vh;
-        width: 100%;
-    }
-    .videoGridContainer.mainVideoPresent .videoSecondaryGrid {
-        flex-direction: row;
-        width: 100%;
-        overflow-x: auto; /* Scroll horizontal para secundarios */
-        min-height: 100px;
-        max-height: 15vh;
-        padding: 0.5rem;
-        border-top: 1px solid var(--border-color);
-        background-color: var(--background-color);
-    }
-    .videoGridContainer.mainVideoPresent .videoSecondaryGrid .videoWrapper {
-        flex-shrink: 0;
-        width: 120px; 
-        height: auto;
-    }
+    align-items: center; /* Centrar elementos */
+    justify-content: center; /* Centrar elementos */
 }
 
 /* Diseño para escritorio (PC): min-width: 769px */
 @media (min-width: 769px) { 
     .videoGridContainer {
-        flex-direction: row;
+        flex-direction: row; /* Contenido principal y videos secundarios lado a lado */
     }
 
-    /* Vista sin pantalla compartida: Cuadrícula dinámica */
-    .videoGridContainer:not(.mainVideoPresent) .videoSecondaryGrid {
-        flex-wrap: wrap;
-        align-content: center;
-        width: 100%;
-        max-height: 100%;
-    }
-    .videoGridContainer:not(.mainVideoPresent) .videoWrapper {
-        flex-grow: 1;
-        min-width: 300px; /* Tamaño mínimo para desktop */
-        min-height: 200px;
-        width: calc(50% - 1rem); /* 2x2 */
-    }
-
-
-    /* Cuando se comparte pantalla en escritorio */
-    .videoGridContainer.mainVideoPresent {
-        flex-direction: row;
-        gap: 1rem;
-    }
-    .videoGridContainer.mainVideoPresent .mainVideo {
-        flex-basis: 75%;
-        max-width: 75%;
-        max-height: 100%;
-    }
-    .videoGridContainer.mainVideoPresent .videoSecondaryGrid {
-        flex-direction: column; /* Secundarios a la derecha en columna */
-        width: 25%; 
-        max-width: 250px;
+    /* Cuando se comparte pantalla en escritorio, videos secundarios en columna a la derecha */
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
+        flex-direction: column;
+        width: 25%; /* Ancho fijo para la barra lateral */
+        max-width: 300px;
         overflow-y: auto;
-        padding-right: 0.5rem; /* Espacio para scrollbar si es necesario */
     }
-    .videoGridContainer.mainVideoPresent .videoSecondaryGrid .videoWrapper {
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
         width: 100%;
-        min-height: 0;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Cuando NO se comparte pantalla en escritorio, todos los videos en una cuadrícula */
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
+        flex-direction: row; /* Organizar en una fila */
+        flex-wrap: wrap; /* Permitir que se envuelvan para crear cuadrícula */
+        width: 100%; /* Ocupar todo el ancho disponible */
+        justify-content: center; /* Centrar elementos en la cuadrícula */
+    }
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
         flex-shrink: 0;
+        width: calc(33.33% - 0.67rem); /* 3 columnas por defecto en escritorio */
+        max-width: 400px; /* Tamaño máximo para video individual en cuadrícula */
+        aspect-ratio: 16 / 9;
+    }
+    /* Ajustar para más columnas en pantallas más grandes de escritorio */
+    @media (min-width: 1024px) {
+        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+            width: calc(25% - 0.75rem); /* 4 columnas */
+        }
+    }
+    @media (min-width: 1440px) {
+        .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+            width: calc(20% - 0.8rem); /* 5 columnas */
+        }
+    }
+}
+
+/* Diseño para móvil (celulares): max-width: 768px */
+@media (max-width: 768px) { 
+    .videoGridContainer {
+        flex-direction: column; /* Contenido principal encima de los videos secundarios */
+    }
+
+    /* Cuando se comparte pantalla en móvil, videos secundarios en fila (scroll horizontal) */
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid {
+        flex-direction: row;
+        width: 100%;
+        overflow-x: auto;
+        min-height: 20%;
+    }
+    .videoGridContainer:has(.mainVideo) .videoSecondaryGrid .videoWrapper {
+        flex-shrink: 0;
+        width: 200px; /* Ancho fijo para scroll horizontal */
+        height: auto;
+        aspect-ratio: 16 / 9;
+    }
+
+    /* Cuando NO se comparte pantalla en móvil, todos los videos en una columna */
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid {
+        flex-direction: column; /* Todos los videos en una sola columna */
+        width: 100%;
+        overflow-y: auto;
+    }
+    .videoGridContainer:not(:has(.mainVideo)) .videoSecondaryGrid .videoWrapper {
+        width: 100%;
+        aspect-ratio: 16 / 9;
     }
 }
 
 
-/* ---------------- Controles (Footer) ---------------- */
-.controlsFooter {
-    background-color: var(--surface-color); 
-    backdrop-filter: blur(8px);
-    padding: 0.75rem 1rem;
-    display: flex;
-    justify-content: space-between; /* En móvil, separa los grupos */
+/* Contenedor del video */
+.videoWrapper {
     align-items: center;
-    gap: 0.5rem;
-    flex-wrap: nowrap;
+    aspect-ratio: 16 / 9;
+    background-color: #000000;
+    border: 2px solid var(--border-color); /* Usa la variable */
+    border-radius: .5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    position: relative;
+    transition: transform .3s ease-in-out;
+    width: 100%;
+}
+
+.videoElement {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.localVideo {
+    transform: scaleX(-1);
+}
+
+.userNameLabel {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    z-index: 10;
+}
+/* ---------------- Controles ---------------- */
+.controlsFooter {
+    background-color: var(--surface-color); /* Usa la variable */
+    backdrop-filter: blur(8px);
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
     z-index: 100;
-    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2);
-    position: relative; /* Para posicionar el menú móvil */
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2); /* Sombra para el footer */
 }
 
 @media (min-width: 640px) {
     .controlsFooter {
-        justify-content: center; /* Centrar en escritorio */
-        gap: 2rem;
-    }
-}
-
-.mainControlsGroup,
-.actionControlsGroup {
-    display: flex;
-    gap: 0.5rem;
-}
-
-@media (min-width: 640px) {
-    .mainControlsGroup,
-    .actionControlsGroup {
-        gap: 1rem;
+        gap: 1.5rem;
     }
 }
 
 .controlButton {
-    background-color: var(--border-color);
-    color: var(--text-color);
+    padding: 0.75rem;
+    border-radius: 9999px;
+    background-color: var(--surface-color); /* Usa la variable */
+    transition: all 0.2s ease-in-out;
     border: none;
-    padding: 0.6rem;
-    border-radius: 50%;
+    color: var(--text-color); /* Usa la variable */
     cursor: pointer;
-    font-size: 1.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s, color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
+
 .controlButton:hover {
-    background-color: var(--primary-color);
-}
-.controlButton:active {
-    transform: scale(0.95);
+    background-color: var(--border-color); /* Usa la variable */
 }
 
 .controlButtonActive {
-    background-color: var(--primary-color);
-    color: var(--surface-color); /* Blanco/claro para contraste */
-}
-.controlButtonActive:hover {
-    background-color: var(--secondary-color);
+    background-color: var(--primary-color) !important; /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
 }
 
 .controlButtonScreenShare {
-    background-color: var(--green-share-color) !important;
-    color: white;
+    background-color: var(--green-share-color) !important; /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+}
+
+/* Nuevo contenedor para los botones de tema */
+.themeControls {
+    display: flex;
+    gap: 0.5rem; /* Espacio entre los botones de tema */
 }
 
 .leaveButton {
-    background-color: var(--red-alert-color);
-    color: white;
-    border: none;
-    padding: 0.6rem 1rem;
-    border-radius: 2rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 9999px;
+    background-color: var(--red-alert-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
     font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    display: none; /* Oculto por defecto en móvil */
-}
-
-.leaveButton:hover {
-    background-color: #c53030;
-}
-
-@media (min-width: 640px) {
-    .leaveButton {
-        display: flex; /* Visible en escritorio */
-        align-items: center;
-    }
-}
-
-/* NUEVO: Menú flotante para botones secundarios en móvil */
-.mobileMenu {
-    position: absolute;
-    bottom: calc(3rem + 1rem); /* Altura del footer + padding */
-    right: 1rem;
-    background-color: var(--surface-color); 
-    border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-    padding: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    z-index: 101;
-    min-width: 150px;
-}
-
-.mobileMenu button {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background-color: transparent;
+    font-size: 0.95rem;
     border: none;
-    color: var(--text-color);
-    border-radius: 0.5rem;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    font-weight: 500;
-    width: 100%;
-    justify-content: flex-start;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
-.mobileMenu button:hover {
-    background-color: var(--border-color);
-}
-.leaveButtonMobile {
-    background-color: var(--red-alert-color) !important;
-    color: white !important;
-    justify-content: center !important;
+.leaveButton:hover {
+    background-color: #b91c1c; /* Color fijo para hover de botón de salir */
 }
 
-/* ---------------- Chat Sidebar ---------------- */
+/* ---------------- Sidebar de Chat ---------------- */
 .chatSidebar {
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
-    width: 100%; /* Ocupa el 100% en móvil */
-    max-width: 350px; /* Ancho máximo en escritorio */
     height: 100%;
-    background-color: var(--surface-color);
+    width: 100%;
+    max-width: 24rem;
+    background-color: var(--surface-color); /* Usa la variable */
     display: flex;
     flex-direction: column;
-    z-index: 99;
-    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.2);
     transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
+    transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 300;
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.3);
 }
-
-@media (min-width: 640px) {
-    .chatSidebar {
-        width: 300px; /* Ancho fijo en escritorio */
-    }
-}
-
-.chatOpen {
+.chatSidebarOpen {
     transform: translateX(0);
 }
 
-.chatClosed {
-    transform: translateX(100%);
+.chatHeader {
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color); /* Usa la variable */
 }
 
-.chatHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
+.chatTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Usa la variable */
 }
-.chatHeader h2 {
-    margin: 0;
-    font-size: 1.2rem;
-}
-.chatCloseButton {
-    background: none;
+
+.closeChatButton {
+    padding: 0.5rem;
+    border-radius: 9999px;
     border: none;
-    color: var(--text-muted-color);
+    background-color: transparent;
+    color: var(--text-color); /* Usa la variable */
     cursor: pointer;
 }
-.chatCloseButton:hover {
-    color: var(--text-color);
+.closeChatButton:hover {
+    background-color: var(--border-color); /* Usa la variable */
 }
 
 .chatMessages {
     flex-grow: 1;
     padding: 1rem;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.systemMessage {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted-color); /* Usa la variable */
+    font-style: italic;
+}
+
+.chatMessageWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+.chatMessageWrapperMe {
+    align-items: flex-end;
 }
 
 .chatMessage {
-    margin-bottom: 0.75rem;
-    display: flex;
-    flex-direction: column;
+    padding: 0.6rem 0.9rem;
+    border-radius: 1rem;
     max-width: 85%;
+    background-color: var(--border-color); /* Usa la variable */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-.peerMessage {
-    align-self: flex-start;
-}
-.myMessage {
-    align-self: flex-end;
-    text-align: right;
+.chatMessageMe {
+    background-color: var(--primary-color); /* Usa la variable */
 }
 
 .chatUserName {
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--primary-color); /* Usa la variable */
     margin-bottom: 0.2rem;
 }
 
-.chatText {
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.75rem;
-    margin: 0;
-    line-height: 1.4;
-    word-wrap: break-word;
-}
-.peerMessage .chatText {
-    background-color: var(--border-color);
-    border-top-left-radius: 0;
-}
-.myMessage .chatText {
-    background-color: var(--primary-color);
-    color: white;
-    border-top-right-radius: 0;
+.chatMessageText {
+    font-size: 0.9rem;
+    word-break: break-word;
 }
 
-.chatTimestamp {
-    font-size: 0.65rem;
-    color: var(--text-muted-color);
-    margin-top: 0.2rem;
-}
-
-.chatInputContainer {
-    display: flex;
+.chatForm {
     padding: 1rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color); /* Usa la variable */
+    display: flex;
+    gap: 0.5rem;
 }
+
 .chatInput {
     flex-grow: 1;
     padding: 0.75rem;
-    border: 1px solid var(--border-color);
-    border-radius: 1.5rem;
-    background-color: var(--background-color);
-    color: var(--text-color);
+    background-color: var(--background-color); /* Usa la variable */
+    border-radius: 9999px;
+    border: 1px solid var(--border-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
     outline: none;
-    margin-right: 0.5rem;
+    transition: border-color 0.2s ease;
+}
+.chatInput::placeholder {
+    color: var(--text-muted-color); /* Usa la variable */
 }
 .chatInput:focus {
-    border-color: var(--primary-color);
-}
-.sendButton {
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.sendButton:hover {
-    background-color: var(--secondary-color);
+    border-color: var(--primary-color); /* Usa la variable */
 }
 
+.chatSendButton {
+    background-color: var(--primary-color); /* Usa la variable */
+    padding: 0.75rem;
+    border-radius: 9999px;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+.chatSendButton:hover {
+    background-color: var(--secondary-color); /* Usa la variable */
+}
 
 /* ---------------- Lobby ---------------- */
 .lobbyContainer {
@@ -538,43 +474,77 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
-    padding: 2rem;
-    background-color: var(--background-color);
+    min-height: 100vh;
+    background-color: var(--background-color); /* Usa la variable */
+    color: var(--text-color); /* Usa la variable */
+    padding: 1rem;
 }
 
-.lobbyForm {
-    background-color: var(--surface-color);
-    padding: 2.5rem;
-    border-radius: 1rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    text-align: center;
-    max-width: 400px;
+.lobbyFormWrapper {
     width: 100%;
+    max-width: 32rem;
+}
+
+.lobbyCard {
+    background-color: var(--surface-color); /* Usa la variable */
+    padding: 2.5rem;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-color); /* Usa la variable */
+    text-align: center;
+}
+
+.lobbyLogo {
+    height: 96px;
+    margin-bottom: 1rem;
 }
 
 .lobbyTitle {
-    color: var(--primary-color);
-    margin-bottom: 0.5rem;
-}
-.lobbySubtitle {
-    color: var(--text-muted-color);
-    margin-bottom: 1.5rem;
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--primary-color); /* Usa la variable */
+    margin-bottom: 2rem;
 }
 
-.lobbyInput {
-    width: 100%;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 0.75rem;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    outline: none;
-    transition: border-color 0.2s;
+.lobbyForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
 }
-.lobbyInput:focus {
-    border-color: var(--primary-color);
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.formLabel {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color); /* Usa la variable */
+    margin-bottom: 0.5rem;
+}
+
+.formInput,
+.formSelect {
+    width: 100%;
+    padding: 0.9rem 0.2rem;
+    background-color: var(--background-color); /* Usa la variable */
+    border: 1px solid var(--border-color); /* Usa la variable */
+    border-radius: 0.75rem;
+    color: var(--text-color); /* Usa la variable */
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+.formInput:focus,
+.formSelect:focus {
+    border-color: var(--primary-color); /* Usa la variable */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.loadingMessage {
+    text-align: center;
+    color: var(--text-muted-color); /* Usa la variable */
 }
 
 .joinButton {
@@ -585,37 +555,23 @@ body {
     padding: 1rem;
     font-size: 1.15rem;
     font-weight: 600;
-    color: white;
-    background-color: var(--primary-color);
-    border: none;
     border-radius: 0.75rem;
+    background-color: var(--primary-color); /* Usa la variable */
+    color: #fff;
+    transition: background-color 0.3s ease;
+    border: none;
     cursor: pointer;
-    transition: background-color 0.2s;
-    gap: 0.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
-.joinButton:hover:not(:disabled) {
-    background-color: var(--secondary-color);
+.joinButton:hover {
+    background-color: var(--secondary-color); /* Usa la variable */
 }
 .joinButton:disabled {
-    background-color: var(--border-color);
+    background-color: #64748b; /* Color fijo */
     cursor: not-allowed;
-}
-.spinner {
-    animation: spin 1s linear infinite;
+    box-shadow: none;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* ---------------- Toastify (ajustes para tema) ---------------- */
-.Toastify__toast--dark {
-    background: var(--surface-color) !important;
-    color: var(--text-color) !important;
-}
-
-.Toastify__toast--light {
-    background: var(--surface-color) !important;
-    color: var(--text-color) !important;
+.joinButtonIcon {
+    margin-right: 0.75rem;
 }
