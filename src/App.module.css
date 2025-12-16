@@ -46,8 +46,7 @@ body {
     position: relative;
     overflow: hidden;
 }
-
-/* Estilos para el contenedor de reacciones y el menú de emojis */
+/*
 .reactionContainer {
     position: relative;
     display: flex;
@@ -61,7 +60,7 @@ body {
     bottom: calc(4.75rem + 10px);
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-color); 
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     padding: 8px;
@@ -85,7 +84,7 @@ body {
 }
 
 .emojiButton:hover {
-    background-color: var(--border-color); /* Usa la variable */
+    background-color: var(--border-color); 
     transform: scale(1.1);
 }
 
@@ -96,10 +95,10 @@ body {
 .commonEmojiButton, .plusButton {
     padding: 0.75rem;
     border-radius: 9999px;
-    background-color: var(--surface-color); /* Usa la variable */
+    background-color: var(--surface-color);
     transition: background-color 0.2s ease;
     border: none;
-    color: var(--text-color); /* Usa la variable */
+    color: var(--text-color); 
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -108,9 +107,9 @@ body {
 }
 
 .commonEmojiButton:hover, .plusButton:hover {
-    background-color: var(--border-color); /* Usa la variable */
+    background-color: var(--border-color); 
 }
-
+*/
 .controlButtonActive {
     background-color: var(--primary-color) !important; /* Usa la variable */
 }
